@@ -12,7 +12,7 @@
 
 ---
 
-This repository contains cloud-config (Hetzner Cloud) and cloud-init (generic cloud) configurations for deploying a Ubuntu 24.04 system capable of running multiple solo cryptocurrency mining pools.
+This repository contains a cloud-config for deploying a Ubuntu 24.04 system capable of running multiple solo cryptocurrency mining pools.
 
 ## Supported Pools
 
@@ -251,20 +251,22 @@ SSH_PORT: "22"
 
 ## Deployment
 
-### Hetzner Cloud
+### Any Cloud Provider (Hetzner, AWS, GCP, Azure, DigitalOcean, Vultr, Linode, OVH, etc.)
 
-1. Create a new server in Hetzner Cloud Console
-2. Select Ubuntu 24.04 as the image
-3. Paste the contents of `hetzner-cloud-config.yaml` into the "Cloud config" field
-4. Adjust the configuration variables at the top
-5. Launch the server
+1. Create a new server/instance with Ubuntu 24.04
+2. Paste the contents of `cloud-config.yaml` into the cloud-config/user-data field
+3. Adjust the configuration variables at the top (wallet addresses, enabled pools, etc.)
+4. Launch the server
 
-### Other Cloud Providers (AWS, GCP, Azure, DigitalOcean, etc.)
-
-1. Create a new instance with Ubuntu 24.04
-2. Use `generic-cloud-init.yaml` as the user-data/cloud-init configuration
-3. Adjust the configuration variables at the top
-4. Launch the instance
+**Provider-specific field names:**
+- **Hetzner Cloud**: "Cloud config" field
+- **AWS EC2**: "User data" field
+- **Google Cloud**: "Automation > Startup script" or metadata key `user-data`
+- **Azure**: "Custom data" field
+- **DigitalOcean**: "User data" field
+- **Vultr**: "Cloud-Init User-Data" field
+- **Linode**: "User Data" field or StackScripts
+- **OVH**: "Post-installation script" field
 
 ## Post-Deployment
 

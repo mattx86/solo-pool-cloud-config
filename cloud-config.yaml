@@ -1,12 +1,12 @@
 #cloud-config
-# Generic Cloud-Init Configuration for Solo Mining Pool Server
+# Solo Mining Pool Server - Cloud Configuration
 # Ubuntu 24.04 LTS
 #
-# Compatible with: AWS, GCP, Azure, DigitalOcean, Vultr, Linode, OVH, etc.
+# Compatible with: Hetzner, AWS, GCP, Azure, DigitalOcean, Vultr, Linode, OVH, etc.
 #
 # INSTRUCTIONS:
 # 1. Edit the CONFIGURATION VARIABLES section below
-# 2. Use this as user-data/cloud-init when launching your instance
+# 2. Paste into your cloud provider's cloud-config/user-data field
 # 3. Launch your server
 #
 # All output is directed to /dev/tty1 for monitoring
