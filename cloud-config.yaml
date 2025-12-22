@@ -16,7 +16,7 @@
 # =============================================================================
 
 write_files:
-  - path: /opt/solo-pool/config.sh
+  - path: /opt/solo-pool/install-scripts/config.sh
     permissions: '0600'
     owner: root:root
     content: |
@@ -28,7 +28,7 @@ write_files:
       # SCRIPT SOURCE - Where to download setup scripts from
       # ---------------------------------------------------------------------
       # Change this to your GitHub raw URL or web server hosting the scripts
-      SCRIPTS_BASE_URL="https://raw.githubusercontent.com/mattx86/solo-pool-cloud-config/main/scripts"
+      SCRIPTS_BASE_URL="https://raw.githubusercontent.com/mattx86/solo-pool-cloud-config/refs/heads/main/install-scripts"
 
       # ---------------------------------------------------------------------
       # POOL SELECTION - Enable/disable each pool (true/false)
@@ -43,7 +43,7 @@ write_files:
       # ---------------------------------------------------------------------
       # MONERO/TARI MINING MODE
       # Options: "merge" (both via merge mining proxy)
-      #          "monero_only" (XMR solo via monero-stratum)
+      #          "monero_only" (XMR solo via P2Pool)
       #          "tari_only" (XTM solo via minotari_miner)
       # ---------------------------------------------------------------------
       MONERO_TARI_MODE="merge"
@@ -71,7 +71,28 @@ write_files:
       DGB_STRATUM_PORT="3335"
       XMR_STRATUM_PORT="3336"
       XTM_STRATUM_PORT="3337"
-      MERGE_STRATUM_PORT="3338"
+      XMR_XTM_MERGE_STRATUM_PORT="3338"
+      ALEO_STRATUM_PORT="3339"
+
+      # ---------------------------------------------------------------------
+      # NETWORK MODE - P2P connectivity settings
+      # ---------------------------------------------------------------------
+      # Set to "false" for outbound-only mode (recommended for private pools)
+      # This reduces attack surface and simplifies firewall - only stratum ports needed
+      # Set to "true" to accept incoming P2P connections from coin networks
+      ENABLE_INBOUND_P2P="false"
+
+      # ---------------------------------------------------------------------
+      # WEB UI CONFIGURATION
+      # ---------------------------------------------------------------------
+      # Enable/disable WebUI entirely
+      ENABLE_WEBUI="true"
+      # HTTP server settings
+      WEBUI_HTTP_ENABLED="true"
+      WEBUI_HTTP_PORT="8080"
+      # HTTPS server settings (uses self-signed 10-year certificate)
+      WEBUI_HTTPS_ENABLED="true"
+      WEBUI_HTTPS_PORT="8443"
 
       # ---------------------------------------------------------------------
       # SYSTEM USER - Dedicated user for running pool services
@@ -81,11 +102,10 @@ write_files:
       # ---------------------------------------------------------------------
       # DIRECTORY STRUCTURE
       # ---------------------------------------------------------------------
-      BASE_DIR="/opt"
-      CONFIG_DIR="/opt/solo-pool"
-      SCRIPTS_DIR="/opt/solo-pool/scripts"
-      NODE_DIR="/opt/node"
-      POOL_DIR="/opt/pool"
+      BASE_DIR="/opt/solo-pool"
+      INSTALL_DIR="${BASE_DIR}/install-scripts"
+      NODE_DIR="${BASE_DIR}/node"
+      POOL_DIR="${BASE_DIR}/pool"
 
       # Node directories
       BITCOIN_DIR="${NODE_DIR}/bitcoin"
@@ -96,39 +116,64 @@ write_files:
       ALEO_DIR="${NODE_DIR}/aleo"
 
       # Pool directories
-      CKPOOL_BTC_DIR="${POOL_DIR}/ckpool-btc"
-      CKPOOL_BCH_DIR="${POOL_DIR}/ckpool-bch"
-      CKPOOL_DGB_DIR="${POOL_DIR}/ckpool-dgb"
-      MONERO_STRATUM_DIR="${POOL_DIR}/monero-stratum"
-      TARI_MINER_DIR="${POOL_DIR}/tari-miner"
-      TARI_MERGE_DIR="${POOL_DIR}/tari-merge-proxy"
+      BTC_CKPOOL_DIR="${POOL_DIR}/btc-ckpool"
+      BCH_CKPOOL_DIR="${POOL_DIR}/bch-ckpool"
+      DGB_CKPOOL_DIR="${POOL_DIR}/dgb-ckpool"
+      XMR_P2POOL_DIR="${POOL_DIR}/xmr-p2pool"
+      XTM_MINER_DIR="${POOL_DIR}/xtm-minotari-miner"
+      XMR_XTM_MERGE_DIR="${POOL_DIR}/xmr-xtm-minotari-merge-proxy"
+      ALEO_POOL_DIR="${POOL_DIR}/aleo-pool-server"
+
+      # WebUI directory
+      WEBUI_DIR="${BASE_DIR}/webui"
+
+      # CKPool socket directories (for API communication with WebUI)
+      BTC_CKPOOL_SOCKET_DIR="/tmp/ckpool-btc"
+      BCH_CKPOOL_SOCKET_DIR="/tmp/ckpool-bch"
+      DGB_CKPOOL_SOCKET_DIR="/tmp/ckpool-dgb"
 
       # ---------------------------------------------------------------------
-      # VERSION PINNING - Update these as needed
+      # VERSION PINNING - Node Software
       # ---------------------------------------------------------------------
-      BITCOIN_VERSION="27.1"
-      BCHN_VERSION="27.1.0"
-      DIGIBYTE_VERSION="7.17.3"
-      MONERO_VERSION="0.18.3.4"
-      # Tari and ALEO use latest releases from GitHub
+      BITCOIN_VERSION="28.3"
+      BCHN_VERSION="28.0.1"
+      DIGIBYTE_VERSION="8.26.1"
+      MONERO_VERSION="0.18.4.4"
+      TARI_VERSION="5.1.0"
+      SNARKOS_VERSION="4.4.0"
+
+      # ---------------------------------------------------------------------
+      # VERSION PINNING - Pool Software
+      # ---------------------------------------------------------------------
+      # CKPool: No formal releases, pinned to specific commit
+      CKPOOL_COMMIT="590fb2a2c6164beb85d458b3a212723507a9d8ac"
+      # P2Pool: Decentralized Monero mining pool (replaces monero-stratum)
+      P2POOL_VERSION="4.13"
+      # ALEO Pool Server: Stratum server for ALEO ASIC mining
+      ALEO_POOL_COMMIT="992792eb9aaf29fde0c20c9942ec5a9244a4a0a6"
+
+      # ---------------------------------------------------------------------
+      # LOGGING
+      # ---------------------------------------------------------------------
+      LOG_FILE="${INSTALL_DIR}/install.log"
 
       # ---------------------------------------------------------------------
       # HELPER FUNCTIONS
       # ---------------------------------------------------------------------
       log() {
-          echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >/dev/tty1 2>&1
+          echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
       }
 
       log_error() {
-          echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $*" >/dev/tty1 2>&1
+          echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $*" | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
       }
 
       log_success() {
-          echo "[$(date '+%Y-%m-%d %H:%M:%S')] SUCCESS: $*" >/dev/tty1 2>&1
+          echo "[$(date '+%Y-%m-%d %H:%M:%S')] SUCCESS: $*" | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
       }
 
       run_cmd() {
-          "$@" >/dev/tty1 2>&1
+          "$@" 2>&1 | tee -a "${LOG_FILE}" >/dev/tty1
       }
 
 # =============================================================================
@@ -136,33 +181,33 @@ write_files:
 # =============================================================================
 
 runcmd:
+  # Create directory structure first (needed for log file)
+  - mkdir -p /opt/solo-pool/install-scripts
+
   # Ensure /dev/tty1 is available for output (create symlink if needed for cloud environments)
   - |
     if [ ! -e /dev/tty1 ]; then
       # Some cloud environments don't have tty1, use console instead
       ln -sf /dev/console /dev/tty1 2>/dev/null || true
     fi
-    exec >/dev/tty1 2>&1
-    echo "=============================================="
-    echo "Solo Mining Pool Setup - Starting"
-    echo "$(date)"
-    echo "=============================================="
-
-  # Create directory structure
-  - mkdir -p /opt/solo-pool/scripts >/dev/tty1 2>&1
+    LOG_FILE="/opt/solo-pool/install-scripts/install.log"
+    echo "=============================================="  | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
+    echo "Solo Mining Pool Setup - Starting"             | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
+    echo "$(date)"                                       | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
+    echo "=============================================="  | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
 
   # Make config readable
-  - chmod 600 /opt/solo-pool/config.sh >/dev/tty1 2>&1
+  - chmod 600 /opt/solo-pool/install-scripts/config.sh
 
   # Source config to get SCRIPTS_BASE_URL
   - |
-    source /opt/solo-pool/config.sh
-    echo "Scripts will be downloaded from: ${SCRIPTS_BASE_URL}" >/dev/tty1 2>&1
+    source /opt/solo-pool/install-scripts/config.sh
+    log "Scripts will be downloaded from: ${SCRIPTS_BASE_URL}"
 
   # Download all scripts
   - |
-    source /opt/solo-pool/config.sh
-    cd /opt/solo-pool/scripts
+    source /opt/solo-pool/install-scripts/config.sh
+    cd /opt/solo-pool/install-scripts
 
     SCRIPTS=(
       "01-system-update.sh"
@@ -176,143 +221,152 @@ runcmd:
       "13-install-monero.sh"
       "14-install-tari.sh"
       "15-install-aleo.sh"
+      "16-install-webui.sh"
       "20-configure-services.sh"
       "99-finalize.sh"
     )
 
-    echo "Downloading setup scripts..." >/dev/tty1 2>&1
+    log "Downloading setup scripts..."
     for script in "${SCRIPTS[@]}"; do
-      echo "  Downloading ${script}..." >/dev/tty1 2>&1
-      wget -q "${SCRIPTS_BASE_URL}/${script}" -O "${script}" >/dev/tty1 2>&1
+      log "  Downloading ${script}..."
+      wget -q "${SCRIPTS_BASE_URL}/${script}" -O "${script}" 2>&1 | tee -a "${LOG_FILE}" >/dev/tty1
       if [ $? -eq 0 ]; then
         chmod +x "${script}"
-        echo "    OK" >/dev/tty1 2>&1
+        log "    OK"
       else
-        echo "    FAILED - Check SCRIPTS_BASE_URL in config" >/dev/tty1 2>&1
+        log_error "    FAILED - Check SCRIPTS_BASE_URL in config"
       fi
     done
 
   # Execute scripts in order
   - |
-    source /opt/solo-pool/config.sh
-    cd /opt/solo-pool/scripts
+    source /opt/solo-pool/install-scripts/config.sh
+    cd /opt/solo-pool/install-scripts
 
-    echo "" >/dev/tty1 2>&1
-    echo "=============================================="  >/dev/tty1 2>&1
-    echo "Executing setup scripts..."  >/dev/tty1 2>&1
-    echo "=============================================="  >/dev/tty1 2>&1
+    log ""
+    log "=============================================="
+    log "Executing setup scripts..."
+    log "=============================================="
 
     # 01 - System Update
     if [ -x "./01-system-update.sh" ]; then
-      echo "" >/dev/tty1 2>&1
-      echo "[STEP 1/13] Running system update..." >/dev/tty1 2>&1
+      log ""
+      log "[STEP 1/14] Running system update..."
       ./01-system-update.sh
     fi
 
     # 02 - CIS Hardening
     if [ -x "./02-cis-hardening.sh" ]; then
-      echo "" >/dev/tty1 2>&1
-      echo "[STEP 2/13] Applying CIS hardening..." >/dev/tty1 2>&1
+      log ""
+      log "[STEP 2/14] Applying CIS hardening..."
       ./02-cis-hardening.sh
     fi
 
     # 03 - UFW Setup
     if [ -x "./03-ufw-setup.sh" ]; then
-      echo "" >/dev/tty1 2>&1
-      echo "[STEP 3/13] Configuring firewall..." >/dev/tty1 2>&1
+      log ""
+      log "[STEP 3/14] Configuring firewall..."
       ./03-ufw-setup.sh
     fi
 
     # 04 - User Setup
     if [ -x "./04-user-setup.sh" ]; then
-      echo "" >/dev/tty1 2>&1
-      echo "[STEP 4/13] Creating pool user and directories..." >/dev/tty1 2>&1
+      log ""
+      log "[STEP 4/14] Creating pool user and directories..."
       ./04-user-setup.sh
     fi
 
     # 05 - Install Dependencies
     if [ -x "./05-install-dependencies.sh" ]; then
-      echo "" >/dev/tty1 2>&1
-      echo "[STEP 5/13] Installing build dependencies..." >/dev/tty1 2>&1
+      log ""
+      log "[STEP 5/14] Installing build dependencies..."
       ./05-install-dependencies.sh
     fi
 
     # 10 - Install Bitcoin
     if [ -x "./10-install-bitcoin.sh" ]; then
-      echo "" >/dev/tty1 2>&1
-      echo "[STEP 6/13] Installing Bitcoin node and pool..." >/dev/tty1 2>&1
+      log ""
+      log "[STEP 6/14] Installing Bitcoin node and pool..."
       ./10-install-bitcoin.sh
     fi
 
     # 11 - Install BCH
     if [ -x "./11-install-bch.sh" ]; then
-      echo "" >/dev/tty1 2>&1
-      echo "[STEP 7/13] Installing Bitcoin Cash node and pool..." >/dev/tty1 2>&1
+      log ""
+      log "[STEP 7/14] Installing Bitcoin Cash node and pool..."
       ./11-install-bch.sh
     fi
 
     # 12 - Install DigiByte
     if [ -x "./12-install-digibyte.sh" ]; then
-      echo "" >/dev/tty1 2>&1
-      echo "[STEP 8/13] Installing DigiByte node and pool..." >/dev/tty1 2>&1
+      log ""
+      log "[STEP 8/14] Installing DigiByte node and pool..."
       ./12-install-digibyte.sh
     fi
 
     # 13 - Install Monero
     if [ -x "./13-install-monero.sh" ]; then
-      echo "" >/dev/tty1 2>&1
-      echo "[STEP 9/13] Installing Monero node and stratum..." >/dev/tty1 2>&1
+      log ""
+      log "[STEP 9/14] Installing Monero node and stratum..."
       ./13-install-monero.sh
     fi
 
     # 14 - Install Tari
     if [ -x "./14-install-tari.sh" ]; then
-      echo "" >/dev/tty1 2>&1
-      echo "[STEP 10/13] Installing Tari node and mining software..." >/dev/tty1 2>&1
+      log ""
+      log "[STEP 10/14] Installing Tari node and mining software..."
       ./14-install-tari.sh
     fi
 
     # 15 - Install ALEO
     if [ -x "./15-install-aleo.sh" ]; then
-      echo "" >/dev/tty1 2>&1
-      echo "[STEP 11/13] Installing ALEO snarkOS..." >/dev/tty1 2>&1
+      log ""
+      log "[STEP 11/14] Installing ALEO snarkOS..."
       ./15-install-aleo.sh
+    fi
+
+    # 16 - Install WebUI
+    if [ -x "./16-install-webui.sh" ]; then
+      log ""
+      log "[STEP 12/14] Installing WebUI dashboard..."
+      ./16-install-webui.sh
     fi
 
     # 20 - Configure Services
     if [ -x "./20-configure-services.sh" ]; then
-      echo "" >/dev/tty1 2>&1
-      echo "[STEP 12/13] Configuring systemd services..." >/dev/tty1 2>&1
+      log ""
+      log "[STEP 13/14] Configuring systemd services..."
       ./20-configure-services.sh
     fi
 
     # 99 - Finalize
     if [ -x "./99-finalize.sh" ]; then
-      echo "" >/dev/tty1 2>&1
-      echo "[STEP 13/13] Finalizing installation..." >/dev/tty1 2>&1
+      log ""
+      log "[STEP 14/14] Finalizing installation..."
       ./99-finalize.sh
     fi
 
-    echo "" >/dev/tty1 2>&1
-    echo "=============================================="  >/dev/tty1 2>&1
-    echo "Solo Mining Pool Setup - Complete"  >/dev/tty1 2>&1
-    echo "$(date)"  >/dev/tty1 2>&1
-    echo "=============================================="  >/dev/tty1 2>&1
-    echo "" >/dev/tty1 2>&1
-    echo "Next steps:" >/dev/tty1 2>&1
-    echo "1. Wait for blockchain nodes to sync" >/dev/tty1 2>&1
-    echo "2. Open firewall ports when ready: sudo ufw allow <port>/tcp" >/dev/tty1 2>&1
-    echo "3. Check service status: sudo systemctl status <service>" >/dev/tty1 2>&1
-    echo "" >/dev/tty1 2>&1
+    log ""
+    log "=============================================="
+    log "Solo Mining Pool Setup - Complete"
+    log "$(date)"
+    log "=============================================="
+    log ""
+    log "Next steps:"
+    log "1. Wait for blockchain nodes to sync"
+    log "2. Open firewall ports when ready: sudo ufw allow <port>/tcp"
+    log "3. Check service status: sudo systemctl status <service>"
+    log ""
 
 # Final message
 final_message: |
   Solo Mining Pool server setup complete!
 
-  Configuration: /opt/solo-pool/config.sh
-  Scripts: /opt/solo-pool/scripts/
-  Nodes: /opt/node/
-  Pools: /opt/pool/
+  Install Scripts: /opt/solo-pool/install-scripts/
+  Configuration: /opt/solo-pool/install-scripts/config.sh
+  Install Log: /opt/solo-pool/install-scripts/install.log
+  Nodes: /opt/solo-pool/node/
+  Pools: /opt/solo-pool/pool/
 
   Check service status with: systemctl status <service-name>
   View logs with: journalctl -u <service-name> -f

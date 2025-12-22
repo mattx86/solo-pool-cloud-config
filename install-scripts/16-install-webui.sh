@@ -1,0 +1,585 @@
+#!/bin/bash
+# =============================================================================
+# 16-install-webui.sh
+# Install Solo Pool Web UI
+#
+# This installs a Rust-based web dashboard that displays:
+# - Per-algorithm pool stats (hashrate, blocks found)
+# - Individual worker statistics
+# - Connection status for each pool
+#
+# Connects to: CKPool (BTC/BCH/DGB), P2Pool (XMR), Tari, ALEO Pool Server
+# =============================================================================
+
+set -e
+
+# Source configuration
+INSTALL_DIR="${INSTALL_DIR:-/opt/solo-pool/install-scripts}"
+source ${INSTALL_DIR}/config.sh
+
+# Check if WebUI is enabled
+if [ "${ENABLE_WEBUI}" != "true" ]; then
+    log "WebUI is disabled (ENABLE_WEBUI=${ENABLE_WEBUI}), skipping installation"
+    exit 0
+fi
+
+log "Installing Solo Pool Web UI..."
+
+# WebUI directory - use config variable with fallback
+WEBUI_DIR="${WEBUI_DIR:-${BASE_DIR}/webui}"
+
+# Use config variables with defaults
+WEBUI_HTTP_ENABLED="${WEBUI_HTTP_ENABLED:-true}"
+WEBUI_HTTP_PORT="${WEBUI_HTTP_PORT:-8080}"
+WEBUI_HTTPS_ENABLED="${WEBUI_HTTPS_ENABLED:-true}"
+WEBUI_HTTPS_PORT="${WEBUI_HTTPS_PORT:-8443}"
+
+# =============================================================================
+# 1. INSTALL BUILD DEPENDENCIES
+# =============================================================================
+log "1. Installing build dependencies..."
+
+# Track what we install so we can remove it later
+WEBUI_BUILD_DEPS=""
+
+# Check if Rust is installed (should be from 05-install-dependencies.sh)
+if [ -f "/root/.cargo/env" ]; then
+    source /root/.cargo/env
+    log "  Rust toolchain already installed"
+else
+    # Install Rust if not present
+    log "  Installing Rust toolchain..."
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+    source /root/.cargo/env
+    WEBUI_BUILD_DEPS="${WEBUI_BUILD_DEPS} rust"
+    log "  Rust installed"
+fi
+
+# Install additional build dependencies if needed
+# These are typically already installed, but ensure they're present
+REQUIRED_PKGS=""
+
+# Check for pkg-config (needed for some Rust crates)
+if ! command -v pkg-config &> /dev/null; then
+    REQUIRED_PKGS="${REQUIRED_PKGS} pkg-config"
+fi
+
+# Check for OpenSSL development headers (needed for reqwest/TLS)
+if [ ! -f "/usr/include/openssl/ssl.h" ]; then
+    REQUIRED_PKGS="${REQUIRED_PKGS} libssl-dev"
+fi
+
+# Install any missing packages
+if [ -n "${REQUIRED_PKGS}" ]; then
+    log "  Installing additional build packages: ${REQUIRED_PKGS}"
+    apt-get update -qq
+    apt-get install -y ${REQUIRED_PKGS}
+    WEBUI_BUILD_DEPS="${WEBUI_BUILD_DEPS} ${REQUIRED_PKGS}"
+fi
+
+log "  Build dependencies ready"
+
+# =============================================================================
+# 2. DOWNLOAD WEBUI SOURCE FROM GITHUB
+# =============================================================================
+log "2. Downloading WebUI source from GitHub..."
+
+# Base URL for raw files (derived from SCRIPTS_BASE_URL)
+WEBUI_BASE_URL="${SCRIPTS_BASE_URL%/install-scripts}/webui"
+
+# Create directory structure
+mkdir -p ${WEBUI_DIR}/src/api
+mkdir -p ${WEBUI_DIR}/src/static/css
+mkdir -p ${WEBUI_DIR}/src/static/js
+
+# Download source files
+DOWNLOAD_ERRORS=0
+download_file() {
+    local url="$1"
+    local dest="$2"
+    log "  Downloading $(basename ${dest})..."
+    if ! wget -q "${url}" -O "${dest}"; then
+        log_error "Failed to download: ${url}"
+        ((DOWNLOAD_ERRORS++))
+        return 1
+    fi
+}
+
+# Root files
+download_file "${WEBUI_BASE_URL}/Cargo.toml" "${WEBUI_DIR}/Cargo.toml"
+download_file "${WEBUI_BASE_URL}/config.toml.example" "${WEBUI_DIR}/config.toml.example"
+
+# Source files
+download_file "${WEBUI_BASE_URL}/src/main.rs" "${WEBUI_DIR}/src/main.rs"
+download_file "${WEBUI_BASE_URL}/src/config.rs" "${WEBUI_DIR}/src/config.rs"
+download_file "${WEBUI_BASE_URL}/src/models.rs" "${WEBUI_DIR}/src/models.rs"
+download_file "${WEBUI_BASE_URL}/src/access_log.rs" "${WEBUI_DIR}/src/access_log.rs"
+
+# API modules
+download_file "${WEBUI_BASE_URL}/src/api/mod.rs" "${WEBUI_DIR}/src/api/mod.rs"
+download_file "${WEBUI_BASE_URL}/src/api/ckpool.rs" "${WEBUI_DIR}/src/api/ckpool.rs"
+download_file "${WEBUI_BASE_URL}/src/api/aleo.rs" "${WEBUI_DIR}/src/api/aleo.rs"
+download_file "${WEBUI_BASE_URL}/src/api/p2pool.rs" "${WEBUI_DIR}/src/api/p2pool.rs"
+download_file "${WEBUI_BASE_URL}/src/api/tari.rs" "${WEBUI_DIR}/src/api/tari.rs"
+
+# Static files (embedded into binary at compile time)
+download_file "${WEBUI_BASE_URL}/src/static/index.html" "${WEBUI_DIR}/src/static/index.html"
+download_file "${WEBUI_BASE_URL}/src/static/css/style.css" "${WEBUI_DIR}/src/static/css/style.css"
+download_file "${WEBUI_BASE_URL}/src/static/js/app.js" "${WEBUI_DIR}/src/static/js/app.js"
+
+# Check for download errors
+if [ ${DOWNLOAD_ERRORS} -gt 0 ]; then
+    log_error "Failed to download ${DOWNLOAD_ERRORS} file(s). Check SCRIPTS_BASE_URL in config."
+    exit 1
+fi
+
+log "  Source downloaded"
+
+# =============================================================================
+# 3. VERIFY SOURCE
+# =============================================================================
+log "3. Verifying source code..."
+
+if [ ! -d "${WEBUI_DIR}" ]; then
+    log_error "WebUI source not found at ${WEBUI_DIR}"
+    exit 1
+fi
+
+if [ ! -f "${WEBUI_DIR}/Cargo.toml" ]; then
+    log_error "Invalid WebUI source - Cargo.toml not found"
+    exit 1
+fi
+
+log "  Source verified at ${WEBUI_DIR}"
+
+# =============================================================================
+# 4. BUILD WEBUI FROM SOURCE
+# =============================================================================
+log "4. Building Solo Pool WebUI..."
+log "  This may take 2-5 minutes depending on system..."
+
+cd ${WEBUI_DIR}
+
+# Clean any previous build artifacts
+if [ -d "target" ]; then
+    log "  Cleaning previous build..."
+    cargo clean 2>/dev/null || true
+fi
+
+# Build release binary with optimizations
+log "  Compiling release binary..."
+CARGO_BUILD_START=$(date +%s)
+
+# Use release profile for smaller, faster binary
+run_cmd cargo build --release
+
+CARGO_BUILD_END=$(date +%s)
+CARGO_BUILD_TIME=$((CARGO_BUILD_END - CARGO_BUILD_START))
+log "  Build completed in ${CARGO_BUILD_TIME} seconds"
+
+# Verify binary was created
+if [ ! -f "target/release/solo-pool-webui" ]; then
+    log_error "Build failed - binary not found"
+    exit 1
+fi
+
+# Get binary size for logging
+BINARY_SIZE=$(du -h target/release/solo-pool-webui | cut -f1)
+log "  Binary size: ${BINARY_SIZE}"
+
+# =============================================================================
+# 5. INSTALL WEBUI
+# =============================================================================
+log "5. Installing WebUI..."
+
+# Create directories (bin, logs, certs - static already exists in source)
+mkdir -p ${WEBUI_DIR}/bin
+mkdir -p ${WEBUI_DIR}/logs
+mkdir -p ${WEBUI_DIR}/certs
+
+# Move binary to bin/
+cp target/release/solo-pool-webui ${WEBUI_DIR}/bin/
+
+# Strip debug symbols to reduce binary size (optional but recommended)
+if command -v strip &> /dev/null; then
+    strip ${WEBUI_DIR}/bin/solo-pool-webui 2>/dev/null || true
+    STRIPPED_SIZE=$(du -h ${WEBUI_DIR}/bin/solo-pool-webui | cut -f1)
+    log "  Binary stripped: ${STRIPPED_SIZE}"
+fi
+
+log "  WebUI installed to ${WEBUI_DIR}"
+
+# =============================================================================
+# 6. CLEANUP BUILD ARTIFACTS
+# =============================================================================
+log "6. Cleaning up build artifacts..."
+
+# Remove target directory (can be several GB)
+cd ${WEBUI_DIR}
+if [ -d "target" ]; then
+    TARGET_SIZE=$(du -sh target 2>/dev/null | cut -f1)
+    log "  Removing build cache (${TARGET_SIZE})..."
+    rm -rf target
+fi
+
+# Clean cargo registry cache for this project's dependencies
+# Note: We keep the global cargo cache as other Rust projects may use it
+log "  Build artifacts cleaned"
+
+# Record disk space saved
+log "  Disk space recovered from build cleanup"
+
+# =============================================================================
+# 7. GENERATE TLS CERTIFICATE (if HTTPS enabled)
+# =============================================================================
+CERT_DIR="${WEBUI_DIR}/certs"
+CERT_FILE="${CERT_DIR}/server.crt"
+KEY_FILE="${CERT_DIR}/server.key"
+
+if [ "${WEBUI_HTTPS_ENABLED}" = "true" ]; then
+    log "7. Generating self-signed TLS certificate..."
+
+    # Get server IP addresses for certificate
+    PUBLIC_IP=$(curl -s --connect-timeout 3 https://ifconfig.me 2>/dev/null || echo "")
+    LOCAL_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "")
+
+    # Build SAN list
+    SAN_LIST="DNS:localhost,IP:127.0.0.1"
+    [ -n "${LOCAL_IP}" ] && SAN_LIST="${SAN_LIST},IP:${LOCAL_IP}"
+    [ -n "${PUBLIC_IP}" ] && [ "${PUBLIC_IP}" != "${LOCAL_IP}" ] && SAN_LIST="${SAN_LIST},IP:${PUBLIC_IP}"
+
+    log "  Certificate SANs: ${SAN_LIST}"
+
+    # Generate 10-year self-signed certificate
+    openssl req -x509 -nodes -days 3650 \
+        -newkey rsa:2048 \
+        -keyout ${KEY_FILE} \
+        -out ${CERT_FILE} \
+        -subj "/C=US/ST=State/L=City/O=Solo Pool/OU=Mining/CN=solo-pool" \
+        -addext "subjectAltName=${SAN_LIST}" \
+        2>/dev/null
+
+    # Set secure permissions on key file
+    chmod 600 ${KEY_FILE}
+    chmod 644 ${CERT_FILE}
+
+    log "  TLS certificate generated (valid for 10 years)"
+    log "  Certificate: ${CERT_FILE}"
+    log "  Private key: ${KEY_FILE}"
+else
+    log "7. Skipping TLS certificate (HTTPS disabled)"
+fi
+
+# =============================================================================
+# 8. CONFIGURE WEBUI
+# =============================================================================
+log "8. Configuring WebUI..."
+
+# Generate config based on enabled pools and settings
+cat > ${WEBUI_DIR}/config.toml << EOF
+# Solo Pool WebUI Configuration
+# Auto-generated by install script
+
+[server]
+host = "0.0.0.0"
+port = ${WEBUI_HTTP_PORT}
+refresh_interval_secs = 10
+
+[server.https]
+enabled = ${WEBUI_HTTPS_ENABLED}
+port = ${WEBUI_HTTPS_PORT}
+cert_path = "${CERT_FILE}"
+key_path = "${KEY_FILE}"
+
+[server.logging]
+log_dir = "${WEBUI_DIR}/logs"
+access_log_enabled = true
+error_log_enabled = true
+EOF
+
+# Log HTTP/HTTPS configuration
+if [ "${WEBUI_HTTP_ENABLED}" = "true" ]; then
+    log "  HTTP enabled on port ${WEBUI_HTTP_PORT}"
+fi
+if [ "${WEBUI_HTTPS_ENABLED}" = "true" ]; then
+    log "  HTTPS enabled on port ${WEBUI_HTTPS_PORT}"
+fi
+
+# Add Bitcoin pool if enabled
+if [ "${ENABLE_BITCOIN_POOL}" = "true" ]; then
+    cat >> ${WEBUI_DIR}/config.toml << EOF
+
+[pools.btc]
+enabled = true
+name = "Bitcoin"
+algorithm = "SHA-256"
+socket_dir = "${BTC_CKPOOL_SOCKET_DIR:-/tmp/ckpool-btc}"
+stratum_port = ${BTC_STRATUM_PORT:-3333}
+EOF
+    log "  Bitcoin pool enabled"
+fi
+
+# Add BCH pool if enabled
+if [ "${ENABLE_BCH_POOL}" = "true" ]; then
+    cat >> ${WEBUI_DIR}/config.toml << EOF
+
+[pools.bch]
+enabled = true
+name = "Bitcoin Cash"
+algorithm = "SHA-256"
+socket_dir = "${BCH_CKPOOL_SOCKET_DIR:-/tmp/ckpool-bch}"
+stratum_port = ${BCH_STRATUM_PORT:-3334}
+EOF
+    log "  Bitcoin Cash pool enabled"
+fi
+
+# Add DigiByte pool if enabled
+if [ "${ENABLE_DGB_POOL}" = "true" ]; then
+    cat >> ${WEBUI_DIR}/config.toml << EOF
+
+[pools.dgb]
+enabled = true
+name = "DigiByte"
+algorithm = "SHA-256"
+socket_dir = "${DGB_CKPOOL_SOCKET_DIR:-/tmp/ckpool-dgb}"
+stratum_port = ${DGB_STRATUM_PORT:-3335}
+EOF
+    log "  DigiByte pool enabled"
+fi
+
+# Add Monero/Tari pools based on mode
+if [ "${ENABLE_MONERO_POOL}" = "true" ] || [ "${ENABLE_TARI_POOL}" = "true" ]; then
+    if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
+        cat >> ${WEBUI_DIR}/config.toml << EOF
+
+[pools.xmr]
+enabled = true
+name = "Monero"
+algorithm = "RandomX"
+api_url = "http://127.0.0.1:${XMR_STRATUM_PORT:-3336}"
+stratum_port = ${XMR_STRATUM_PORT:-3336}
+EOF
+        log "  Monero P2Pool enabled"
+
+    elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
+        cat >> ${WEBUI_DIR}/config.toml << EOF
+
+[pools.xtm]
+enabled = true
+name = "Tari"
+algorithm = "RandomX"
+api_url = "http://127.0.0.1:${XTM_STRATUM_PORT:-3337}"
+stratum_port = ${XTM_STRATUM_PORT:-3337}
+EOF
+        log "  Tari solo mining enabled"
+
+    elif [ "${MONERO_TARI_MODE}" = "merge" ]; then
+        cat >> ${WEBUI_DIR}/config.toml << EOF
+
+[pools.xmr_xtm_merge]
+enabled = true
+name = "XMR+XTM Merge Mining"
+algorithm = "RandomX"
+api_url = "http://127.0.0.1:${XMR_XTM_MERGE_STRATUM_PORT:-3338}"
+stratum_port = ${XMR_XTM_MERGE_STRATUM_PORT:-3338}
+EOF
+        log "  XMR+XTM merge mining enabled"
+    fi
+fi
+
+# Add ALEO pool if enabled
+if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
+    cat >> ${WEBUI_DIR}/config.toml << EOF
+
+[pools.aleo]
+enabled = true
+name = "Aleo"
+algorithm = "AleoBFT"
+api_url = "http://127.0.0.1:${ALEO_STRATUM_PORT:-3339}"
+stratum_port = ${ALEO_STRATUM_PORT:-3339}
+EOF
+    log "  ALEO pool enabled"
+fi
+
+log "  Configuration generated"
+
+# =============================================================================
+# 9. CREATE SYSTEMD SERVICE
+# =============================================================================
+log "9. Creating systemd service..."
+
+cat > /etc/systemd/system/solo-pool-webui.service << EOF
+[Unit]
+Description=Solo Pool Web UI Dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=${POOL_USER}
+Group=${POOL_USER}
+
+WorkingDirectory=${WEBUI_DIR}
+ExecStart=${WEBUI_DIR}/bin/solo-pool-webui
+
+Environment=RUST_LOG=info
+Environment=CONFIG_PATH=${WEBUI_DIR}/config.toml
+
+Restart=on-failure
+RestartSec=10
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable solo-pool-webui >/dev/null 2>&1
+
+log "  Systemd service created and enabled"
+
+# =============================================================================
+# 10. SET PERMISSIONS
+# =============================================================================
+log "10. Setting permissions..."
+
+chown -R ${POOL_USER}:${POOL_USER} ${WEBUI_DIR}
+chmod 755 ${WEBUI_DIR}/bin/solo-pool-webui
+chmod 644 ${WEBUI_DIR}/config.toml
+# Ensure logs directory is writable
+chmod 755 ${WEBUI_DIR}/logs
+# Ensure certs directory and files have proper permissions
+chmod 755 ${WEBUI_DIR}/certs
+
+log "  Permissions set"
+
+# =============================================================================
+# 11. CONFIGURE FIREWALL
+# =============================================================================
+log "11. Configuring firewall..."
+
+if [ "${WEBUI_HTTP_ENABLED}" = "true" ]; then
+    ufw allow ${WEBUI_HTTP_PORT}/tcp comment "Solo Pool WebUI HTTP" >/dev/null 2>&1
+    log "  Firewall rule added for HTTP port ${WEBUI_HTTP_PORT}"
+fi
+
+if [ "${WEBUI_HTTPS_ENABLED}" = "true" ]; then
+    ufw allow ${WEBUI_HTTPS_PORT}/tcp comment "Solo Pool WebUI HTTPS" >/dev/null 2>&1
+    log "  Firewall rule added for HTTPS port ${WEBUI_HTTPS_PORT}"
+fi
+
+# =============================================================================
+# 12. CLEANUP WEBUI-ONLY BUILD DEPENDENCIES
+# =============================================================================
+log "12. Cleaning up build-only dependencies..."
+
+# Note: We do NOT remove Rust here because:
+# - ALEO (snarkOS, aleo-pool-server) requires Rust
+# - Tari components require Rust
+# - Future updates may need to rebuild
+#
+# If you want to remove Rust after ALL builds are complete, run:
+#   rustup self uninstall
+#
+# The cargo cache can be cleaned with:
+#   rm -rf ~/.cargo/registry/cache
+#   rm -rf ~/.cargo/git/db
+
+# Clean apt cache
+apt-get clean >/dev/null 2>&1
+
+log "  Cleanup complete"
+log "  Note: Rust toolchain retained for other components"
+
+# =============================================================================
+# 13. CREATE SETUP NOTES
+# =============================================================================
+log "13. Creating setup notes..."
+
+cat > ${WEBUI_DIR}/SETUP_NOTES.txt << EOF
+Solo Pool Web UI Setup Notes
+============================
+
+The web dashboard is installed and configured.
+
+ACCESS:
+EOF
+
+if [ "${WEBUI_HTTP_ENABLED}" = "true" ]; then
+    echo "  HTTP:  http://YOUR_SERVER_IP:${WEBUI_HTTP_PORT}" >> ${WEBUI_DIR}/SETUP_NOTES.txt
+fi
+if [ "${WEBUI_HTTPS_ENABLED}" = "true" ]; then
+    echo "  HTTPS: https://YOUR_SERVER_IP:${WEBUI_HTTPS_PORT}" >> ${WEBUI_DIR}/SETUP_NOTES.txt
+    echo "  Note: Self-signed certificate - browser will show security warning" >> ${WEBUI_DIR}/SETUP_NOTES.txt
+fi
+
+cat >> ${WEBUI_DIR}/SETUP_NOTES.txt << EOF
+
+DIRECTORIES:
+  Runtime: ${WEBUI_DIR}
+  Binary:  ${WEBUI_DIR}/bin/solo-pool-webui (static files embedded)
+  Config:  ${WEBUI_DIR}/config.toml
+  Logs:    ${WEBUI_DIR}/logs/
+
+SYSTEMD SERVICE:
+  Start:   sudo systemctl start solo-pool-webui
+  Stop:    sudo systemctl stop solo-pool-webui
+  Status:  sudo systemctl status solo-pool-webui
+  Logs:    journalctl -u solo-pool-webui -f
+
+CONFIGURATION:
+  Edit ${WEBUI_DIR}/config.toml to change settings.
+  Restart the service after changes.
+
+API ENDPOINTS:
+  GET /api/stats       - All pool statistics
+  GET /api/stats/btc   - Bitcoin pool stats
+  GET /api/stats/bch   - Bitcoin Cash pool stats
+  GET /api/stats/dgb   - DigiByte pool stats
+  GET /api/stats/xmr   - Monero P2Pool stats
+  GET /api/stats/xtm   - Tari solo mining stats
+  GET /api/stats/merge - XMR+XTM merge mining stats
+  GET /api/stats/aleo  - ALEO pool stats
+  GET /api/health      - Health check
+
+LOGS:
+  Access log: ${WEBUI_DIR}/logs/access.log (Apache Combined Log Format)
+  Error log:  ${WEBUI_DIR}/logs/error.log
+
+REBUILDING:
+  If you need to rebuild the WebUI:
+    cd ${WEBUI_DIR}
+    source ~/.cargo/env
+    cargo build --release
+    cp target/release/solo-pool-webui bin/
+    rm -rf target
+    systemctl restart solo-pool-webui
+EOF
+
+# =============================================================================
+# COMPLETE
+# =============================================================================
+log_success "Solo Pool WebUI installed successfully"
+log ""
+if [ "${WEBUI_HTTP_ENABLED}" = "true" ]; then
+    log "  HTTP:  http://YOUR_SERVER_IP:${WEBUI_HTTP_PORT}"
+fi
+if [ "${WEBUI_HTTPS_ENABLED}" = "true" ]; then
+    log "  HTTPS: https://YOUR_SERVER_IP:${WEBUI_HTTPS_PORT}"
+fi
+log ""
+log "  Binary: ${WEBUI_DIR}/bin/solo-pool-webui"
+log "  Config: ${WEBUI_DIR}/config.toml"
+log "  Logs:   ${WEBUI_DIR}/logs/"
+log ""
+log "  Start the dashboard:"
+log "    sudo systemctl start solo-pool-webui"
+log ""
+log "  View service logs:"
+log "    journalctl -u solo-pool-webui -f"
+log ""
+log "  View access/error logs:"
+log "    tail -f ${WEBUI_DIR}/logs/access.log"
+log "    tail -f ${WEBUI_DIR}/logs/error.log"

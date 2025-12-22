@@ -1,0 +1,59 @@
+[package]
+name = "solo-pool-webui"
+version = "0.1.0"
+edition = "2021"
+description = "Web UI for Solo Mining Pool statistics"
+authors = ["Solo Pool"]
+license = "MIT"
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["macros"] }
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["fs", "cors", "trace"] }
+
+# TLS support
+rustls-pemfile = "2"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# HTTP client for pool APIs
+reqwest = { version = "0.12", features = ["json"] }
+
+# Configuration
+toml = "0.8"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-appender = "0.2"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1"
+anyhow = "1"
+
+# Template rendering
+askama = "0.12"
+askama_axum = "0.4"
+
+# Embedded static files (compiled into binary)
+rust-embed = "8"
+mime_guess = "2"
+
+# For reading CKPool logs
+notify = "6"
+regex = "1"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

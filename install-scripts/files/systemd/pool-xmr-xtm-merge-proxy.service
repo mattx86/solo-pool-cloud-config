@@ -1,0 +1,21 @@
+[Unit]
+Description=Minotari Merge Mining Proxy (XMR+XTM)
+After=node-xmr-monerod.service node-xtm-minotari.service
+Requires=node-xmr-monerod.service node-xtm-minotari.service
+
+[Service]
+Type=simple
+User=${POOL_USER}
+Group=${POOL_USER}
+
+ExecStart=${TARI_DIR}/bin/minotari_merge_mining_proxy --config=${XMR_XTM_MERGE_DIR}/config/config.toml
+ExecStop=/bin/kill -SIGTERM $MAINPID
+
+Restart=on-failure
+RestartSec=10
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

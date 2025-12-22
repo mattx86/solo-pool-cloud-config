@@ -1,0 +1,21 @@
+[Unit]
+Description=CKPool DigiByte Stratum Server
+After=node-dgb-digibyted.service
+Requires=node-dgb-digibyted.service
+
+[Service]
+Type=simple
+User=${POOL_USER}
+Group=${POOL_USER}
+
+WorkingDirectory=${DGB_CKPOOL_DIR}
+ExecStart=${DGB_CKPOOL_DIR}/bin/ckpool -c ${DGB_CKPOOL_DIR}/ckpool.conf -l ${DGB_CKPOOL_DIR}/logs
+
+Restart=on-failure
+RestartSec=10
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

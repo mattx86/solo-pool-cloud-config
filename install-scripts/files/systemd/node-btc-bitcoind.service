@@ -1,0 +1,24 @@
+[Unit]
+Description=Bitcoin Core Daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=${POOL_USER}
+Group=${POOL_USER}
+
+ExecStart=${BITCOIN_DIR}/bin/bitcoind -conf=${BITCOIN_DIR}/bitcoin.conf -datadir=${BITCOIN_DIR}/data
+ExecStop=${BITCOIN_DIR}/bin/bitcoin-cli -conf=${BITCOIN_DIR}/bitcoin.conf stop
+
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=infinity
+TimeoutStopSec=600
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

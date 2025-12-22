@@ -1,0 +1,21 @@
+[Unit]
+Description=CKPool Bitcoin Stratum Server
+After=node-btc-bitcoind.service
+Requires=node-btc-bitcoind.service
+
+[Service]
+Type=simple
+User=${POOL_USER}
+Group=${POOL_USER}
+
+WorkingDirectory=${BTC_CKPOOL_DIR}
+ExecStart=${BTC_CKPOOL_DIR}/bin/ckpool -c ${BTC_CKPOOL_DIR}/ckpool.conf -l ${BTC_CKPOOL_DIR}/logs
+
+Restart=on-failure
+RestartSec=10
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

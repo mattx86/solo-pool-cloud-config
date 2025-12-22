@@ -21,7 +21,7 @@ This repository contains a cloud-config for deploying a Ubuntu 24.04 system capa
 | Bitcoin (BTC) | bitcoind | CKPool | SHA256 |
 | Bitcoin Cash (BCH) | BCHN | CKPool | SHA256 |
 | DigiByte (DGB) | digibyted | CKPool | SHA256 only |
-| Monero (XMR) | monerod | monero-stratum | RandomX |
+| Monero (XMR) | monerod | P2Pool | RandomX |
 | Tari (XTM) | minotari_node | minotari_miner | RandomX |
 | Monero+Tari | monerod + minotari_node | minotari_merge_mining_proxy | RandomX |
 | ALEO | snarkOS | snarkOS (integrated) | AleoBFT/PoSW |
@@ -55,8 +55,8 @@ This repository contains a cloud-config for deploying a Ubuntu 24.04 system capa
 | Component | CPU Cores | RAM | Disk | Notes |
 |-----------|-----------|-----|------|-------|
 | monerod | 2 | 4 GB | 200 GB+ | Full node |
-| monero-stratum | 0.5 | 100 MB | 50 MB | Lightweight stratum server |
-| **Subtotal** | **2.5** | **4 GB** | **~200 GB** | |
+| P2Pool | 1 | 1 GB | 1 GB | Decentralized pool with sidechain |
+| **Subtotal** | **3** | **5 GB** | **~201 GB** | |
 
 #### Tari (XTM) - Solo Only
 | Component | CPU Cores | RAM | Disk | Notes |
@@ -132,7 +132,8 @@ This repository contains a cloud-config for deploying a Ubuntu 24.04 system capa
 | **Monero** | | | | |
 | monerod P2P | 18080 | TCP | Both | Blockchain network |
 | monerod RPC | 18081 | TCP | Localhost | Internal only |
-| monero-stratum | 3336 | TCP | Inbound | Miner connections |
+| P2Pool Stratum | 3336 | TCP | Inbound | Miner connections |
+| P2Pool P2P | 37889 | TCP | Both | P2Pool sidechain network |
 | | | | | |
 | **Tari** | | | | |
 | minotari_node P2P | 18189 | TCP | Both | Blockchain network |
@@ -162,10 +163,11 @@ sudo ufw status numbered
 ## Directory Structure
 
 ```
-/opt/
-├── solo-pool/
+/opt/solo-pool/
+├── install-scripts/                 # Installation scripts and config
 │   ├── config.sh                    # Configuration variables
-│   └── scripts/                     # Downloaded setup scripts
+│   ├── install.log                  # Installation log
+│   └── *.sh                         # Downloaded setup scripts
 ├── node/
 │   ├── bitcoin/
 │   │   ├── bin/                     # bitcoind, bitcoin-cli
@@ -190,30 +192,34 @@ sudo ufw status numbered
 │   └── aleo/
 │       ├── bin/
 │       ├── data/
-│       └── .snarkos.conf
+│       ├── logs/
+│       ├── start-prover.sh
+│       └── SETUP_NOTES.txt
 └── pool/
-    ├── ckpool-btc/
+    ├── btc-ckpool/
     │   ├── bin/
     │   ├── logs/
     │   └── ckpool.conf
-    ├── ckpool-bch/
+    ├── bch-ckpool/
     │   ├── bin/
     │   ├── logs/
     │   └── ckpool.conf
-    ├── ckpool-dgb/
+    ├── dgb-ckpool/
     │   ├── bin/
     │   ├── logs/
     │   └── ckpool.conf
-    ├── monero-stratum/
+    ├── xmr-p2pool/
     │   ├── bin/
+    │   ├── data/
     │   ├── logs/
-    │   └── config.json
-    ├── tari-miner/
-    │   ├── bin/
-    │   └── config.toml
-    └── tari-merge-proxy/
-        ├── bin/
-        └── config.toml
+    │   └── start-p2pool.sh
+    ├── xtm-minotari-miner/          # (tari_only mode)
+    │   ├── config/
+    │   └── logs/
+    ├── xmr-xtm-minotari-merge-proxy/ # (merge mode)
+    │   ├── config/
+    │   └── logs/
+    └── aleo -> ../node/aleo         # Symlink (snarkOS is both node and prover)
 ```
 
 ## Configuration
@@ -224,7 +230,7 @@ Edit the following variables in the cloud-config/cloud-init before deployment:
 
 ```yaml
 # Base URL where scripts are hosted (e.g., GitHub raw URL)
-SCRIPTS_BASE_URL: "https://raw.githubusercontent.com/mattx86/solo-pool-cloud-config/main/scripts"
+SCRIPTS_BASE_URL: "https://raw.githubusercontent.com/mattx86/solo-pool-cloud-config/refs/heads/main/install-scripts"
 
 # Pool Selection
 ENABLE_BITCOIN_POOL: "true"
@@ -273,31 +279,72 @@ SSH_PORT: "22"
 ### Check Installation Progress
 
 ```bash
-# View live installation output
+# View live installation output (install log)
+tail -f /opt/solo-pool/install-scripts/install.log
+
+# Or view cloud-init output
 tail -f /var/log/cloud-init-output.log
 
 # Or connect to tty1 if available
-# All output is directed to /dev/tty1
+# All output is directed to both /dev/tty1 and /opt/solo-pool/install-scripts/install.log
 ```
 
 ### Verify Services
 
 ```bash
-# Check service status
-sudo systemctl status bitcoind
-sudo systemctl status bchn
-sudo systemctl status digibyted
-sudo systemctl status monerod
-sudo systemctl status minotari-node
-sudo systemctl status snarkos
+# Check node services
+sudo systemctl status node-btc-bitcoind
+sudo systemctl status node-bch-bchn
+sudo systemctl status node-dgb-digibyted
+sudo systemctl status node-xmr-monerod
+sudo systemctl status node-xtm-minotari
+sudo systemctl status node-aleo-snarkos
 
 # Check pool services
-sudo systemctl status ckpool-btc
-sudo systemctl status ckpool-bch
-sudo systemctl status ckpool-dgb
-sudo systemctl status monero-stratum
-sudo systemctl status minotari-miner        # If tari_only mode
-sudo systemctl status minotari-merge-proxy  # If merge mode
+sudo systemctl status pool-btc-ckpool
+sudo systemctl status pool-bch-ckpool
+sudo systemctl status pool-dgb-ckpool
+sudo systemctl status pool-xmr-p2pool              # If monero_only mode
+sudo systemctl status pool-xtm-minotari-miner      # If tari_only mode
+sudo systemctl status pool-xmr-xtm-merge-proxy     # If merge mode
+```
+
+### Master Service
+
+A master `solo-pool` systemd service manages all node and pool services. It is enabled by default and will start all services on boot.
+
+```bash
+# Start all services via systemd
+sudo systemctl start solo-pool
+
+# Stop all services via systemd
+sudo systemctl stop solo-pool
+
+# Check master service status
+sudo systemctl status solo-pool
+
+# Disable auto-start on boot
+sudo systemctl disable solo-pool
+```
+
+### Convenience Scripts
+
+Convenience scripts are also available for manual control:
+
+```bash
+# Start/stop all services
+/opt/solo-pool/start-all.sh    # Start nodes first, then pools
+/opt/solo-pool/stop-all.sh     # Stop pools first, then nodes
+
+# Start/stop individual service groups
+/opt/solo-pool/start-nodes.sh  # Start all node services
+/opt/solo-pool/stop-nodes.sh   # Stop all node services
+/opt/solo-pool/start-pools.sh  # Start all pool services
+/opt/solo-pool/stop-pools.sh   # Stop all pool services
+
+# Check status
+/opt/solo-pool/status.sh       # Check all service status
+/opt/solo-pool/sync-status.sh  # Check blockchain sync progress
 ```
 
 ### Open Firewall Ports
@@ -353,31 +400,31 @@ Open additional ports only when needed.
 
 ```bash
 # Stop services before updating
-sudo systemctl stop ckpool-btc bitcoind
+sudo systemctl stop pool-btc-ckpool node-btc-bitcoind
 
 # Update and restart
 # (Follow specific update procedures for each node)
-sudo systemctl start bitcoind ckpool-btc
+sudo systemctl start node-btc-bitcoind pool-btc-ckpool
 ```
 
 ### View Logs
 
 ```bash
 # Node logs
-sudo journalctl -u bitcoind -f
-sudo journalctl -u monerod -f
+sudo journalctl -u node-btc-bitcoind -f
+sudo journalctl -u node-xmr-monerod -f
 
 # Pool logs
-tail -f /opt/pool/ckpool-btc/logs/ckpool.log
-tail -f /opt/pool/monero-stratum/logs/stratum.log
+tail -f /opt/solo-pool/pool/btc-ckpool/logs/ckpool.log
+sudo journalctl -u pool-xmr-p2pool -f
 ```
 
 ### Backup
 
 Important files to backup:
-- `/opt/solo-pool/config.sh` - Your configuration
-- `/opt/node/*/data/wallet*` - Any wallet files
-- `/opt/pool/*/` - Pool configurations and logs
+- `/opt/solo-pool/install-scripts/config.sh` - Your configuration
+- `/opt/solo-pool/node/*/data/wallet*` - Any wallet files
+- `/opt/solo-pool/pool/*/` - Pool configurations and logs
 
 ## Troubleshooting
 
@@ -392,7 +439,7 @@ Important files to backup:
 
 1. Verify node is fully synced
 2. Check stratum port is open: `sudo ufw status | grep 333`
-3. Check pool service is running: `sudo systemctl status ckpool-btc`
+3. Check pool service is running: `sudo systemctl status pool-btc-ckpool`
 4. Check pool logs for errors
 
 ### High Resource Usage

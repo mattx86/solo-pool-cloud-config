@@ -1,0 +1,17 @@
+[Unit]
+Description=Solo Mining Pool - All Services
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+ExecStart=/opt/solo-pool/start-all.sh
+ExecStop=/opt/solo-pool/stop-all.sh
+
+TimeoutStartSec=infinity
+TimeoutStopSec=600
+
+[Install]
+WantedBy=multi-user.target

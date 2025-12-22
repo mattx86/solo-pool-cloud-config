@@ -1,0 +1,34 @@
+ALEO Setup Notes
+================
+
+Your ALEO account was auto-generated during installation.
+
+Account Address: ${ALEO_ADDRESS}
+
+IMPORTANT: Your credentials are stored in:
+  ${ALEO_DIR}/account-credentials.txt
+
+The start-prover.sh script is already configured with your private key.
+
+To start the prover:
+  sudo systemctl start node-aleo-snarkos
+
+To use a DIFFERENT account, edit:
+  ${ALEO_DIR}/start-prover.sh
+  Set ALEO_PRIVATE_KEY to your preferred private key
+
+Resource Requirements:
+- CPU: 8+ cores recommended (proving is CPU-intensive)
+- RAM: 16GB+ recommended
+- GPU: Highly recommended for competitive proving
+
+The current configuration is set up for CPU proving only.
+For GPU proving, you'll need to install CUDA and rebuild snarkOS with GPU support.
+
+Network Ports:
+- P2P: 4130 (must be open for network connectivity)
+- REST API: 3030 (optional, for monitoring)
+
+Commands:
+- Check status: snarkos --help
+- View peers: curl http://localhost:3030/testnet/peers/count

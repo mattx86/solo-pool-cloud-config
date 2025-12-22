@@ -1,0 +1,14 @@
+#!/bin/bash
+# P2Pool Start Script
+# Decentralized Monero mining pool
+
+exec ${XMR_P2POOL_DIR}/bin/p2pool \
+    --host 127.0.0.1 \
+    --rpc-port 18081 \
+    --zmq-port 18083 \
+    --wallet ${XMR_WALLET_ADDRESS} \
+    --stratum 0.0.0.0:${XMR_STRATUM_PORT} \
+    --p2p 0.0.0.0:37889 \
+    --data-api ${XMR_P2POOL_DIR}/data \
+    --local-api \
+    --log-level 2

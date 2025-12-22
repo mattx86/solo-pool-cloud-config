@@ -1,0 +1,98 @@
+# Solo Pool WebUI Configuration
+# Copy this file to config.toml and edit as needed
+
+[server]
+host = "0.0.0.0"
+port = 8080
+
+# Stats refresh interval in seconds
+refresh_interval_secs = 10
+
+# HTTPS Configuration
+# Uses a self-signed certificate by default (10-year validity)
+[server.https]
+enabled = true
+port = 8443
+cert_path = "/opt/solo-pool/webui/certs/server.crt"
+key_path = "/opt/solo-pool/webui/certs/server.key"
+
+# Logging Configuration
+# Apache Combined Log Format for access.log, standard format for error.log
+[server.logging]
+log_dir = "/opt/solo-pool/webui/logs"
+access_log_enabled = true
+error_log_enabled = true
+
+# =============================================================================
+# CKPool-based pools (BTC, BCH, DGB)
+# Uses Unix socket API exclusively for real-time stats
+# Each pool instance must have its own socket directory configured via -s flag
+# =============================================================================
+
+# Bitcoin Pool (CKPool)
+[pools.btc]
+enabled = true
+name = "Bitcoin"
+algorithm = "SHA-256"
+# Unix socket directory - CKPool listens here for API commands
+# CKPool must be started with: ckpool -s /tmp/ckpool-btc ...
+# Socket path will be: {socket_dir}/stratifier
+socket_dir = "/tmp/ckpool-btc"
+stratum_port = 3333
+
+# Bitcoin Cash Pool (CKPool)
+[pools.bch]
+enabled = true
+name = "Bitcoin Cash"
+algorithm = "SHA-256"
+socket_dir = "/tmp/ckpool-bch"
+stratum_port = 3334
+
+# DigiByte Pool (CKPool)
+[pools.dgb]
+enabled = true
+name = "DigiByte"
+algorithm = "SHA-256"
+socket_dir = "/tmp/ckpool-dgb"
+stratum_port = 3335
+
+# =============================================================================
+# Monero/Tari Pools
+# Only ONE of these three should be enabled based on MONERO_TARI_MODE
+# =============================================================================
+
+# Monero Pool (P2Pool) - Only for monero_only mode
+[pools.xmr]
+enabled = false
+name = "Monero"
+algorithm = "RandomX"
+api_url = "http://127.0.0.1:3336"
+stratum_port = 3336
+
+# Tari Pool (minotari_miner) - Only for tari_only mode
+[pools.xtm]
+enabled = false
+name = "Tari"
+algorithm = "RandomX"
+api_url = "http://127.0.0.1:3337"
+stratum_port = 3337
+
+# XMR+XTM Merge Mining (minotari_merge_mining_proxy) - For merge mode
+[pools.xmr_xtm_merge]
+enabled = true
+name = "XMR+XTM Merge Mining"
+algorithm = "RandomX"
+api_url = "http://127.0.0.1:3338"
+stratum_port = 3338
+
+# =============================================================================
+# ALEO Pool
+# =============================================================================
+
+# ALEO Pool (aleo-pool-server)
+[pools.aleo]
+enabled = true
+name = "Aleo"
+algorithm = "AleoBFT"
+api_url = "http://127.0.0.1:3339"
+stratum_port = 3339
