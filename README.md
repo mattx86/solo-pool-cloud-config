@@ -24,7 +24,20 @@ This repository contains a cloud-config for deploying a Ubuntu 24.04 system capa
 | Monero (XMR) | monerod | P2Pool | RandomX |
 | Tari (XTM) | minotari_node | minotari_miner | RandomX |
 | Monero+Tari | monerod + minotari_node | minotari_merge_mining_proxy | RandomX |
-| ALEO | snarkOS | snarkOS (integrated) | AleoBFT/PoSW |
+| ALEO | snarkOS | aleo-pool-server | AleoBFT/PoSW |
+
+## Web Dashboard
+
+A built-in web dashboard provides real-time statistics for all enabled pools:
+
+- **Pool status** - Online/offline status for each pool
+- **Hashrate** - Current hashrate across all workers
+- **Workers** - Connected miners and their stats
+- **Blocks found** - Block discovery history
+
+Access the dashboard at:
+- HTTP: `http://YOUR_SERVER_IP:8080`
+- HTTPS: `https://YOUR_SERVER_IP:8443` (self-signed certificate)
 
 ## Resource Requirements
 
@@ -144,20 +157,28 @@ This repository contains a cloud-config for deploying a Ubuntu 24.04 system capa
 | **ALEO** | | | | |
 | snarkOS P2P | 4130 | TCP | Both | Blockchain network |
 | snarkOS REST | 3030 | TCP | Localhost | Internal only |
+| aleo-pool-server Stratum | 3339 | TCP | Inbound | Miner connections |
+| | | | | |
+| **Web Dashboard** | | | | |
+| WebUI HTTP | 8080 | TCP | Inbound | Dashboard access |
+| WebUI HTTPS | 8443 | TCP | Inbound | Secure dashboard access |
 
 ### Default Firewall Configuration
 
-By default, only SSH (port 22) is allowed. Use the following commands to open ports as needed:
+The firewall is automatically configured during installation to allow:
+
+- **SSH** - Port 22 (or custom `SSH_PORT`)
+- **Stratum ports** - Only for enabled pools (3333-3339)
+- **WebUI ports** - HTTP (8080) and/or HTTPS (8443) if enabled
+
+P2P ports are **not** opened by default to reduce attack surface. The pools work fine with outbound-only P2P connections.
 
 ```bash
-# Example: Open Bitcoin stratum port
-sudo ufw allow 3333/tcp comment 'CKPool BTC Stratum'
-
-# Example: Open Bitcoin P2P port
-sudo ufw allow 8333/tcp comment 'Bitcoin P2P'
-
-# View current rules
+# View current firewall rules
 sudo ufw status numbered
+
+# Example: Open Bitcoin P2P port (optional, for better connectivity)
+sudo ufw allow 8333/tcp comment 'Bitcoin P2P'
 ```
 
 ## Directory Structure
@@ -219,7 +240,19 @@ sudo ufw status numbered
     ├── xmr-xtm-minotari-merge-proxy/ # (merge mode)
     │   ├── config/
     │   └── logs/
-    └── aleo -> ../node/aleo         # Symlink (snarkOS is both node and prover)
+    └── aleo-pool-server/
+        ├── bin/
+        └── logs/
+├── webui/                           # Web dashboard
+│   ├── bin/
+│   │   └── solo-pool-webui          # Dashboard binary
+│   ├── certs/                       # TLS certificates
+│   │   ├── server.crt
+│   │   └── server.key
+│   ├── logs/
+│   │   ├── access.log               # Apache Combined Log Format
+│   │   └── error.log
+│   └── config.toml                  # Dashboard configuration
 ```
 
 ## Configuration
@@ -253,6 +286,13 @@ ALEO_WALLET_ADDRESS: "your-aleo-address-here"
 
 # Optional: Custom SSH port (default: 22)
 SSH_PORT: "22"
+
+# Web Dashboard
+ENABLE_WEBUI: "true"
+WEBUI_HTTP_ENABLED: "true"
+WEBUI_HTTP_PORT: "8080"
+WEBUI_HTTPS_ENABLED: "true"
+WEBUI_HTTPS_PORT: "8443"
 ```
 
 ## Deployment
@@ -307,6 +347,10 @@ sudo systemctl status pool-dgb-ckpool
 sudo systemctl status pool-xmr-p2pool              # If monero_only mode
 sudo systemctl status pool-xtm-minotari-miner      # If tari_only mode
 sudo systemctl status pool-xmr-xtm-merge-proxy     # If merge mode
+sudo systemctl status pool-aleo
+
+# Check web dashboard
+sudo systemctl status solo-pool-webui
 ```
 
 ### Master Service
@@ -347,25 +391,22 @@ Convenience scripts are also available for manual control:
 /opt/solo-pool/sync-status.sh  # Check blockchain sync progress
 ```
 
-### Open Firewall Ports
+### Firewall Ports
 
-Once nodes are synced and you're ready to accept miners:
+Stratum and WebUI ports are **automatically opened** during installation for enabled pools.
+
+To open P2P ports for better node connectivity (optional):
 
 ```bash
-# Open stratum ports for your enabled pools
-sudo ufw allow 3333/tcp  # BTC
-sudo ufw allow 3334/tcp  # BCH
-sudo ufw allow 3335/tcp  # DGB
-sudo ufw allow 3336/tcp  # XMR
-sudo ufw allow 3337/tcp  # XTM (solo)
-sudo ufw allow 3338/tcp  # XMR+XTM (merge)
+sudo ufw allow 8333/tcp   # BTC/BCH P2P
+sudo ufw allow 12024/tcp  # DGB P2P
+sudo ufw allow 18080/tcp  # XMR P2P
+sudo ufw allow 18189/tcp  # XTM P2P
+sudo ufw allow 4130/tcp   # ALEO P2P
+sudo ufw allow 37889/tcp  # P2Pool sidechain (if using monero_only mode)
 
-# Open P2P ports for better node connectivity
-sudo ufw allow 8333/tcp   # BTC/BCH
-sudo ufw allow 12024/tcp  # DGB
-sudo ufw allow 18080/tcp  # XMR
-sudo ufw allow 18189/tcp  # XTM
-sudo ufw allow 4130/tcp   # ALEO
+# View all open ports
+sudo ufw status
 ```
 
 ## Security
@@ -387,12 +428,14 @@ Some CIS controls are intentionally skipped as they would interfere with pool op
 
 ### Firewall
 
-UFW (Uncomplicated Firewall) is configured to:
-- Allow SSH (port 22 by default)
-- Deny all other incoming traffic
-- Allow all outgoing traffic
+UFW (Uncomplicated Firewall) is automatically configured to:
+- **Allow SSH** - Port 22 (or custom SSH_PORT)
+- **Allow stratum ports** - Only for enabled pools
+- **Allow WebUI** - HTTP/HTTPS ports if dashboard is enabled
+- **Deny all other incoming traffic**
+- **Allow all outgoing traffic**
 
-Open additional ports only when needed.
+P2P ports are intentionally not opened to reduce attack surface. Nodes work fine with outbound-only connections.
 
 ## Maintenance
 
@@ -417,6 +460,11 @@ sudo journalctl -u node-xmr-monerod -f
 # Pool logs
 tail -f /opt/solo-pool/pool/btc-ckpool/logs/ckpool.log
 sudo journalctl -u pool-xmr-p2pool -f
+
+# WebUI logs
+sudo journalctl -u solo-pool-webui -f
+tail -f /opt/solo-pool/webui/logs/access.log
+tail -f /opt/solo-pool/webui/logs/error.log
 ```
 
 ### Backup
@@ -425,6 +473,8 @@ Important files to backup:
 - `/opt/solo-pool/install-scripts/config.sh` - Your configuration
 - `/opt/solo-pool/node/*/data/wallet*` - Any wallet files
 - `/opt/solo-pool/pool/*/` - Pool configurations and logs
+- `/opt/solo-pool/webui/config.toml` - WebUI configuration
+- `/opt/solo-pool/webui/certs/` - TLS certificates (if using custom certs)
 
 ## Troubleshooting
 
@@ -447,6 +497,13 @@ Important files to backup:
 1. Check which process: `htop`
 2. ALEO proving is CPU-intensive by design
 3. Initial blockchain sync is resource-intensive
+
+### WebUI Not Accessible
+
+1. Check service is running: `sudo systemctl status solo-pool-webui`
+2. Check firewall: `sudo ufw status | grep 808`
+3. Check logs: `sudo journalctl -u solo-pool-webui -n 50`
+4. Verify ports in config: `cat /opt/solo-pool/webui/config.toml`
 
 ## License
 
