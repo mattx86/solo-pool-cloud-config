@@ -87,8 +87,8 @@ write_files:
       # ---------------------------------------------------------------------
       # Enable/disable WebUI entirely
       ENABLE_WEBUI="true"
-      # HTTP server settings
-      WEBUI_HTTP_ENABLED="true"
+      # HTTP server settings (disabled by default - use HTTPS)
+      WEBUI_HTTP_ENABLED="false"
       WEBUI_HTTP_PORT="8080"
       # HTTPS server settings (uses self-signed 10-year certificate)
       WEBUI_HTTPS_ENABLED="true"

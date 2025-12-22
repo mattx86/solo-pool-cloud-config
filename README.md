@@ -36,8 +36,8 @@ A built-in web dashboard provides real-time statistics for all enabled pools:
 - **Blocks found** - Block discovery history
 
 Access the dashboard at:
-- HTTP: `http://YOUR_SERVER_IP:8080`
-- HTTPS: `https://YOUR_SERVER_IP:8443` (self-signed certificate)
+- HTTPS: `https://YOUR_SERVER_IP:8443` (self-signed certificate, enabled by default)
+- HTTP: `http://YOUR_SERVER_IP:8080` (disabled by default)
 
 ## Resource Requirements
 
@@ -289,7 +289,7 @@ SSH_PORT: "22"
 
 # Web Dashboard
 ENABLE_WEBUI: "true"
-WEBUI_HTTP_ENABLED: "true"
+WEBUI_HTTP_ENABLED: "false"      # Disabled by default (use HTTPS)
 WEBUI_HTTP_PORT: "8080"
 WEBUI_HTTPS_ENABLED: "true"
 WEBUI_HTTPS_PORT: "8443"
