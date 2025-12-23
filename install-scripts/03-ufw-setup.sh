@@ -9,6 +9,12 @@ set -e
 # Source configuration
 source /opt/solo-pool/install-scripts/config.sh
 
+# Validate config was loaded successfully
+if [ "${CONFIG_LOADED:-}" != "true" ]; then
+    echo "ERROR: Failed to load configuration from config.sh" >&2
+    exit 1
+fi
+
 log "Configuring UFW firewall..."
 
 # Install UFW if not present
@@ -49,7 +55,7 @@ fi
 if [ "${ENABLE_MONERO_POOL}" = "true" ] || [ "${ENABLE_TARI_POOL}" = "true" ]; then
     if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
         log "  Allowing XMR stratum port ${XMR_STRATUM_PORT}..."
-        run_cmd ufw allow ${XMR_STRATUM_PORT}/tcp comment 'XMR Stratum (P2Pool)'
+        run_cmd ufw allow ${XMR_STRATUM_PORT}/tcp comment 'XMR Stratum (monero-pool)'
     elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
         log "  Allowing XTM stratum port ${XTM_STRATUM_PORT}..."
         run_cmd ufw allow ${XTM_STRATUM_PORT}/tcp comment 'XTM Stratum'

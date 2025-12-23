@@ -2,6 +2,12 @@
 # Start all enabled services (nodes first, then pools, then dashboard)
 source /opt/solo-pool/install-scripts/config.sh
 
+# Validate config was loaded
+if [ "${CONFIG_LOADED:-}" != "true" ]; then
+    echo "ERROR: Failed to load configuration" >&2
+    exit 1
+fi
+
 echo "Starting all services..."
 echo ""
 ${BASE_DIR}/start-nodes.sh

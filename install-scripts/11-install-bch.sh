@@ -9,6 +9,12 @@ set -e
 # Source configuration
 source /opt/solo-pool/install-scripts/config.sh
 
+# Validate config was loaded successfully
+if [ "${CONFIG_LOADED:-}" != "true" ]; then
+    echo "ERROR: Failed to load configuration from config.sh" >&2
+    exit 1
+fi
+
 # Check if BCH pool is enabled
 if [ "${ENABLE_BCH_POOL}" != "true" ]; then
     log "Bitcoin Cash pool is disabled, skipping..."
@@ -62,7 +68,7 @@ listen=${BCH_LISTEN}
 
 # Use different ports than BTC
 port=8335
-rpcport=8334
+rpcport=${BCH_RPC_PORT}
 
 # RPC Configuration
 rpcuser=bchrpc
@@ -71,8 +77,8 @@ rpcallowip=127.0.0.1
 rpcbind=127.0.0.1
 
 # ZMQ for block notifications (different ports than BTC)
-zmqpubhashblock=tcp://127.0.0.1:28334
-zmqpubhashtx=tcp://127.0.0.1:28335
+zmqpubhashblock=tcp://127.0.0.1:${BCH_ZMQ_BLOCK_PORT}
+zmqpubhashtx=tcp://127.0.0.1:${BCH_ZMQ_TX_PORT}
 
 # Performance
 dbcache=1024
@@ -136,17 +142,25 @@ log "  Creating CKPool configuration..."
 # Get RPC password from bitcoin.conf
 BCH_RPC_PASS=$(grep -i rpcpassword ${BCHN_DIR}/bitcoin.conf | cut -d'=' -f2)
 
+# Determine starting difficulty
+if [ "${ENABLE_CUSTOM_DIFFICULTY}" = "true" ]; then
+    BCH_STARTDIFF="${BCH_START_DIFFICULTY:-42}"
+else
+    BCH_STARTDIFF=42
+fi
+
 cat > ${BCH_CKPOOL_DIR}/ckpool.conf << EOF
 {
     "btcd" : [
         {
-            "url" : "127.0.0.1:8334",
+            "url" : "127.0.0.1:${BCH_RPC_PORT}",
             "auth" : "bchrpc",
             "pass" : "${BCH_RPC_PASS}",
             "notify" : true
         }
     ],
-    "btcaddress" : "${BCH_WALLET_ADDRESS}",
+    "_comment" : "btcaddress is ignored in BTCSOLO mode (-B flag); miners use their wallet address as username",
+    "btcaddress" : "ignored_in_btcsolo_mode",
     "btcsig" : "Solo Pool BCH",
     "blockpoll" : 100,
     "update_interval" : 30,
@@ -154,7 +168,7 @@ cat > ${BCH_CKPOOL_DIR}/ckpool.conf << EOF
         "0.0.0.0:${BCH_STRATUM_PORT}"
     ],
     "mindiff" : 1,
-    "startdiff" : 42,
+    "startdiff" : ${BCH_STARTDIFF},
     "maxdiff" : 0,
     "logdir" : "${BCH_CKPOOL_DIR}/logs"
 }

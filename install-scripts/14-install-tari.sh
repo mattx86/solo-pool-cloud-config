@@ -22,6 +22,12 @@ set -e
 # Source configuration
 source /opt/solo-pool/install-scripts/config.sh
 
+# Validate config was loaded successfully
+if [ "${CONFIG_LOADED:-}" != "true" ]; then
+    echo "ERROR: Failed to load configuration from config.sh" >&2
+    exit 1
+fi
+
 # Check if Tari pool is enabled
 if [ "${ENABLE_TARI_POOL}" != "true" ]; then
     log "Tari pool is disabled, skipping..."
@@ -59,7 +65,7 @@ log "  Extracting..."
 mkdir -p tari-extract
 tar -xzf tari.tar.gz -C tari-extract
 
-# Find and copy binaries
+# Find and copy binaries (node, wallet, miner, and merge proxy)
 log "  Installing binaries..."
 find tari-extract -type f -executable -name "minotari_*" -exec cp {} ${TARI_DIR}/bin/ \;
 
@@ -109,11 +115,11 @@ pruned_mode_cleanup_interval = 50
 
 # gRPC for wallet and mining
 grpc_enabled = true
-grpc_address = "127.0.0.1:18142"
+grpc_address = "127.0.0.1:${TARI_NODE_GRPC_PORT}"
 
 [wallet]
 grpc_enabled = true
-grpc_address = "127.0.0.1:18143"
+grpc_address = "127.0.0.1:${TARI_WALLET_GRPC_PORT}"
 password = "$(apg -a 1 -m 32 -M NCL -n 1)"
 EOF
 
@@ -124,7 +130,127 @@ chmod 600 ${TARI_DIR}/config/config.toml
 log "  Minotari node configured"
 
 # =============================================================================
-# 3. CONFIGURE BASED ON MODE
+# 3. CREATE POOL WALLET
+# =============================================================================
+log "3. Creating Tari pool wallet..."
+
+# Create wallet directory
+mkdir -p ${TARI_DIR}/wallet
+
+# Generate a secure wallet password
+XTM_WALLET_PASSWORD=$(apg -a 1 -m 32 -M NCL -n 1)
+
+# Save the password securely
+echo "${XTM_WALLET_PASSWORD}" > ${TARI_DIR}/wallet/pool-wallet.password
+chmod 600 ${TARI_DIR}/wallet/pool-wallet.password
+
+# Initialize wallet with minotari_console_wallet
+# The wallet will generate a new seed phrase on first run
+log "  Initializing pool wallet..."
+
+# Create wallet config for console wallet
+cat > ${TARI_DIR}/wallet/config.toml << EOF
+# Tari Pool Wallet Configuration
+
+[wallet]
+network = "mainnet"
+grpc_enabled = true
+grpc_address = "127.0.0.1:${TARI_WALLET_GRPC_PORT}"
+base_node_grpc_address = "127.0.0.1:${TARI_NODE_GRPC_PORT}"
+data_dir = "${TARI_DIR}/wallet/data"
+password = "${XTM_WALLET_PASSWORD}"
+EOF
+
+chmod 600 ${TARI_DIR}/wallet/config.toml
+
+# Create wallet initialization script
+# This will be run on first start to create the wallet
+cat > ${TARI_DIR}/wallet/init-wallet.sh << 'INITEOF'
+#!/bin/bash
+# Initialize Tari Pool Wallet
+# Run this once after node is synced to create the pool wallet
+
+TARI_DIR="${TARI_DIR}"
+WALLET_DIR="${TARI_DIR}/wallet"
+PASSWORD_FILE="${WALLET_DIR}/pool-wallet.password"
+
+if [ -f "${WALLET_DIR}/data/wallet.sqlite3" ]; then
+    echo "Wallet already exists"
+    exit 0
+fi
+
+echo "Creating new Tari pool wallet..."
+
+# Read password
+PASSWORD=$(cat "${PASSWORD_FILE}")
+
+# Initialize wallet (creates new wallet with random seed)
+${TARI_DIR}/bin/minotari_console_wallet \
+    --config "${WALLET_DIR}/config.toml" \
+    --password "${PASSWORD}" \
+    --non-interactive \
+    --command "get-balance" 2>/dev/null
+
+# Export seed words for backup
+echo "Exporting seed words for backup..."
+${TARI_DIR}/bin/minotari_console_wallet \
+    --config "${WALLET_DIR}/config.toml" \
+    --password "${PASSWORD}" \
+    --non-interactive \
+    --command "export-seed-words" > "${WALLET_DIR}/SEED_BACKUP.txt" 2>/dev/null
+
+chmod 600 "${WALLET_DIR}/SEED_BACKUP.txt"
+
+# Get wallet address
+echo "Getting wallet address..."
+${TARI_DIR}/bin/minotari_console_wallet \
+    --config "${WALLET_DIR}/config.toml" \
+    --password "${PASSWORD}" \
+    --non-interactive \
+    --command "get-address" | grep -E '^[a-f0-9]{64}' | head -1 > "${WALLET_DIR}/pool-wallet.address"
+
+if [ -s "${WALLET_DIR}/pool-wallet.address" ]; then
+    echo "Pool wallet created successfully!"
+    echo "Address: $(cat ${WALLET_DIR}/pool-wallet.address)"
+    echo ""
+    echo "*** IMPORTANT: Backup ${WALLET_DIR}/SEED_BACKUP.txt immediately! ***"
+else
+    echo "WARNING: Could not extract wallet address. Run this script again after node sync."
+fi
+INITEOF
+
+# Replace variables in init script
+sed -i "s|\${TARI_DIR}|${TARI_DIR}|g" ${TARI_DIR}/wallet/init-wallet.sh
+chmod +x ${TARI_DIR}/wallet/init-wallet.sh
+
+# Create wallet-rpc start script
+log "  Creating wallet start script..."
+cat > ${TARI_DIR}/start-wallet.sh << EOF
+#!/bin/bash
+# Tari Wallet Start Script
+# Runs minotari_console_wallet in daemon mode with gRPC enabled
+
+PASSWORD=\$(cat ${TARI_DIR}/wallet/pool-wallet.password)
+
+exec ${TARI_DIR}/bin/minotari_console_wallet \\
+    --config ${TARI_DIR}/wallet/config.toml \\
+    --password "\${PASSWORD}" \\
+    --daemon
+EOF
+
+chmod +x ${TARI_DIR}/start-wallet.sh
+
+# Set ownership
+chown -R ${POOL_USER}:${POOL_USER} ${TARI_DIR}/wallet
+chown ${POOL_USER}:${POOL_USER} ${TARI_DIR}/start-wallet.sh
+
+log_success "Pool wallet setup prepared"
+log "  Wallet config: ${TARI_DIR}/wallet/config.toml"
+log "  Init script: ${TARI_DIR}/wallet/init-wallet.sh"
+log "  NOTE: Run init-wallet.sh after node is synced to generate wallet"
+
+# =============================================================================
+# 4. CONFIGURE BASED ON MODE
 # =============================================================================
 
 if [ "${MONERO_TARI_MODE}" = "merge" ]; then
@@ -139,7 +265,7 @@ if [ "${MONERO_TARI_MODE}" = "merge" ]; then
         exit 1
     fi
 
-    log "3. Configuring Merge Mining Proxy..."
+    log "4. Configuring Merge Mining Proxy..."
 
     mkdir -p ${XMR_XTM_MERGE_DIR}/config
 
@@ -155,16 +281,18 @@ network = "mainnet"
 listener_address = "0.0.0.0:${XMR_XTM_MERGE_STRATUM_PORT}"
 
 # Monero node connection
-monerod_url = "http://127.0.0.1:18081"
+monerod_url = "http://127.0.0.1:${MONERO_RPC_PORT}"
 monerod_username = ""
 monerod_password = ""
 monerod_use_auth = false
 
 # Tari node connection (gRPC)
-grpc_base_node_address = "127.0.0.1:18142"
-grpc_console_wallet_address = "127.0.0.1:18143"
+grpc_base_node_address = "127.0.0.1:${TARI_NODE_GRPC_PORT}"
+grpc_console_wallet_address = "127.0.0.1:${TARI_WALLET_GRPC_PORT}"
 
 # Wallet for Tari coinbase
+# Use the pool wallet address from ${TARI_DIR}/wallet/pool-wallet.address
+# or configure XTM_WALLET_ADDRESS in config.sh
 wallet_payment_address = "${XTM_WALLET_ADDRESS}"
 
 # Mining configuration
@@ -189,7 +317,7 @@ elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
     # =============================================================================
     # TARI-ONLY MINING MODE
     # =============================================================================
-    log "3. Configuring Minotari Miner (Tari-only)..."
+    log "4. Configuring Minotari Miner (Tari-only)..."
 
     mkdir -p ${XTM_MINER_DIR}/config
 
@@ -202,10 +330,12 @@ elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
 network = "mainnet"
 
 # Base node connection
-base_node_grpc_address = "127.0.0.1:18142"
+base_node_grpc_address = "127.0.0.1:${TARI_NODE_GRPC_PORT}"
 
 # Wallet for receiving rewards
-wallet_grpc_address = "127.0.0.1:18143"
+# Use the pool wallet address from ${TARI_DIR}/wallet/pool-wallet.address
+# or configure XTM_WALLET_ADDRESS in config.sh
+wallet_grpc_address = "127.0.0.1:${TARI_WALLET_GRPC_PORT}"
 wallet_payment_address = "${XTM_WALLET_ADDRESS}"
 
 # Mining configuration
@@ -233,8 +363,17 @@ EOF
 fi
 
 # =============================================================================
-# 4. PAYMENT ADDRESS INFO
+# 5. WALLET SETUP INFO
 # =============================================================================
-log "4. Payment address configured..."
-log "  Rewards will be sent to: ${XTM_WALLET_ADDRESS}"
-log "  (Use your Tari Universe or other external wallet address)"
+log "5. Wallet setup info..."
+log "  Pool wallet location: ${TARI_DIR}/wallet/"
+log "  Current payment address: ${XTM_WALLET_ADDRESS}"
+log ""
+log "  To use the local pool wallet for PPLNS distribution:"
+log "    1. Start node: sudo systemctl start node-xtm-minotari"
+log "    2. Wait for sync"
+log "    3. Initialize wallet: ${TARI_DIR}/wallet/init-wallet.sh"
+log "    4. Update config with address from: ${TARI_DIR}/wallet/pool-wallet.address"
+log "    5. Start wallet: sudo systemctl start wallet-xtm"
+log ""
+log "  *** BACKUP ${TARI_DIR}/wallet/SEED_BACKUP.txt after initialization! ***"

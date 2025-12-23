@@ -65,7 +65,7 @@ impl TariMergeClient {
                 }
             }
             Err(e) => {
-                tracing::debug!("Failed to connect to Tari merge proxy: {}", e);
+                tracing::warn!("Failed to connect to Tari merge proxy at {}: {}", stats_url, e);
                 stats.online = false;
             }
         }
@@ -78,16 +78,25 @@ impl TariMergeClient {
                     for miner in miners {
                         let (hr, unit) = format_hashrate(miner.hashrate);
 
+                        let worker_name = if miner.worker_id.is_empty() {
+                            "Unknown".to_string()
+                        } else {
+                            miner.worker_id
+                        };
+                        let wallet_address = if worker_name.contains('.') {
+                            worker_name.split('.').next().unwrap_or("").to_string()
+                        } else {
+                            String::new()
+                        };
+
                         let worker = WorkerStats {
-                            name: if miner.worker_id.is_empty() {
-                                "Unknown".to_string()
-                            } else {
-                                miner.worker_id
-                            },
+                            name: worker_name,
+                            wallet_address,
                             hashrate: hr,
                             hashrate_unit: unit,
                             shares_accepted: miner.shares,
                             shares_rejected: 0,
+                            blocks_found: 0,
                             best_share: 0.0,
                             last_share_time: if miner.last_share > 0 {
                                 DateTime::from_timestamp(miner.last_share, 0)
@@ -146,10 +155,12 @@ impl TariMinerClient {
                     // Create a single worker entry for the local miner
                     let worker = WorkerStats {
                         name: "Local Miner".to_string(),
+                        wallet_address: String::new(),
                         hashrate: stats.total_hashrate,
                         hashrate_unit: stats.hashrate_unit.clone(),
                         shares_accepted: stats.blocks_found,
                         shares_rejected: 0,
+                        blocks_found: stats.blocks_found,
                         best_share: 0.0,
                         last_share_time: None,
                         connected_since: None,
@@ -161,7 +172,8 @@ impl TariMinerClient {
                     stats.online = false;
                 }
             }
-            Err(_) => {
+            Err(e) => {
+                tracing::warn!("Failed to connect to Tari miner at {}: {}", stats_url, e);
                 stats.online = false;
             }
         }

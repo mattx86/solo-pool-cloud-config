@@ -120,12 +120,15 @@ impl CkPoolClient {
             if let Ok(workers) = serde_json::from_str::<Vec<CkPoolUserEntry>>(&response_str) {
                 for w in workers {
                     let (hr, unit) = format_hashrate(w.hashrate5m);
+                    let worker_name = if w.worker.is_empty() { w.user.clone() } else { format!("{}.{}", w.user, w.worker) };
                     let worker = WorkerStats {
-                        name: if w.worker.is_empty() { w.user.clone() } else { format!("{}.{}", w.user, w.worker) },
+                        name: worker_name.clone(),
+                        wallet_address: w.user.clone(), // CKPool uses wallet.worker format
                         hashrate: hr,
                         hashrate_unit: unit,
                         shares_accepted: w.shares,
                         shares_rejected: 0,
+                        blocks_found: 0,
                         best_share: w.bestshare.max(w.bestever),
                         last_share_time: if w.lastshare > 0 {
                             DateTime::from_timestamp(w.lastshare, 0)
@@ -144,12 +147,15 @@ impl CkPoolClient {
             for line in response_str.lines() {
                 if let Ok(w) = serde_json::from_str::<CkPoolUserEntry>(line) {
                     let (hr, unit) = format_hashrate(w.hashrate5m);
+                    let worker_name = if w.worker.is_empty() { w.user.clone() } else { format!("{}.{}", w.user, w.worker) };
                     let worker = WorkerStats {
-                        name: if w.worker.is_empty() { w.user.clone() } else { format!("{}.{}", w.user, w.worker) },
+                        name: worker_name.clone(),
+                        wallet_address: w.user.clone(), // CKPool uses wallet.worker format
                         hashrate: hr,
                         hashrate_unit: unit,
                         shares_accepted: w.shares,
                         shares_rejected: 0,
+                        blocks_found: 0,
                         best_share: w.bestshare.max(w.bestever),
                         last_share_time: if w.lastshare > 0 {
                             DateTime::from_timestamp(w.lastshare, 0)

@@ -8,7 +8,7 @@
 # - Individual worker statistics
 # - Connection status for each pool
 #
-# Connects to: CKPool (BTC/BCH/DGB), P2Pool (XMR), Tari, ALEO Pool Server
+# Connects to: CKPool (BTC/BCH/DGB), monero-pool (XMR), Tari, ALEO Pool Server
 # =============================================================================
 
 set -e
@@ -16,6 +16,12 @@ set -e
 # Source configuration
 INSTALL_DIR="${INSTALL_DIR:-/opt/solo-pool/install-scripts}"
 source ${INSTALL_DIR}/config.sh
+
+# Validate config was loaded successfully
+if [ "${CONFIG_LOADED:-}" != "true" ]; then
+    echo "ERROR: Failed to load configuration from config.sh" >&2
+    exit 1
+fi
 
 # Check if WebUI is enabled
 if [ "${ENABLE_WEBUI}" != "true" ]; then
@@ -114,12 +120,13 @@ download_file "${WEBUI_BASE_URL}/src/main.rs" "${WEBUI_DIR}/src/main.rs"
 download_file "${WEBUI_BASE_URL}/src/config.rs" "${WEBUI_DIR}/src/config.rs"
 download_file "${WEBUI_BASE_URL}/src/models.rs" "${WEBUI_DIR}/src/models.rs"
 download_file "${WEBUI_BASE_URL}/src/access_log.rs" "${WEBUI_DIR}/src/access_log.rs"
+download_file "${WEBUI_BASE_URL}/src/db.rs" "${WEBUI_DIR}/src/db.rs"
 
 # API modules
 download_file "${WEBUI_BASE_URL}/src/api/mod.rs" "${WEBUI_DIR}/src/api/mod.rs"
 download_file "${WEBUI_BASE_URL}/src/api/ckpool.rs" "${WEBUI_DIR}/src/api/ckpool.rs"
 download_file "${WEBUI_BASE_URL}/src/api/aleo.rs" "${WEBUI_DIR}/src/api/aleo.rs"
-download_file "${WEBUI_BASE_URL}/src/api/p2pool.rs" "${WEBUI_DIR}/src/api/p2pool.rs"
+download_file "${WEBUI_BASE_URL}/src/api/monero_pool.rs" "${WEBUI_DIR}/src/api/monero_pool.rs"
 download_file "${WEBUI_BASE_URL}/src/api/tari.rs" "${WEBUI_DIR}/src/api/tari.rs"
 
 # Static files (embedded into binary at compile time)
@@ -192,10 +199,11 @@ log "  Binary size: ${BINARY_SIZE}"
 # =============================================================================
 log "5. Installing WebUI..."
 
-# Create directories (bin, logs, certs - static already exists in source)
+# Create directories (bin, logs, certs, db - static already exists in source)
 mkdir -p ${WEBUI_DIR}/bin
 mkdir -p ${WEBUI_DIR}/logs
 mkdir -p ${WEBUI_DIR}/certs
+mkdir -p ${WEBUI_DIR}/db
 
 # Move binary to bin/
 cp target/release/solo-pool-webui ${WEBUI_DIR}/bin/
@@ -283,7 +291,8 @@ cat > ${WEBUI_DIR}/config.toml << EOF
 [server]
 host = "0.0.0.0"
 port = ${WEBUI_HTTP_PORT}
-refresh_interval_secs = 10
+refresh_interval_secs = ${WEBUI_REFRESH_INTERVAL:-15}
+db_dir = "${WEBUI_DIR}/db"
 
 [server.https]
 enabled = ${WEBUI_HTTPS_ENABLED}
@@ -315,6 +324,8 @@ name = "Bitcoin"
 algorithm = "SHA-256"
 socket_dir = "${BTC_CKPOOL_SOCKET_DIR:-/tmp/ckpool-btc}"
 stratum_port = ${BTC_STRATUM_PORT:-3333}
+username_format = "YOUR_BTC_ADDRESS.worker_name"
+password = "x"
 EOF
     log "  Bitcoin pool enabled"
 fi
@@ -329,6 +340,8 @@ name = "Bitcoin Cash"
 algorithm = "SHA-256"
 socket_dir = "${BCH_CKPOOL_SOCKET_DIR:-/tmp/ckpool-bch}"
 stratum_port = ${BCH_STRATUM_PORT:-3334}
+username_format = "YOUR_BCH_ADDRESS.worker_name"
+password = "x"
 EOF
     log "  Bitcoin Cash pool enabled"
 fi
@@ -343,6 +356,8 @@ name = "DigiByte"
 algorithm = "SHA-256"
 socket_dir = "${DGB_CKPOOL_SOCKET_DIR:-/tmp/ckpool-dgb}"
 stratum_port = ${DGB_STRATUM_PORT:-3335}
+username_format = "YOUR_DGB_ADDRESS.worker_name"
+password = "x"
 EOF
     log "  DigiByte pool enabled"
 fi
@@ -350,18 +365,39 @@ fi
 # Add Monero/Tari pools based on mode
 if [ "${ENABLE_MONERO_POOL}" = "true" ] || [ "${ENABLE_TARI_POOL}" = "true" ]; then
     if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
+        # Read XMR pool wallet address if available
+        XMR_POOL_ADDR=""
+        if [ -f "${MONERO_DIR}/wallet/pool-wallet.address" ]; then
+            XMR_POOL_ADDR=$(cat "${MONERO_DIR}/wallet/pool-wallet.address" 2>/dev/null | tr -d '\n' || echo "")
+        fi
+
         cat >> ${WEBUI_DIR}/config.toml << EOF
 
 [pools.xmr]
 enabled = true
 name = "Monero"
 algorithm = "RandomX"
-api_url = "http://127.0.0.1:${XMR_STRATUM_PORT:-3336}"
+api_url = "http://127.0.0.1:${MONERO_POOL_API_PORT:-4243}"
 stratum_port = ${XMR_STRATUM_PORT:-3336}
 EOF
-        log "  Monero P2Pool enabled"
+        # Add pool wallet address if available
+        if [ -n "${XMR_POOL_ADDR}" ]; then
+            echo "pool_wallet_address = \"${XMR_POOL_ADDR}\"" >> ${WEBUI_DIR}/config.toml
+        fi
+        cat >> ${WEBUI_DIR}/config.toml << EOF
+username_format = "YOUR_XMR_ADDRESS.worker_name"
+password = "x"
+EOF
+        log "  Monero monero-pool enabled"
+        [ -n "${XMR_POOL_ADDR}" ] && log "  XMR pool wallet: ${XMR_POOL_ADDR:0:20}..."
 
     elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
+        # Read XTM pool wallet address if available
+        XTM_POOL_ADDR=""
+        if [ -f "${TARI_DIR}/wallet/pool-wallet.address" ]; then
+            XTM_POOL_ADDR=$(cat "${TARI_DIR}/wallet/pool-wallet.address" 2>/dev/null | tr -d '\n' || echo "")
+        fi
+
         cat >> ${WEBUI_DIR}/config.toml << EOF
 
 [pools.xtm]
@@ -371,9 +407,28 @@ algorithm = "RandomX"
 api_url = "http://127.0.0.1:${XTM_STRATUM_PORT:-3337}"
 stratum_port = ${XTM_STRATUM_PORT:-3337}
 EOF
+        # Add pool wallet address if available
+        if [ -n "${XTM_POOL_ADDR}" ]; then
+            echo "pool_wallet_address = \"${XTM_POOL_ADDR}\"" >> ${WEBUI_DIR}/config.toml
+        fi
+        cat >> ${WEBUI_DIR}/config.toml << EOF
+username_format = "YOUR_XTM_ADDRESS.worker_name"
+password = "x"
+EOF
         log "  Tari solo mining enabled"
+        [ -n "${XTM_POOL_ADDR}" ] && log "  XTM pool wallet: ${XTM_POOL_ADDR:0:20}..."
 
     elif [ "${MONERO_TARI_MODE}" = "merge" ]; then
+        # Read both XMR and XTM pool wallet addresses for merge mining
+        XMR_POOL_ADDR=""
+        XTM_POOL_ADDR=""
+        if [ -f "${MONERO_DIR}/wallet/pool-wallet.address" ]; then
+            XMR_POOL_ADDR=$(cat "${MONERO_DIR}/wallet/pool-wallet.address" 2>/dev/null | tr -d '\n' || echo "")
+        fi
+        if [ -f "${TARI_DIR}/wallet/pool-wallet.address" ]; then
+            XTM_POOL_ADDR=$(cat "${TARI_DIR}/wallet/pool-wallet.address" 2>/dev/null | tr -d '\n' || echo "")
+        fi
+
         cat >> ${WEBUI_DIR}/config.toml << EOF
 
 [pools.xmr_xtm_merge]
@@ -383,12 +438,31 @@ algorithm = "RandomX"
 api_url = "http://127.0.0.1:${XMR_XTM_MERGE_STRATUM_PORT:-3338}"
 stratum_port = ${XMR_XTM_MERGE_STRATUM_PORT:-3338}
 EOF
+        # Add pool wallet addresses if available
+        if [ -n "${XMR_POOL_ADDR}" ]; then
+            echo "xmr_pool_wallet_address = \"${XMR_POOL_ADDR}\"" >> ${WEBUI_DIR}/config.toml
+        fi
+        if [ -n "${XTM_POOL_ADDR}" ]; then
+            echo "xtm_pool_wallet_address = \"${XTM_POOL_ADDR}\"" >> ${WEBUI_DIR}/config.toml
+        fi
+        cat >> ${WEBUI_DIR}/config.toml << EOF
+username_format = "YOUR_XMR_ADDRESS.worker_name"
+password = "x"
+EOF
         log "  XMR+XTM merge mining enabled"
+        [ -n "${XMR_POOL_ADDR}" ] && log "  XMR pool wallet: ${XMR_POOL_ADDR:0:20}..."
+        [ -n "${XTM_POOL_ADDR}" ] && log "  XTM pool wallet: ${XTM_POOL_ADDR:0:20}..."
     fi
 fi
 
 # Add ALEO pool if enabled
 if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
+    # Read ALEO pool wallet address if available
+    ALEO_POOL_ADDR=""
+    if [ -f "${ALEO_DIR}/wallet/pool-wallet.address" ]; then
+        ALEO_POOL_ADDR=$(cat "${ALEO_DIR}/wallet/pool-wallet.address" 2>/dev/null | tr -d '\n' || echo "")
+    fi
+
     cat >> ${WEBUI_DIR}/config.toml << EOF
 
 [pools.aleo]
@@ -398,7 +472,16 @@ algorithm = "AleoBFT"
 api_url = "http://127.0.0.1:${ALEO_STRATUM_PORT:-3339}"
 stratum_port = ${ALEO_STRATUM_PORT:-3339}
 EOF
+    # Add pool wallet address if available
+    if [ -n "${ALEO_POOL_ADDR}" ]; then
+        echo "pool_wallet_address = \"${ALEO_POOL_ADDR}\"" >> ${WEBUI_DIR}/config.toml
+    fi
+    cat >> ${WEBUI_DIR}/config.toml << EOF
+username_format = "YOUR_ALEO_ADDRESS.worker_name"
+password = "x"
+EOF
     log "  ALEO pool enabled"
+    [ -n "${ALEO_POOL_ADDR}" ] && log "  ALEO pool wallet: ${ALEO_POOL_ADDR:0:20}..."
 fi
 
 log "  Configuration generated"
@@ -450,6 +533,8 @@ chmod 755 ${WEBUI_DIR}/bin/solo-pool-webui
 chmod 644 ${WEBUI_DIR}/config.toml
 # Ensure logs directory is writable
 chmod 755 ${WEBUI_DIR}/logs
+# Ensure db directory is writable (SQLite database)
+chmod 755 ${WEBUI_DIR}/db
 # Ensure certs directory and files have proper permissions
 chmod 755 ${WEBUI_DIR}/certs
 
@@ -518,10 +603,11 @@ fi
 cat >> ${WEBUI_DIR}/SETUP_NOTES.txt << EOF
 
 DIRECTORIES:
-  Runtime: ${WEBUI_DIR}
-  Binary:  ${WEBUI_DIR}/bin/solo-pool-webui (static files embedded)
-  Config:  ${WEBUI_DIR}/config.toml
-  Logs:    ${WEBUI_DIR}/logs/
+  Runtime:  ${WEBUI_DIR}
+  Binary:   ${WEBUI_DIR}/bin/solo-pool-webui (static files embedded)
+  Config:   ${WEBUI_DIR}/config.toml
+  Database: ${WEBUI_DIR}/db/stats.db (worker statistics)
+  Logs:     ${WEBUI_DIR}/logs/
 
 SYSTEMD SERVICE:
   Start:   sudo systemctl start solo-pool-webui
@@ -534,15 +620,16 @@ CONFIGURATION:
   Restart the service after changes.
 
 API ENDPOINTS:
-  GET /api/stats       - All pool statistics
-  GET /api/stats/btc   - Bitcoin pool stats
-  GET /api/stats/bch   - Bitcoin Cash pool stats
-  GET /api/stats/dgb   - DigiByte pool stats
-  GET /api/stats/xmr   - Monero P2Pool stats
-  GET /api/stats/xtm   - Tari solo mining stats
-  GET /api/stats/merge - XMR+XTM merge mining stats
-  GET /api/stats/aleo  - ALEO pool stats
-  GET /api/health      - Health check
+  GET    /api/stats                   - All pool statistics
+  GET    /api/stats/btc               - Bitcoin pool stats
+  GET    /api/stats/bch               - Bitcoin Cash pool stats
+  GET    /api/stats/dgb               - DigiByte pool stats
+  GET    /api/stats/xmr               - Monero pool stats
+  GET    /api/stats/xtm               - Tari solo mining stats
+  GET    /api/stats/merge             - XMR+XTM merge mining stats
+  GET    /api/stats/aleo              - ALEO pool stats
+  DELETE /api/workers/:pool/:worker   - Delete worker from database
+  GET    /api/health                  - Health check
 
 LOGS:
   Access log: ${WEBUI_DIR}/logs/access.log (Apache Combined Log Format)

@@ -9,6 +9,12 @@ set -e
 # Source configuration
 source /opt/solo-pool/install-scripts/config.sh
 
+# Validate config was loaded successfully
+if [ "${CONFIG_LOADED:-}" != "true" ]; then
+    echo "ERROR: Failed to load configuration from config.sh" >&2
+    exit 1
+fi
+
 # Check if DigiByte pool is enabled
 if [ "${ENABLE_DGB_POOL}" != "true" ]; then
     log "DigiByte pool is disabled, skipping..."
@@ -65,11 +71,11 @@ rpcuser=digibyterpc
 rpcpassword=$(apg -a 1 -m 64 -M NCL -n 1)
 rpcallowip=127.0.0.1
 rpcbind=127.0.0.1
-rpcport=14022
+rpcport=${DGB_RPC_PORT}
 
 # ZMQ for block notifications
-zmqpubhashblock=tcp://127.0.0.1:28336
-zmqpubhashtx=tcp://127.0.0.1:28337
+zmqpubhashblock=tcp://127.0.0.1:${DGB_ZMQ_BLOCK_PORT}
+zmqpubhashtx=tcp://127.0.0.1:${DGB_ZMQ_TX_PORT}
 
 # Performance
 dbcache=512
@@ -137,17 +143,25 @@ log "  Creating CKPool configuration..."
 # Get RPC password from digibyte.conf
 DGB_RPC_PASS=$(grep -i rpcpassword ${DIGIBYTE_DIR}/digibyte.conf | cut -d'=' -f2)
 
+# Determine starting difficulty
+if [ "${ENABLE_CUSTOM_DIFFICULTY}" = "true" ]; then
+    DGB_STARTDIFF="${DGB_START_DIFFICULTY:-16}"
+else
+    DGB_STARTDIFF=16
+fi
+
 cat > ${DGB_CKPOOL_DIR}/ckpool.conf << EOF
 {
     "btcd" : [
         {
-            "url" : "127.0.0.1:14022",
+            "url" : "127.0.0.1:${DGB_RPC_PORT}",
             "auth" : "digibyterpc",
             "pass" : "${DGB_RPC_PASS}",
             "notify" : true
         }
     ],
-    "btcaddress" : "${DGB_WALLET_ADDRESS}",
+    "_comment" : "btcaddress is ignored in BTCSOLO mode (-B flag); miners use their wallet address as username",
+    "btcaddress" : "ignored_in_btcsolo_mode",
     "btcsig" : "Solo Pool DGB",
     "blockpoll" : 100,
     "update_interval" : 30,
@@ -155,7 +169,7 @@ cat > ${DGB_CKPOOL_DIR}/ckpool.conf << EOF
         "0.0.0.0:${DGB_STRATUM_PORT}"
     ],
     "mindiff" : 1,
-    "startdiff" : 16,
+    "startdiff" : ${DGB_STARTDIFF},
     "maxdiff" : 0,
     "logdir" : "${DGB_CKPOOL_DIR}/logs"
 }

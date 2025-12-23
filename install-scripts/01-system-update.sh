@@ -9,6 +9,12 @@ set -e
 # Source configuration
 source /opt/solo-pool/install-scripts/config.sh
 
+# Validate config was loaded successfully
+if [ "${CONFIG_LOADED:-}" != "true" ]; then
+    echo "ERROR: Failed to load configuration from config.sh" >&2
+    exit 1
+fi
+
 log "Starting system update..."
 
 # Wait for apt locks to be released (cloud-init may be using apt)

@@ -173,12 +173,16 @@ header h1 {
 .pool-stats {
     padding: 20px;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 15px;
 }
 
 .stat-item {
     text-align: center;
+}
+
+.stat-item.stat-primary {
+    grid-column: span 2;
 }
 
 .stat-label {
@@ -197,6 +201,11 @@ header h1 {
 
 .stat-value.hashrate {
     color: #667eea;
+}
+
+.stat-value.fee-free {
+    color: var(--success);
+    font-weight: 700;
 }
 
 .stat-unit {
@@ -247,7 +256,7 @@ header h1 {
 
 .worker-item {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto auto auto;
     gap: 15px;
     align-items: center;
     padding: 12px;
@@ -296,6 +305,252 @@ header h1 {
     font-size: 0.8rem;
     color: var(--text-secondary);
     text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.worker-shares .shares-accepted {
+    color: var(--success);
+}
+
+.worker-shares .shares-rejected {
+    color: var(--error);
+    font-size: 0.75rem;
+}
+
+.worker-blocks {
+    font-size: 0.8rem;
+    color: var(--accent-btc);
+    text-align: right;
+    font-weight: 500;
+}
+
+/* Worker with delete button - 5 columns */
+.worker-item.worker-offline {
+    grid-template-columns: 1fr auto auto auto auto;
+}
+
+/* Worker delete button */
+.worker-delete-btn {
+    background: transparent;
+    border: 1px solid var(--error);
+    color: var(--error);
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    opacity: 0.7;
+}
+
+.worker-delete-btn:hover {
+    background: var(--error);
+    color: white;
+    opacity: 1;
+}
+
+/* Hidden workers count in header */
+.hidden-count {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+/* Hidden workers info at bottom of list */
+.hidden-workers-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: rgba(139, 146, 165, 0.1);
+    border-radius: 8px;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.restore-workers-btn {
+    background: transparent;
+    border: 1px solid var(--text-muted);
+    color: var(--text-secondary);
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.restore-workers-btn:hover {
+    border-color: var(--success);
+    color: var(--success);
+}
+
+/* Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-dialog {
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    max-width: 400px;
+    width: 90%;
+    overflow: hidden;
+    animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-body p {
+    margin-bottom: 12px;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.modal-body p:last-child {
+    margin-bottom: 0;
+}
+
+.modal-note {
+    font-size: 0.8rem !important;
+    color: var(--text-muted) !important;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 20px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-cancel {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+}
+
+.btn-confirm {
+    background: var(--error);
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-confirm:hover {
+    background: #d32f2f;
+}
+
+/* Pool Wallet Info */
+.pool-wallet-info {
+    padding: 15px 20px;
+    background: rgba(102, 126, 234, 0.05);
+    border-top: 1px solid var(--border-color);
+}
+
+.pool-wallet-info h4 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.wallet-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 0.85rem;
+}
+
+.wallet-label {
+    color: var(--text-muted);
+    font-weight: 500;
+    flex-shrink: 0;
+    min-width: 45px;
+}
+
+.wallet-address {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: #667eea;
+    text-align: right;
+    word-break: break-all;
+    margin-left: 10px;
+}
+
+.wallet-address.copyable {
+    cursor: pointer;
+    padding: 4px 8px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.wallet-address.copyable:hover {
+    background: rgba(102, 126, 234, 0.2);
+}
+
+.wallet-address.na {
+    color: var(--text-muted);
+    font-style: italic;
 }
 
 /* Connection Info */
@@ -303,6 +558,75 @@ header h1 {
     padding: 15px 20px;
     background: var(--bg-secondary);
     border-top: 1px solid var(--border-color);
+}
+
+.connection-info h4 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.connection-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 0.85rem;
+}
+
+.connection-label {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.connection-value {
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    text-align: right;
+    word-break: break-all;
+    margin-left: 10px;
+}
+
+.connection-value.copyable {
+    cursor: pointer;
+    padding: 4px 8px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.connection-value.copyable:hover {
+    background: rgba(102, 126, 234, 0.2);
+}
+
+.copy-tooltip {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--success);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    z-index: 1000;
+    animation: fadeInOut 1.5s ease;
+}
+
+.copy-tooltip.error {
+    background: var(--error);
+    animation: fadeInOut 3s ease;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+    20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
 }
 
 .stratum-url {
@@ -403,8 +727,28 @@ footer {
         gap: 8px;
     }
 
+    .worker-item.worker-offline {
+        grid-template-columns: 1fr auto;
+    }
+
     .worker-hashrate,
-    .worker-shares {
+    .worker-shares,
+    .worker-blocks {
         text-align: left;
+    }
+
+    .worker-shares {
+        flex-direction: row;
+        gap: 10px;
+    }
+
+    .worker-delete-btn {
+        grid-row: 1 / 5;
+        grid-column: 2;
+        align-self: center;
+    }
+
+    .modal-dialog {
+        width: 95%;
     }
 }

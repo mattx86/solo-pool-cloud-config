@@ -14,6 +14,12 @@ set -e
 # Source configuration
 source /opt/solo-pool/install-scripts/config.sh
 
+# Validate config was loaded successfully
+if [ "${CONFIG_LOADED:-}" != "true" ]; then
+    echo "ERROR: Failed to load configuration from config.sh" >&2
+    exit 1
+fi
+
 log "Configuring systemd services..."
 
 # =============================================================================
@@ -64,9 +70,10 @@ User=${POOL_USER}
 Group=${POOL_USER}
 
 WorkingDirectory=${BTC_CKPOOL_DIR}
+# -B enables BTCSOLO mode: miners use their wallet address as username, pool pays directly to that address
 # -s sets socket directory for API access (used by webui for live stats)
 ExecStartPre=/bin/mkdir -p ${BTC_CKPOOL_SOCKET_DIR}
-ExecStart=${BTC_CKPOOL_DIR}/bin/ckpool -c ${BTC_CKPOOL_DIR}/ckpool.conf -l ${BTC_CKPOOL_DIR}/logs -s ${BTC_CKPOOL_SOCKET_DIR}
+ExecStart=${BTC_CKPOOL_DIR}/bin/ckpool -B -c ${BTC_CKPOOL_DIR}/ckpool.conf -l ${BTC_CKPOOL_DIR}/logs -s ${BTC_CKPOOL_SOCKET_DIR}
 
 Restart=on-failure
 RestartSec=10
@@ -125,9 +132,10 @@ User=${POOL_USER}
 Group=${POOL_USER}
 
 WorkingDirectory=${BCH_CKPOOL_DIR}
+# -B enables BTCSOLO mode: miners use their wallet address as username, pool pays directly to that address
 # -s sets socket directory for API access (used by webui for live stats)
 ExecStartPre=/bin/mkdir -p ${BCH_CKPOOL_SOCKET_DIR}
-ExecStart=${BCH_CKPOOL_DIR}/bin/ckpool -c ${BCH_CKPOOL_DIR}/ckpool.conf -l ${BCH_CKPOOL_DIR}/logs -s ${BCH_CKPOOL_SOCKET_DIR}
+ExecStart=${BCH_CKPOOL_DIR}/bin/ckpool -B -c ${BCH_CKPOOL_DIR}/ckpool.conf -l ${BCH_CKPOOL_DIR}/logs -s ${BCH_CKPOOL_SOCKET_DIR}
 
 Restart=on-failure
 RestartSec=10
@@ -186,9 +194,10 @@ User=${POOL_USER}
 Group=${POOL_USER}
 
 WorkingDirectory=${DGB_CKPOOL_DIR}
+# -B enables BTCSOLO mode: miners use their wallet address as username, pool pays directly to that address
 # -s sets socket directory for API access (used by webui for live stats)
 ExecStartPre=/bin/mkdir -p ${DGB_CKPOOL_SOCKET_DIR}
-ExecStart=${DGB_CKPOOL_DIR}/bin/ckpool -c ${DGB_CKPOOL_DIR}/ckpool.conf -l ${DGB_CKPOOL_DIR}/logs -s ${DGB_CKPOOL_SOCKET_DIR}
+ExecStart=${DGB_CKPOOL_DIR}/bin/ckpool -B -c ${DGB_CKPOOL_DIR}/ckpool.conf -l ${DGB_CKPOOL_DIR}/logs -s ${DGB_CKPOOL_SOCKET_DIR}
 
 Restart=on-failure
 RestartSec=10
@@ -233,12 +242,12 @@ PrivateTmp=true
 WantedBy=multi-user.target
 EOF
 
-    # pool-xmr-p2pool service (only for monero_only mode)
-    if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
-        cat > /etc/systemd/system/pool-xmr-p2pool.service << EOF
+    # wallet-xmr-rpc service (required for payment processing)
+    cat > /etc/systemd/system/wallet-xmr-rpc.service << EOF
 [Unit]
-Description=P2Pool Decentralized Monero Mining Pool
-After=node-xmr-monerod.service
+Description=Monero Wallet RPC (Pool Payments)
+After=network-online.target node-xmr-monerod.service
+Wants=network-online.target
 Requires=node-xmr-monerod.service
 
 [Service]
@@ -246,8 +255,37 @@ Type=simple
 User=${POOL_USER}
 Group=${POOL_USER}
 
-WorkingDirectory=${XMR_P2POOL_DIR}
-ExecStart=${XMR_P2POOL_DIR}/start-p2pool.sh
+ExecStart=${MONERO_DIR}/start-wallet-rpc.sh
+ExecStop=/bin/kill -SIGTERM \$MAINPID
+
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=120
+TimeoutStopSec=60
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    log "  Monero wallet-rpc service created"
+
+    # pool-xmr-monero-pool service (only for monero_only mode)
+    if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
+        cat > /etc/systemd/system/pool-xmr-monero-pool.service << EOF
+[Unit]
+Description=monero-pool Monero Mining Pool
+After=node-xmr-monerod.service wallet-xmr-rpc.service
+Requires=node-xmr-monerod.service wallet-xmr-rpc.service
+
+[Service]
+Type=simple
+User=${POOL_USER}
+Group=${POOL_USER}
+
+WorkingDirectory=${XMR_MONERO_POOL_DIR}
+ExecStart=${XMR_MONERO_POOL_DIR}/start-monero-pool.sh
 
 Restart=on-failure
 RestartSec=10
@@ -258,7 +296,7 @@ PrivateTmp=true
 [Install]
 WantedBy=multi-user.target
 EOF
-        log "  P2Pool service created"
+        log "  monero-pool service created"
     fi
 
     log "  Monero services created"
@@ -296,6 +334,35 @@ PrivateTmp=true
 [Install]
 WantedBy=multi-user.target
 EOF
+
+    # wallet-xtm service (required for payment processing)
+    cat > /etc/systemd/system/wallet-xtm.service << EOF
+[Unit]
+Description=Tari Wallet (Pool Payments)
+After=network-online.target node-xtm-minotari.service
+Wants=network-online.target
+Requires=node-xtm-minotari.service
+
+[Service]
+Type=simple
+User=${POOL_USER}
+Group=${POOL_USER}
+
+ExecStart=${TARI_DIR}/start-wallet.sh
+ExecStop=/bin/kill -SIGTERM \$MAINPID
+
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=120
+TimeoutStopSec=60
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    log "  Tari wallet service created"
 
     if [ "${MONERO_TARI_MODE}" = "merge" ]; then
         # pool-xmr-xtm-merge-proxy service
@@ -418,6 +485,16 @@ EOF
 fi
 
 # =============================================================================
+# PAYMENT PROCESSOR SERVICE
+# =============================================================================
+# Note: The payment processor systemd service is created by 17-install-payments.sh
+# We only need to check if it needs to be enabled (for service dependency tracking)
+NEED_PAYMENTS="false"
+[ "${ENABLE_MONERO_POOL}" = "true" ] && NEED_PAYMENTS="true"
+[ "${ENABLE_TARI_POOL}" = "true" ] && NEED_PAYMENTS="true"
+[ "${ENABLE_ALEO_POOL}" = "true" ] && NEED_PAYMENTS="true"
+
+# =============================================================================
 # MASTER SOLO-POOL SERVICE
 # =============================================================================
 log "Creating master solo-pool service..."
@@ -460,13 +537,17 @@ log "Enabling services..."
 [ "${ENABLE_TARI_POOL}" = "true" ] && [ "${MONERO_TARI_MODE}" != "monero_only" ] && systemctl enable node-xtm-minotari >/dev/tty1 2>&1
 [ "${ENABLE_ALEO_POOL}" = "true" ] && systemctl enable node-aleo-snarkos >/dev/tty1 2>&1
 
+# Enable wallet services (required for payment processing)
+[ "${ENABLE_MONERO_POOL}" = "true" ] && systemctl enable wallet-xmr-rpc >/dev/tty1 2>&1
+[ "${ENABLE_TARI_POOL}" = "true" ] && [ "${MONERO_TARI_MODE}" != "monero_only" ] && systemctl enable wallet-xtm >/dev/tty1 2>&1
+
 # Enable pool services (they depend on nodes)
 [ "${ENABLE_BITCOIN_POOL}" = "true" ] && systemctl enable pool-btc-ckpool >/dev/tty1 2>&1
 [ "${ENABLE_BCH_POOL}" = "true" ] && systemctl enable pool-bch-ckpool >/dev/tty1 2>&1
 [ "${ENABLE_DGB_POOL}" = "true" ] && systemctl enable pool-dgb-ckpool >/dev/tty1 2>&1
 
 if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
-    systemctl enable pool-xmr-p2pool >/dev/tty1 2>&1
+    systemctl enable pool-xmr-monero-pool >/dev/tty1 2>&1
 elif [ "${MONERO_TARI_MODE}" = "merge" ]; then
     systemctl enable pool-xmr-xtm-merge-proxy >/dev/tty1 2>&1
 elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
@@ -474,6 +555,9 @@ elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
 fi
 
 [ "${ENABLE_ALEO_POOL}" = "true" ] && systemctl enable pool-aleo >/dev/tty1 2>&1
+
+# Enable payment processor if needed
+[ "${NEED_PAYMENTS}" = "true" ] && systemctl enable solo-pool-payments >/dev/tty1 2>&1
 
 # Enable master solo-pool service
 systemctl enable solo-pool >/dev/tty1 2>&1

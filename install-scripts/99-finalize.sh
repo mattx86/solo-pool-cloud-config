@@ -9,6 +9,12 @@ set -e
 # Source configuration
 source /opt/solo-pool/install-scripts/config.sh
 
+# Validate config was loaded successfully
+if [ "${CONFIG_LOADED:-}" != "true" ]; then
+    echo "ERROR: Failed to load configuration from config.sh" >&2
+    exit 1
+fi
+
 log "Finalizing installation..."
 
 # =============================================================================
@@ -48,7 +54,7 @@ fi
 if [ "${ENABLE_MONERO_POOL}" = "true" ]; then
     verify_binary "monerod" "${MONERO_DIR}/bin/monerod" || ((ERRORS++))
     if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
-        verify_binary "p2pool" "${XMR_P2POOL_DIR}/bin/p2pool" || ((ERRORS++))
+        verify_binary "monero-pool" "${XMR_MONERO_POOL_DIR}/bin/monero-pool" || ((ERRORS++))
     fi
 fi
 
@@ -143,7 +149,7 @@ fi
 
 # Clean up /tmp
 log "  Cleaning /tmp..."
-rm -rf /tmp/ckpool-* /tmp/snarkOS /tmp/p2pool* /tmp/tari* /tmp/bitcoin* /tmp/bchn* /tmp/digibyte* /tmp/monero* 2>/dev/null || true
+rm -rf /tmp/ckpool-* /tmp/snarkOS /tmp/monero-pool* /tmp/tari* /tmp/bitcoin* /tmp/bchn* /tmp/digibyte* /tmp/monero* 2>/dev/null || true
 
 log "  Cleanup complete"
 
@@ -201,7 +207,7 @@ if [ "${ENABLE_MONERO_POOL}" = "true" ] || [ "${ENABLE_TARI_POOL}" = "true" ]; t
     if [ "${MONERO_TARI_MODE}" = "merge" ]; then
         log "  - Monero + Tari (merge mining) on port ${XMR_XTM_MERGE_STRATUM_PORT}"
     elif [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
-        log "  - Monero (XMR) via P2Pool on port ${XMR_STRATUM_PORT}"
+        log "  - Monero (XMR) via monero-pool on port ${XMR_STRATUM_PORT}"
     elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
         log "  - Tari (XTM) on port ${XTM_STRATUM_PORT}"
     fi

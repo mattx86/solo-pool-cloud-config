@@ -63,10 +63,12 @@ impl AleoPoolClient {
 
                             let worker = WorkerStats {
                                 name: Self::shorten_address(&prover.address),
+                                wallet_address: prover.address.clone(),
                                 hashrate: hr,
                                 hashrate_unit: unit,
                                 shares_accepted: prover.solutions,
                                 shares_rejected: 0,
+                                blocks_found: 0,
                                 best_share: 0.0,
                                 last_share_time: prover.last_solution
                                     .and_then(|ts| DateTime::from_timestamp(ts, 0)),
@@ -82,13 +84,13 @@ impl AleoPoolClient {
                 } else {
                     // Server responded but with error
                     stats.online = false;
-                    tracing::debug!("ALEO pool returned status: {}", response.status());
+                    tracing::warn!("ALEO pool at {} returned status: {}", stats_url, response.status());
                 }
             }
             Err(e) => {
                 // Try alternative endpoint or mark offline
                 stats.online = false;
-                tracing::debug!("Failed to connect to ALEO pool: {}", e);
+                tracing::warn!("Failed to connect to ALEO pool at {}: {}", stats_url, e);
 
                 // Try provers endpoint as fallback
                 if let Ok(provers_stats) = Self::fetch_provers(api_url).await {
@@ -122,10 +124,12 @@ impl AleoPoolClient {
 
                     let worker = WorkerStats {
                         name: Self::shorten_address(&prover.address),
+                        wallet_address: prover.address.clone(),
                         hashrate: hr,
                         hashrate_unit: unit,
                         shares_accepted: prover.solutions,
                         shares_rejected: 0,
+                        blocks_found: 0,
                         best_share: 0.0,
                         last_share_time: prover.last_solution
                             .and_then(|ts| DateTime::from_timestamp(ts, 0)),

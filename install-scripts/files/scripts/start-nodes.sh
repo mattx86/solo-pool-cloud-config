@@ -1,6 +1,12 @@
 #!/bin/bash
-# Start all enabled node services
+# Start all enabled node and wallet services
 source /opt/solo-pool/install-scripts/config.sh
+
+# Validate config was loaded
+if [ "${CONFIG_LOADED:-}" != "true" ]; then
+    echo "ERROR: Failed to load configuration" >&2
+    exit 1
+fi
 
 echo "Starting node services..."
 
@@ -11,4 +17,12 @@ echo "Starting node services..."
 [ "${ENABLE_TARI_POOL}" = "true" ] && [ "${MONERO_TARI_MODE}" != "monero_only" ] && sudo systemctl start node-xtm-minotari && echo "  Started node-xtm-minotari"
 [ "${ENABLE_ALEO_POOL}" = "true" ] && sudo systemctl start node-aleo-snarkos && echo "  Started node-aleo-snarkos"
 
+echo ""
+echo "Starting wallet services (for payment processing)..."
+
+[ "${ENABLE_MONERO_POOL}" = "true" ] && sudo systemctl start wallet-xmr-rpc && echo "  Started wallet-xmr-rpc"
+[ "${ENABLE_TARI_POOL}" = "true" ] && [ "${MONERO_TARI_MODE}" != "monero_only" ] && sudo systemctl start wallet-xtm && echo "  Started wallet-xtm"
+
+echo ""
 echo "Done. Wait for nodes to sync before starting pools."
+echo "NOTE: For Tari, run ${TARI_DIR:-/opt/solo-pool/node/tari}/wallet/init-wallet.sh after node sync."

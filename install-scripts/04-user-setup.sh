@@ -9,6 +9,12 @@ set -e
 # Source configuration
 source /opt/solo-pool/install-scripts/config.sh
 
+# Validate config was loaded successfully
+if [ "${CONFIG_LOADED:-}" != "true" ]; then
+    echo "ERROR: Failed to load configuration from config.sh" >&2
+    exit 1
+fi
+
 log "Creating pool user and directory structure..."
 
 # Create pool user if it doesn't exist
@@ -35,7 +41,7 @@ run_cmd mkdir -p ${ALEO_DIR}/{bin,data}
 run_cmd mkdir -p ${BTC_CKPOOL_DIR}/{bin,logs}
 run_cmd mkdir -p ${BCH_CKPOOL_DIR}/{bin,logs}
 run_cmd mkdir -p ${DGB_CKPOOL_DIR}/{bin,logs}
-run_cmd mkdir -p ${XMR_P2POOL_DIR}/{bin,data,logs}
+run_cmd mkdir -p ${XMR_MONERO_POOL_DIR}/{bin,data,logs}
 run_cmd mkdir -p ${XTM_MINER_DIR}/{config,logs}
 run_cmd mkdir -p ${XMR_XTM_MERGE_DIR}/{config,logs}
 

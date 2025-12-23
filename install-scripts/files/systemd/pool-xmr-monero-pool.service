@@ -1,5 +1,5 @@
 [Unit]
-Description=P2Pool Decentralized Monero Mining Pool
+Description=monero-pool Monero Mining Pool
 After=node-xmr-monerod.service
 Requires=node-xmr-monerod.service
 
@@ -8,8 +8,8 @@ Type=simple
 User=${POOL_USER}
 Group=${POOL_USER}
 
-WorkingDirectory=${XMR_P2POOL_DIR}
-ExecStart=${XMR_P2POOL_DIR}/start-p2pool.sh
+WorkingDirectory=${XMR_MONERO_POOL_DIR}
+ExecStart=${XMR_MONERO_POOL_DIR}/start-monero-pool.sh
 
 Restart=on-failure
 RestartSec=10

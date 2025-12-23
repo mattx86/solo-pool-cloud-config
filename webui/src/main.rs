@@ -3,7 +3,7 @@ use axum::{
     extract::State,
     http::{header, StatusCode, Uri},
     response::{Html, IntoResponse, Json, Response},
-    routing::get,
+    routing::{delete, get},
     Router,
 };
 use axum_server::tls_rustls::RustlsConfig;
@@ -21,11 +21,13 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 mod access_log;
 mod api;
 mod config;
+mod db;
 mod models;
 
 use access_log::{AccessLogLayer, AccessLogWriter};
 use config::Config;
-use models::{PoolStats, AppState};
+use db::Database;
+use models::{PoolStats, AppState, detect_server_ip};
 
 /// Embedded static files (compiled into binary at build time)
 #[derive(Embed)]
@@ -67,10 +69,26 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Error log: {}", error_log_path.display());
     tracing::info!("Loaded configuration: {:?}", config);
 
+    // Detect server IP for stratum URLs
+    tracing::info!("Detecting server IP...");
+    let server_ip = detect_server_ip().await;
+    tracing::info!("Server IP detected: {}", server_ip);
+
+    // Initialize database
+    let db_dir = Path::new(&config.server.db_dir);
+    std::fs::create_dir_all(db_dir)?;
+    let db_path = db_dir.join("stats.db");
+    tracing::info!("Database path: {}", db_path.display());
+
+    let db = Database::new(&db_path)?;
+    tracing::info!("Database initialized with WAL mode");
+
     // Initialize app state
     let state = Arc::new(AppState {
         config: config.clone(),
         stats: RwLock::new(PoolStats::default()),
+        server_ip,
+        db: Arc::new(db),
     });
 
     // Spawn background task to fetch stats
@@ -101,6 +119,7 @@ async fn main() -> anyhow::Result<()> {
         // API routes
         .route("/api/stats", get(get_stats))
         .route("/api/stats/:pool", get(get_pool_stats))
+        .route("/api/workers/:pool/:worker", delete(delete_worker))
         .route("/api/health", get(health_check))
         // Serve embedded static files
         .fallback(static_handler)
@@ -118,7 +137,7 @@ async fn main() -> anyhow::Result<()> {
     // Start HTTP server
     let http_addr: SocketAddr = format!("{}:{}", config.server.host, config.server.port)
         .parse()
-        .expect("Invalid HTTP address");
+        .map_err(|e| anyhow::anyhow!("Invalid HTTP address '{}:{}': {}", config.server.host, config.server.port, e))?;
 
     tracing::info!("HTTP server listening on http://{}", http_addr);
 
@@ -126,7 +145,7 @@ async fn main() -> anyhow::Result<()> {
     if config.server.https.enabled {
         let https_addr: SocketAddr = format!("{}:{}", config.server.host, config.server.https.port)
             .parse()
-            .expect("Invalid HTTPS address");
+            .map_err(|e| anyhow::anyhow!("Invalid HTTPS address '{}:{}': {}", config.server.host, config.server.https.port, e))?;
 
         // Load TLS certificate and key
         let cert_path = &config.server.https.cert_path;
@@ -135,7 +154,7 @@ async fn main() -> anyhow::Result<()> {
         if std::path::Path::new(cert_path).exists() && std::path::Path::new(key_path).exists() {
             let tls_config = RustlsConfig::from_pem_file(cert_path, key_path)
                 .await
-                .expect("Failed to load TLS certificate");
+                .map_err(|e| anyhow::anyhow!("Failed to load TLS certificate from '{}' and '{}': {}", cert_path, key_path, e))?;
 
             tracing::info!("HTTPS server listening on https://{}", https_addr);
 
@@ -203,6 +222,38 @@ async fn get_pool_stats(
 
 async fn health_check() -> &'static str {
     "OK"
+}
+
+/// Delete a worker from the database
+async fn delete_worker(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Path((pool, worker)): axum::extract::Path<(String, String)>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    // URL decode the worker name (it may contain special characters)
+    let worker_name = urlencoding::decode(&worker)
+        .map(|s| s.into_owned())
+        .unwrap_or(worker);
+
+    tracing::info!("Delete request for worker '{}' in pool '{}'", worker_name, pool);
+
+    match state.db.delete_worker(&pool, &worker_name) {
+        Ok(deleted) => {
+            if deleted {
+                tracing::info!("Worker '{}' deleted from pool '{}'", worker_name, pool);
+                Ok(Json(serde_json::json!({
+                    "success": true,
+                    "message": format!("Worker '{}' deleted from pool '{}'", worker_name, pool)
+                })))
+            } else {
+                tracing::warn!("Worker '{}' not found in pool '{}'", worker_name, pool);
+                Err(StatusCode::NOT_FOUND)
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to delete worker '{}': {}", worker_name, e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 /// Handler for embedded static files

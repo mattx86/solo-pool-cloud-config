@@ -2,6 +2,12 @@
 # Check blockchain sync status
 source /opt/solo-pool/install-scripts/config.sh
 
+# Validate config was loaded
+if [ "${CONFIG_LOADED:-}" != "true" ]; then
+    echo "ERROR: Failed to load configuration" >&2
+    exit 1
+fi
+
 echo "=== Blockchain Sync Status ==="
 echo ""
 
@@ -22,7 +28,7 @@ fi
 
 if [ "${ENABLE_MONERO_POOL}" = "true" ]; then
     echo "Monero:"
-    curl -s http://127.0.0.1:18081/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"get_info"}' -H 'Content-Type: application/json' 2>/dev/null | jq -r '"  Height: \(.result.height), Target: \(.result.target_height), Sync: \(if .result.synchronized then "Yes" else "No" end)"' || echo "  Not running or syncing"
+    curl -s http://127.0.0.1:${MONERO_RPC_PORT}/json_rpc -d '{"jsonrpc":"2.0","id":"0","method":"get_info"}' -H 'Content-Type: application/json' 2>/dev/null | jq -r '"  Height: \(.result.height), Target: \(.result.target_height), Sync: \(if .result.synchronized then "Yes" else "No" end)"' || echo "  Not running or syncing"
 fi
 
 echo ""

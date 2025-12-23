@@ -14,6 +14,9 @@ pub struct ServerConfig {
     pub port: u16,
     #[serde(default = "default_refresh")]
     pub refresh_interval_secs: u64,
+    /// Database directory for persistent worker stats
+    #[serde(default = "default_db_dir")]
+    pub db_dir: String,
     /// HTTPS configuration
     #[serde(default)]
     pub https: HttpsConfig,
@@ -104,8 +107,37 @@ fn default_log_dir() -> String {
     "/opt/solo-pool/webui/logs".to_string()
 }
 
+fn default_db_dir() -> String {
+    "/opt/solo-pool/webui/db".to_string()
+}
+
 fn default_true() -> bool {
     true
+}
+
+// CKPool uses BTCSOLO mode: miners provide their own wallet address as username
+fn default_ckpool_username() -> String {
+    "YOUR_WALLET_ADDRESS.worker_name".to_string()
+}
+
+fn default_xmr_username() -> String {
+    "wallet_address.worker_name".to_string()
+}
+
+fn default_xmr_password() -> String {
+    "x".to_string()
+}
+
+fn default_tari_username() -> String {
+    "wallet_address.worker_name".to_string()
+}
+
+fn default_aleo_username() -> String {
+    "wallet_address.worker_name".to_string()
+}
+
+fn default_password() -> String {
+    "x".to_string()
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -136,6 +168,12 @@ pub struct CkPoolConfig {
     /// CKPool must be started with -s flag pointing to this directory
     pub socket_dir: Option<String>,
     pub stratum_port: u16,
+    /// Miner username format (e.g., "wallet_address.worker_name" or "worker_name")
+    #[serde(default = "default_ckpool_username")]
+    pub username_format: String,
+    /// Miner password (typically ignored, use "x")
+    #[serde(default = "default_password")]
+    pub password: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -143,9 +181,18 @@ pub struct MoneroPoolConfig {
     pub enabled: bool,
     pub name: String,
     pub algorithm: String,
-    /// P2Pool API URL (e.g., http://127.0.0.1:3336 for stratum port)
+    /// monero-pool API URL (e.g., http://127.0.0.1:4243 for stats)
     pub api_url: String,
     pub stratum_port: u16,
+    /// Pool wallet address (receives block rewards for PPLNS distribution)
+    #[serde(default)]
+    pub pool_wallet_address: Option<String>,
+    /// Miner username format
+    #[serde(default = "default_xmr_username")]
+    pub username_format: String,
+    /// Miner password
+    #[serde(default = "default_xmr_password")]
+    pub password: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -156,6 +203,15 @@ pub struct TariPoolConfig {
     /// Minotari miner API URL
     pub api_url: String,
     pub stratum_port: u16,
+    /// Pool wallet address (receives block rewards for PPLNS distribution)
+    #[serde(default)]
+    pub pool_wallet_address: Option<String>,
+    /// Miner username format
+    #[serde(default = "default_tari_username")]
+    pub username_format: String,
+    /// Miner password
+    #[serde(default = "default_password")]
+    pub password: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -167,6 +223,18 @@ pub struct MergePoolConfig {
     #[serde(default)]
     pub api_url: Option<String>,
     pub stratum_port: u16,
+    /// XMR pool wallet address (receives XMR block rewards)
+    #[serde(default)]
+    pub xmr_pool_wallet_address: Option<String>,
+    /// XTM pool wallet address (receives XTM block rewards)
+    #[serde(default)]
+    pub xtm_pool_wallet_address: Option<String>,
+    /// Miner username format
+    #[serde(default = "default_xmr_username")]
+    pub username_format: String,
+    /// Miner password
+    #[serde(default = "default_xmr_password")]
+    pub password: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -176,6 +244,15 @@ pub struct AleoPoolConfig {
     pub algorithm: String,
     pub api_url: String,
     pub stratum_port: u16,
+    /// Pool wallet address (receives block rewards for PPLNS distribution)
+    #[serde(default)]
+    pub pool_wallet_address: Option<String>,
+    /// Miner username format
+    #[serde(default = "default_aleo_username")]
+    pub username_format: String,
+    /// Miner password
+    #[serde(default = "default_password")]
+    pub password: String,
 }
 
 impl Config {
@@ -202,6 +279,7 @@ impl Default for Config {
                 host: default_host(),
                 port: default_port(),
                 refresh_interval_secs: default_refresh(),
+                db_dir: default_db_dir(),
                 https: HttpsConfig::default(),
                 logging: LogConfig::default(),
             },
@@ -212,6 +290,8 @@ impl Default for Config {
                     algorithm: "SHA256".to_string(),
                     socket_dir: Some("/tmp/ckpool-btc".to_string()),
                     stratum_port: 3333,
+                    username_format: "YOUR_BTC_ADDRESS.worker_name".to_string(),
+                    password: "x".to_string(),
                 }),
                 bch: Some(CkPoolConfig {
                     enabled: true,
@@ -219,6 +299,8 @@ impl Default for Config {
                     algorithm: "SHA256".to_string(),
                     socket_dir: Some("/tmp/ckpool-bch".to_string()),
                     stratum_port: 3334,
+                    username_format: "YOUR_BCH_ADDRESS.worker_name".to_string(),
+                    password: "x".to_string(),
                 }),
                 dgb: Some(CkPoolConfig {
                     enabled: true,
@@ -226,6 +308,8 @@ impl Default for Config {
                     algorithm: "SHA256".to_string(),
                     socket_dir: Some("/tmp/ckpool-dgb".to_string()),
                     stratum_port: 3335,
+                    username_format: "YOUR_DGB_ADDRESS.worker_name".to_string(),
+                    password: "x".to_string(),
                 }),
                 xmr: Some(MoneroPoolConfig {
                     enabled: false, // Disabled when using merge mode
@@ -233,6 +317,9 @@ impl Default for Config {
                     algorithm: "RandomX".to_string(),
                     api_url: "http://127.0.0.1:3336".to_string(),
                     stratum_port: 3336,
+                    pool_wallet_address: None,
+                    username_format: "YOUR_XMR_ADDRESS.worker_name".to_string(),
+                    password: "x".to_string(),
                 }),
                 xtm: Some(TariPoolConfig {
                     enabled: false, // Disabled when using merge mode
@@ -240,6 +327,9 @@ impl Default for Config {
                     algorithm: "RandomX".to_string(),
                     api_url: "http://127.0.0.1:3337".to_string(),
                     stratum_port: 3337,
+                    pool_wallet_address: None,
+                    username_format: "YOUR_XTM_ADDRESS.worker_name".to_string(),
+                    password: "x".to_string(),
                 }),
                 xmr_xtm_merge: Some(MergePoolConfig {
                     enabled: true, // Default: merge mining mode
@@ -247,6 +337,10 @@ impl Default for Config {
                     algorithm: "RandomX (Merge)".to_string(),
                     api_url: Some("http://127.0.0.1:3338".to_string()),
                     stratum_port: 3338,
+                    xmr_pool_wallet_address: None,
+                    xtm_pool_wallet_address: None,
+                    username_format: "YOUR_XMR_ADDRESS.worker_name".to_string(),
+                    password: "x".to_string(),
                 }),
                 aleo: Some(AleoPoolConfig {
                     enabled: true,
@@ -254,6 +348,9 @@ impl Default for Config {
                     algorithm: "zkSNARK".to_string(),
                     api_url: "http://127.0.0.1:3339".to_string(),
                     stratum_port: 3339,
+                    pool_wallet_address: None,
+                    username_format: "YOUR_ALEO_ADDRESS.worker_name".to_string(),
+                    password: "x".to_string(),
                 }),
             },
         }

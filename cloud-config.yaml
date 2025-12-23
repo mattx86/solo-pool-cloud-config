@@ -43,17 +43,19 @@ write_files:
       # ---------------------------------------------------------------------
       # MONERO/TARI MINING MODE
       # Options: "merge" (both via merge mining proxy)
-      #          "monero_only" (XMR solo via P2Pool)
+      #          "monero_only" (XMR solo via monero-pool)
       #          "tari_only" (XTM solo via minotari_miner)
       # ---------------------------------------------------------------------
       MONERO_TARI_MODE="merge"
 
       # ---------------------------------------------------------------------
-      # WALLET ADDRESSES - Required for enabled pools
+      # WALLET ADDRESSES
       # ---------------------------------------------------------------------
-      BTC_WALLET_ADDRESS="YOUR_BTC_WALLET_ADDRESS_HERE"
-      BCH_WALLET_ADDRESS="YOUR_BCH_WALLET_ADDRESS_HERE"
-      DGB_WALLET_ADDRESS="YOUR_DGB_WALLET_ADDRESS_HERE"
+      # NOTE: BTC/BCH/DGB wallets are NOT configured here. CKPool runs in
+      # BTCSOLO mode where miners provide their own wallet address as the
+      # stratum username. Block rewards go directly to the miner's wallet.
+      #
+      # XMR/XTM/ALEO: Required for monero-pool, Tari, and ALEO pool operation
       XMR_WALLET_ADDRESS="YOUR_XMR_WALLET_ADDRESS_HERE"
       XTM_WALLET_ADDRESS="YOUR_XTM_WALLET_ADDRESS_HERE"
       ALEO_WALLET_ADDRESS="YOUR_ALEO_WALLET_ADDRESS_HERE"
@@ -75,6 +77,100 @@ write_files:
       ALEO_STRATUM_PORT="3339"
 
       # ---------------------------------------------------------------------
+      # POOL API PORTS - Internal ports for payment processor
+      # ---------------------------------------------------------------------
+      # monero-pool WebUI/API port (for stats/shares)
+      MONERO_POOL_API_PORT="4243"
+      # Merge mining proxy stats API
+      MERGE_PROXY_API_PORT="18081"
+      # Minotari miner stats API (for tari_only mode)
+      TARI_MINER_API_PORT="18084"
+      # ALEO pool server stats API
+      ALEO_POOL_API_PORT="4000"
+
+      # ---------------------------------------------------------------------
+      # NODE RPC PORTS - For pool software to communicate with nodes
+      # ---------------------------------------------------------------------
+      # Bitcoin Core RPC
+      BITCOIN_RPC_PORT="8332"
+      # Bitcoin Cash Node RPC
+      BCH_RPC_PORT="8334"
+      # DigiByte Core RPC
+      DGB_RPC_PORT="14022"
+      # Monero daemon RPC (JSON-RPC)
+      MONERO_RPC_PORT="18081"
+      # Tari node GRPC
+      TARI_NODE_GRPC_PORT="18142"
+      # ALEO snarkOS REST API
+      ALEO_REST_PORT="3030"
+      # ALEO snarkOS RPC (for transactions)
+      ALEO_RPC_PORT="3033"
+
+      # ---------------------------------------------------------------------
+      # WALLET RPC PORTS - For payment processor to send transactions
+      # ---------------------------------------------------------------------
+      # Monero wallet RPC (monero-wallet-rpc)
+      MONERO_WALLET_RPC_PORT="18082"
+      # Tari console wallet GRPC
+      TARI_WALLET_GRPC_PORT="18143"
+
+      # ---------------------------------------------------------------------
+      # ZMQ PORTS - For real-time block/transaction notifications
+      # ---------------------------------------------------------------------
+      # Bitcoin ZMQ
+      BITCOIN_ZMQ_BLOCK_PORT="28332"
+      BITCOIN_ZMQ_TX_PORT="28333"
+      # Bitcoin Cash ZMQ
+      BCH_ZMQ_BLOCK_PORT="28334"
+      BCH_ZMQ_TX_PORT="28335"
+      # DigiByte ZMQ
+      DGB_ZMQ_BLOCK_PORT="28336"
+      DGB_ZMQ_TX_PORT="28337"
+      # Monero ZMQ
+      MONERO_ZMQ_PORT="18083"
+
+      # ---------------------------------------------------------------------
+      # P2P PORTS - For node-to-node communication (optional, for reference)
+      # ---------------------------------------------------------------------
+      # These are standard ports used by the blockchain networks
+      # BITCOIN_P2P_PORT="8333"
+      # BCH_P2P_PORT="8335"
+      # DGB_P2P_PORT="12024"
+      # MONERO_P2P_PORT="18080"
+      # TARI_P2P_PORT="18189"
+      # ALEO_P2P_PORT="4130"
+      # Note: monero-pool uses XMR_STRATUM_PORT (3336) for stratum connections
+
+      # ---------------------------------------------------------------------
+      # STARTING DIFFICULTY - Initial difficulty for miners
+      # ---------------------------------------------------------------------
+      # Set ENABLE_CUSTOM_DIFFICULTY="true" to use custom starting difficulties
+      # When disabled, pools use their default starting difficulties
+      ENABLE_CUSTOM_DIFFICULTY="false"
+
+      # CKPool (BTC/BCH/DGB) - Default: 6000 (tuned for Avalon Nano 3S @ 6 TH/s)
+      # Formula: difficulty = hashrate_TH × 1000 (targets ~3 second share intervals)
+      # Adjust based on your miners: 1 TH/s = 1000, 100 TH/s = 100000
+      BTC_START_DIFFICULTY="6000"
+      BCH_START_DIFFICULTY="6000"
+      DGB_START_DIFFICULTY="6000"
+
+      # monero-pool (XMR) - Default: 4500 (tuned for 1.5 KH/s RandomX)
+      # monero-pool uses vardiff, but this sets the initial difficulty
+      # Formula: difficulty = hashrate_KH × 3 (targets ~3 second share intervals)
+      XMR_START_DIFFICULTY="4500"
+
+      # Tari (XTM) - Default: 4500 (tuned for 1.5 KH/s RandomX)
+      XTM_START_DIFFICULTY="4500"
+
+      # Merge Mining Proxy (XMR+XTM) - Default: 4500 (tuned for 1.5 KH/s RandomX)
+      XMR_XTM_MERGE_START_DIFFICULTY="4500"
+
+      # ALEO - Default: 1 (tuned for IceRiver AE0 @ 60 MH/s)
+      # ALEO uses zkSNARK proof generation, difficulty scaling differs from hash mining
+      ALEO_START_DIFFICULTY="1"
+
+      # ---------------------------------------------------------------------
       # NETWORK MODE - P2P connectivity settings
       # ---------------------------------------------------------------------
       # Set to "false" for outbound-only mode (recommended for private pools)
@@ -93,6 +189,8 @@ write_files:
       # HTTPS server settings (uses self-signed 10-year certificate)
       WEBUI_HTTPS_ENABLED="true"
       WEBUI_HTTPS_PORT="8443"
+      # Stats refresh interval in seconds (how often to poll pool backends)
+      WEBUI_REFRESH_INTERVAL="15"
 
       # ---------------------------------------------------------------------
       # SYSTEM USER - Dedicated user for running pool services
@@ -119,7 +217,7 @@ write_files:
       BTC_CKPOOL_DIR="${POOL_DIR}/btc-ckpool"
       BCH_CKPOOL_DIR="${POOL_DIR}/bch-ckpool"
       DGB_CKPOOL_DIR="${POOL_DIR}/dgb-ckpool"
-      XMR_P2POOL_DIR="${POOL_DIR}/xmr-p2pool"
+      XMR_MONERO_POOL_DIR="${POOL_DIR}/xmr-monero-pool"
       XTM_MINER_DIR="${POOL_DIR}/xtm-minotari-miner"
       XMR_XTM_MERGE_DIR="${POOL_DIR}/xmr-xtm-minotari-merge-proxy"
       ALEO_POOL_DIR="${POOL_DIR}/aleo-pool-server"
@@ -147,8 +245,8 @@ write_files:
       # ---------------------------------------------------------------------
       # CKPool: No formal releases, pinned to specific commit
       CKPOOL_COMMIT="590fb2a2c6164beb85d458b3a212723507a9d8ac"
-      # P2Pool: Decentralized Monero mining pool (replaces monero-stratum)
-      P2POOL_VERSION="4.13"
+      # monero-pool: Monero mining pool with share tracking (jtgrassie/monero-pool)
+      MONERO_POOL_COMMIT="master"
       # ALEO Pool Server: Stratum server for ALEO ASIC mining
       ALEO_POOL_COMMIT="992792eb9aaf29fde0c20c9942ec5a9244a4a0a6"
 
@@ -175,6 +273,30 @@ write_files:
       run_cmd() {
           "$@" 2>&1 | tee -a "${LOG_FILE}" >/dev/tty1
       }
+
+      # Validation function - call this after sourcing to verify config loaded
+      validate_config() {
+          local errors=0
+
+          # Check essential variables
+          if [ -z "${SCRIPTS_BASE_URL:-}" ]; then
+              echo "ERROR: SCRIPTS_BASE_URL not defined" >&2
+              ((errors++))
+          fi
+          if [ -z "${BASE_DIR:-}" ]; then
+              echo "ERROR: BASE_DIR not defined" >&2
+              ((errors++))
+          fi
+          if [ -z "${POOL_USER:-}" ]; then
+              echo "ERROR: POOL_USER not defined" >&2
+              ((errors++))
+          fi
+
+          return $errors
+      }
+
+      # Mark that config was successfully loaded
+      CONFIG_LOADED="true"
 
 # =============================================================================
 # CLOUD-INIT EXECUTION
@@ -222,6 +344,7 @@ runcmd:
       "14-install-tari.sh"
       "15-install-aleo.sh"
       "16-install-webui.sh"
+      "17-install-payments.sh"
       "20-configure-services.sh"
       "99-finalize.sh"
     )
@@ -251,98 +374,105 @@ runcmd:
     # 01 - System Update
     if [ -x "./01-system-update.sh" ]; then
       log ""
-      log "[STEP 1/14] Running system update..."
+      log "[STEP 1/15] Running system update..."
       ./01-system-update.sh
     fi
 
     # 02 - CIS Hardening
     if [ -x "./02-cis-hardening.sh" ]; then
       log ""
-      log "[STEP 2/14] Applying CIS hardening..."
+      log "[STEP 2/15] Applying CIS hardening..."
       ./02-cis-hardening.sh
     fi
 
     # 03 - UFW Setup
     if [ -x "./03-ufw-setup.sh" ]; then
       log ""
-      log "[STEP 3/14] Configuring firewall..."
+      log "[STEP 3/15] Configuring firewall..."
       ./03-ufw-setup.sh
     fi
 
     # 04 - User Setup
     if [ -x "./04-user-setup.sh" ]; then
       log ""
-      log "[STEP 4/14] Creating pool user and directories..."
+      log "[STEP 4/15] Creating pool user and directories..."
       ./04-user-setup.sh
     fi
 
     # 05 - Install Dependencies
     if [ -x "./05-install-dependencies.sh" ]; then
       log ""
-      log "[STEP 5/14] Installing build dependencies..."
+      log "[STEP 5/15] Installing build dependencies..."
       ./05-install-dependencies.sh
     fi
 
     # 10 - Install Bitcoin
     if [ -x "./10-install-bitcoin.sh" ]; then
       log ""
-      log "[STEP 6/14] Installing Bitcoin node and pool..."
+      log "[STEP 6/15] Installing Bitcoin node and pool..."
       ./10-install-bitcoin.sh
     fi
 
     # 11 - Install BCH
     if [ -x "./11-install-bch.sh" ]; then
       log ""
-      log "[STEP 7/14] Installing Bitcoin Cash node and pool..."
+      log "[STEP 7/15] Installing Bitcoin Cash node and pool..."
       ./11-install-bch.sh
     fi
 
     # 12 - Install DigiByte
     if [ -x "./12-install-digibyte.sh" ]; then
       log ""
-      log "[STEP 8/14] Installing DigiByte node and pool..."
+      log "[STEP 8/15] Installing DigiByte node and pool..."
       ./12-install-digibyte.sh
     fi
 
     # 13 - Install Monero
     if [ -x "./13-install-monero.sh" ]; then
       log ""
-      log "[STEP 9/14] Installing Monero node and stratum..."
+      log "[STEP 9/15] Installing Monero node and stratum..."
       ./13-install-monero.sh
     fi
 
     # 14 - Install Tari
     if [ -x "./14-install-tari.sh" ]; then
       log ""
-      log "[STEP 10/14] Installing Tari node and mining software..."
+      log "[STEP 10/15] Installing Tari node and mining software..."
       ./14-install-tari.sh
     fi
 
     # 15 - Install ALEO
     if [ -x "./15-install-aleo.sh" ]; then
       log ""
-      log "[STEP 11/14] Installing ALEO snarkOS..."
+      log "[STEP 11/15] Installing ALEO snarkOS..."
       ./15-install-aleo.sh
     fi
 
     # 16 - Install WebUI
     if [ -x "./16-install-webui.sh" ]; then
       log ""
-      log "[STEP 12/14] Installing WebUI dashboard..."
+      log "[STEP 12/15] Installing WebUI dashboard..."
       ./16-install-webui.sh
+    fi
+
+    # 17 - Install Payment Processor
+    if [ -x "./17-install-payments.sh" ]; then
+      log ""
+      log "[STEP 13/15] Installing payment processor..."
+      ./17-install-payments.sh
     fi
 
     # 20 - Configure Services
     if [ -x "./20-configure-services.sh" ]; then
       log ""
-      log "[STEP 13/14] Configuring systemd services..."
+      log "[STEP 14/15] Configuring systemd services..."
       ./20-configure-services.sh
     fi
 
     # 99 - Finalize
     if [ -x "./99-finalize.sh" ]; then
       log ""
-      log "[STEP 14/14] Finalizing installation..."
+      log "[STEP 15/15] Finalizing installation..."
       ./99-finalize.sh
     fi
 

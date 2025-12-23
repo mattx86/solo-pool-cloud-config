@@ -61,13 +61,16 @@ stratum_port = 3335
 # Only ONE of these three should be enabled based on MONERO_TARI_MODE
 # =============================================================================
 
-# Monero Pool (P2Pool) - Only for monero_only mode
+# Monero Pool (monero-pool) - Only for monero_only mode
 [pools.xmr]
 enabled = false
 name = "Monero"
 algorithm = "RandomX"
-api_url = "http://127.0.0.1:3336"
+api_url = "http://127.0.0.1:4243"
 stratum_port = 3336
+# Pool wallet address (auto-populated during installation)
+# This is the address that receives block rewards for PPLNS distribution
+# pool_wallet_address = "4..."
 
 # Tari Pool (minotari_miner) - Only for tari_only mode
 [pools.xtm]
@@ -76,6 +79,8 @@ name = "Tari"
 algorithm = "RandomX"
 api_url = "http://127.0.0.1:3337"
 stratum_port = 3337
+# Pool wallet address (auto-populated during installation)
+# pool_wallet_address = "..."
 
 # XMR+XTM Merge Mining (minotari_merge_mining_proxy) - For merge mode
 [pools.xmr_xtm_merge]
@@ -84,6 +89,9 @@ name = "XMR+XTM Merge Mining"
 algorithm = "RandomX"
 api_url = "http://127.0.0.1:3338"
 stratum_port = 3338
+# Pool wallet addresses (auto-populated during installation)
+# xmr_pool_wallet_address = "4..."
+# xtm_pool_wallet_address = "..."
 
 # =============================================================================
 # ALEO Pool
@@ -94,5 +102,7 @@ stratum_port = 3338
 enabled = true
 name = "Aleo"
 algorithm = "AleoBFT"
-api_url = "http://127.0.0.1:3339"
+api_url = "http://127.0.0.1:4000"
 stratum_port = 3339
+# Pool wallet address (auto-populated during installation)
+# pool_wallet_address = "aleo1..."

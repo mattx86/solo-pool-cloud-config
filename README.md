@@ -21,10 +21,24 @@ This repository contains a cloud-config for deploying a Ubuntu 24.04 system capa
 | Bitcoin (BTC) | bitcoind | CKPool | SHA256 |
 | Bitcoin Cash (BCH) | BCHN | CKPool | SHA256 |
 | DigiByte (DGB) | digibyted | CKPool | SHA256 only |
-| Monero (XMR) | monerod | P2Pool | RandomX |
+| Monero (XMR) | monerod | monero-pool | RandomX |
 | Tari (XTM) | minotari_node | minotari_miner | RandomX |
 | Monero+Tari | monerod + minotari_node | minotari_merge_mining_proxy | RandomX |
 | ALEO | snarkOS | aleo-pool-server | AleoBFT/PoSW |
+
+## Software Versions
+
+| Software | Version | Source |
+|----------|---------|--------|
+| Bitcoin Core | 28.3 | [bitcoin/bitcoin](https://github.com/bitcoin/bitcoin) |
+| Bitcoin Cash Node (BCHN) | 28.0.1 | [bitcoin-cash-node/bitcoin-cash-node](https://gitlab.com/bitcoin-cash-node/bitcoin-cash-node) |
+| DigiByte Core | 8.26.1 | [digibyte/digibyte](https://github.com/digibyte/digibyte) |
+| Monero | 0.18.4.4 | [monero-project/monero](https://github.com/monero-project/monero) |
+| Tari (minotari) | 5.1.0 | [tari-project/tari](https://github.com/tari-project/tari) |
+| snarkOS | 4.4.0 | [AleoNet/snarkOS](https://github.com/AleoNet/snarkOS) |
+| CKPool | commit 590fb2a | [ckolivas/ckpool](https://bitbucket.org/ckolivas/ckpool) |
+| monero-pool | master | [jtgrassie/monero-pool](https://github.com/jtgrassie/monero-pool) |
+| aleo-pool-server | commit 992792e | [foxpy/aleo-pool-server](https://github.com/foxpy/aleo-pool-server) |
 
 ## Web Dashboard
 
@@ -32,12 +46,99 @@ A built-in web dashboard provides real-time statistics for all enabled pools:
 
 - **Pool status** - Online/offline status for each pool
 - **Hashrate** - Current hashrate across all workers
-- **Workers** - Connected miners and their stats
+- **Workers** - Connected miners with hashrate, accepted/rejected shares, and blocks found
 - **Blocks found** - Block discovery history
+- **Zero fees** - All pools are fee-free (0% pool fee)
+
+Worker statistics are persisted in an SQLite database (`/opt/solo-pool/webui/db/stats.db`) and survive WebUI restarts. Offline workers can be deleted from the database via the dashboard.
 
 Access the dashboard at:
 - HTTPS: `https://YOUR_SERVER_IP:8443` (self-signed certificate, enabled by default)
 - HTTP: `http://YOUR_SERVER_IP:8080` (disabled by default)
+
+## Pool Wallets
+
+For XMR, XTM, and ALEO pools, the installation script automatically generates pool wallets to receive block rewards. The payment processor then distributes rewards to miners based on their share contributions.
+
+**Note:** BTC, BCH, and DGB pools use CKPool's BTCSOLO mode, where miners receive rewards directly to their wallet address (specified as their stratum username). No separate pool wallet or payment processing is needed for these pools.
+
+### Generated Wallets
+
+| Pool | Wallet Location | Backup File | Service |
+|------|-----------------|-------------|---------|
+| XMR | `/opt/solo-pool/node/monero/wallet/` | `SEED_BACKUP.txt` | `wallet-xmr-rpc` |
+| XTM | `/opt/solo-pool/node/tari/wallet/` | `SEED_BACKUP.txt` | `wallet-xtm` |
+| ALEO | `/opt/solo-pool/node/aleo/wallet/` | `pool-wallet.privatekey` | N/A (uses private key directly) |
+
+### Wallet Initialization
+
+**XMR Wallet**: Created automatically during installation. The monero-wallet-rpc service starts automatically.
+
+**XTM Wallet**: Requires manual initialization after the Tari node is synced:
+```bash
+# Wait for node to sync first
+sudo systemctl status node-xtm-minotari
+
+# Initialize wallet (creates new wallet and exports seed)
+/opt/solo-pool/node/tari/wallet/init-wallet.sh
+
+# Start wallet service
+sudo systemctl start wallet-xtm
+```
+
+**ALEO Wallet**: A keypair is generated automatically during installation. The private key is used directly by the payment processor.
+
+### Critical Backup Warning
+
+**IMMEDIATELY BACKUP these files after installation:**
+
+```bash
+# XMR seed phrase (24 words)
+/opt/solo-pool/node/monero/wallet/SEED_BACKUP.txt
+
+# XTM seed phrase (after running init-wallet.sh)
+/opt/solo-pool/node/tari/wallet/SEED_BACKUP.txt
+
+# ALEO private key
+/opt/solo-pool/node/aleo/wallet/pool-wallet.privatekey
+```
+
+**If you lose these backup files and the server is lost, your pool funds are UNRECOVERABLE.**
+
+### Wallet Services
+
+```bash
+# Check wallet service status
+sudo systemctl status wallet-xmr-rpc
+sudo systemctl status wallet-xtm
+
+# View wallet logs
+sudo journalctl -u wallet-xmr-rpc -f
+sudo journalctl -u wallet-xtm -f
+```
+
+## Payment Processor
+
+The payment processor (`solo-pool-payments`) handles share tracking and reward distribution for XMR, XTM, and ALEO pools using the generated pool wallets.
+
+### Features
+
+- Share tracking from pool APIs
+- Proportional reward distribution
+- Automatic payments to miner wallets
+- RESTful API for stats and history
+
+### API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/health` | Health check |
+| `GET /api/stats` | All payment stats |
+| `GET /api/stats/:coin` | Stats for specific coin (xmr, xtm, aleo) |
+| `GET /api/miner/:coin/:address` | Miner balance and history |
+| `GET /api/payments/:coin` | Recent payments |
+| `GET /api/payments/:coin/:address` | Miner payment history |
+
 
 ## Resource Requirements
 
@@ -68,8 +169,8 @@ Access the dashboard at:
 | Component | CPU Cores | RAM | Disk | Notes |
 |-----------|-----------|-----|------|-------|
 | monerod | 2 | 4 GB | 200 GB+ | Full node |
-| P2Pool | 1 | 1 GB | 1 GB | Decentralized pool with sidechain |
-| **Subtotal** | **3** | **5 GB** | **~201 GB** | |
+| monero-pool | 1 | 500 MB | 500 MB | Pool with PPLNS payouts |
+| **Subtotal** | **3** | **4.5 GB** | **~201 GB** | |
 
 #### Tari (XTM) - Solo Only
 | Component | CPU Cores | RAM | Disk | Notes |
@@ -145,8 +246,8 @@ Access the dashboard at:
 | **Monero** | | | | |
 | monerod P2P | 18080 | TCP | Both | Blockchain network |
 | monerod RPC | 18081 | TCP | Localhost | Internal only |
-| P2Pool Stratum | 3336 | TCP | Inbound | Miner connections |
-| P2Pool P2P | 37889 | TCP | Both | P2Pool sidechain network |
+| monero-pool Stratum | 3336 | TCP | Inbound | Miner connections |
+| monero-pool API | 4243 | TCP | Localhost | Internal only |
 | | | | | |
 | **Tari** | | | | |
 | minotari_node P2P | 18189 | TCP | Both | Blockchain network |
@@ -203,16 +304,34 @@ sudo ufw allow 8333/tcp comment 'Bitcoin P2P'
 │   │   ├── data/
 │   │   └── digibyte.conf
 │   ├── monero/
-│   │   ├── bin/
+│   │   ├── bin/                     # monerod, monero-wallet-cli, monero-wallet-rpc
 │   │   ├── data/
+│   │   ├── wallet/                  # Pool wallet
+│   │   │   ├── pool-wallet          # Wallet files
+│   │   │   ├── pool-wallet.address  # Wallet address
+│   │   │   ├── pool-wallet.password # Wallet password
+│   │   │   ├── SEED_BACKUP.txt      # ⚠️ BACKUP THIS!
+│   │   │   └── start-wallet-rpc.sh
 │   │   └── monerod.conf
 │   ├── tari/
-│   │   ├── bin/
+│   │   ├── bin/                     # minotari_node, minotari_console_wallet, etc.
 │   │   ├── data/
+│   │   ├── config/
+│   │   ├── wallet/                  # Pool wallet
+│   │   │   ├── config.toml
+│   │   │   ├── pool-wallet.password
+│   │   │   ├── pool-wallet.address  # (after init-wallet.sh)
+│   │   │   ├── SEED_BACKUP.txt      # ⚠️ BACKUP THIS! (after init-wallet.sh)
+│   │   │   └── init-wallet.sh       # Run after node sync
+│   │   ├── start-wallet.sh
 │   │   └── config.toml
 │   └── aleo/
 │       ├── bin/
 │       ├── data/
+│       ├── wallet/                  # Pool wallet keypair
+│       │   ├── pool-wallet.address
+│       │   ├── pool-wallet.viewkey
+│       │   └── pool-wallet.privatekey  # ⚠️ BACKUP THIS!
 │       ├── logs/
 │       ├── start-prover.sh
 │       └── SETUP_NOTES.txt
@@ -229,11 +348,11 @@ sudo ufw allow 8333/tcp comment 'Bitcoin P2P'
     │   ├── bin/
     │   ├── logs/
     │   └── ckpool.conf
-    ├── xmr-p2pool/
+    ├── xmr-monero-pool/
     │   ├── bin/
     │   ├── data/
     │   ├── logs/
-    │   └── start-p2pool.sh
+    │   └── pool.conf
     ├── xtm-minotari-miner/          # (tari_only mode)
     │   ├── config/
     │   └── logs/
@@ -249,10 +368,18 @@ sudo ufw allow 8333/tcp comment 'Bitcoin P2P'
 │   ├── certs/                       # TLS certificates
 │   │   ├── server.crt
 │   │   └── server.key
+│   ├── db/
+│   │   └── stats.db                 # SQLite database for worker stats
 │   ├── logs/
 │   │   ├── access.log               # Apache Combined Log Format
 │   │   └── error.log
 │   └── config.toml                  # Dashboard configuration
+├── payments/                        # Payment processor (XMR, XTM, ALEO)
+│   ├── solo-pool-payments           # Payment processor binary
+│   ├── config.toml                  # Payment configuration
+│   ├── db/
+│   │   └── payments.db              # SQLite database
+│   └── logs/
 ```
 
 ## Configuration
@@ -293,6 +420,7 @@ WEBUI_HTTP_ENABLED: "false"      # Disabled by default (use HTTPS)
 WEBUI_HTTP_PORT: "8080"
 WEBUI_HTTPS_ENABLED: "true"
 WEBUI_HTTPS_PORT: "8443"
+WEBUI_REFRESH_INTERVAL: "15"     # Stats refresh interval in seconds
 ```
 
 ## Deployment
@@ -340,14 +468,21 @@ sudo systemctl status node-xmr-monerod
 sudo systemctl status node-xtm-minotari
 sudo systemctl status node-aleo-snarkos
 
+# Check wallet services (for payment processing)
+sudo systemctl status wallet-xmr-rpc              # XMR wallet RPC
+sudo systemctl status wallet-xtm                  # XTM wallet (run init-wallet.sh first)
+
 # Check pool services
 sudo systemctl status pool-btc-ckpool
 sudo systemctl status pool-bch-ckpool
 sudo systemctl status pool-dgb-ckpool
-sudo systemctl status pool-xmr-p2pool              # If monero_only mode
+sudo systemctl status pool-xmr-monero-pool         # If monero_only mode
 sudo systemctl status pool-xtm-minotari-miner      # If tari_only mode
 sudo systemctl status pool-xmr-xtm-merge-proxy     # If merge mode
 sudo systemctl status pool-aleo
+
+# Check payment processor (XMR, XTM, ALEO)
+sudo systemctl status solo-pool-payments
 
 # Check web dashboard
 sudo systemctl status solo-pool-webui
@@ -403,7 +538,7 @@ sudo ufw allow 12024/tcp  # DGB P2P
 sudo ufw allow 18080/tcp  # XMR P2P
 sudo ufw allow 18189/tcp  # XTM P2P
 sudo ufw allow 4130/tcp   # ALEO P2P
-sudo ufw allow 37889/tcp  # P2Pool sidechain (if using monero_only mode)
+sudo ufw allow 3336/tcp   # monero-pool stratum (if using monero_only mode)
 
 # View all open ports
 sudo ufw status
@@ -459,7 +594,10 @@ sudo journalctl -u node-xmr-monerod -f
 
 # Pool logs
 tail -f /opt/solo-pool/pool/btc-ckpool/logs/ckpool.log
-sudo journalctl -u pool-xmr-p2pool -f
+sudo journalctl -u pool-xmr-monero-pool -f
+
+# Payment processor logs
+sudo journalctl -u solo-pool-payments -f
 
 # WebUI logs
 sudo journalctl -u solo-pool-webui -f
@@ -469,12 +607,19 @@ tail -f /opt/solo-pool/webui/logs/error.log
 
 ### Backup
 
-Important files to backup:
+**CRITICAL - Pool Wallet Seeds/Keys (funds at risk if lost):**
+- `/opt/solo-pool/node/monero/wallet/SEED_BACKUP.txt` - XMR wallet seed phrase
+- `/opt/solo-pool/node/tari/wallet/SEED_BACKUP.txt` - XTM wallet seed phrase
+- `/opt/solo-pool/node/aleo/wallet/pool-wallet.privatekey` - ALEO private key
+
+**Important configuration files:**
 - `/opt/solo-pool/install-scripts/config.sh` - Your configuration
-- `/opt/solo-pool/node/*/data/wallet*` - Any wallet files
 - `/opt/solo-pool/pool/*/` - Pool configurations and logs
 - `/opt/solo-pool/webui/config.toml` - WebUI configuration
 - `/opt/solo-pool/webui/certs/` - TLS certificates (if using custom certs)
+- `/opt/solo-pool/webui/db/` - WebUI database (worker stats history)
+- `/opt/solo-pool/payments/config.toml` - Payment processor configuration
+- `/opt/solo-pool/payments/db/` - Payment database (share history, balances)
 
 ## Troubleshooting
 
@@ -504,6 +649,33 @@ Important files to backup:
 2. Check firewall: `sudo ufw status | grep 808`
 3. Check logs: `sudo journalctl -u solo-pool-webui -n 50`
 4. Verify ports in config: `cat /opt/solo-pool/webui/config.toml`
+
+### Payment Processor Issues
+
+1. Check service is running: `sudo systemctl status solo-pool-payments`
+2. Check logs: `sudo journalctl -u solo-pool-payments -n 50`
+3. Verify pool API is accessible: `curl http://127.0.0.1:PORT/api/stats`
+4. Check database: `sqlite3 /opt/solo-pool/payments/db/payments.db ".tables"`
+5. For ALEO: Ensure private key is set in config.toml
+
+### Wallet Service Issues
+
+**XMR (wallet-xmr-rpc):**
+1. Check service status: `sudo systemctl status wallet-xmr-rpc`
+2. Ensure monerod is synced: `sudo journalctl -u node-xmr-monerod | tail -20`
+3. Check wallet-rpc logs: `sudo journalctl -u wallet-xmr-rpc -n 50`
+4. Verify wallet files exist: `ls -la /opt/solo-pool/node/monero/wallet/`
+
+**XTM (wallet-xtm):**
+1. Ensure node is synced first: `sudo systemctl status node-xtm-minotari`
+2. Initialize wallet if not done: `/opt/solo-pool/node/tari/wallet/init-wallet.sh`
+3. Check wallet address was generated: `cat /opt/solo-pool/node/tari/wallet/pool-wallet.address`
+4. Check wallet logs: `sudo journalctl -u wallet-xtm -n 50`
+
+**ALEO:**
+1. Verify keypair was generated: `ls -la /opt/solo-pool/node/aleo/wallet/`
+2. Check address file: `cat /opt/solo-pool/node/aleo/wallet/pool-wallet.address`
+3. Ensure private key is in payment processor config
 
 ## License
 

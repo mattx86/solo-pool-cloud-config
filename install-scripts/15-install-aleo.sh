@@ -19,6 +19,12 @@ set -e
 # Source configuration
 source /opt/solo-pool/install-scripts/config.sh
 
+# Validate config was loaded successfully
+if [ "${CONFIG_LOADED:-}" != "true" ]; then
+    echo "ERROR: Failed to load configuration from config.sh" >&2
+    exit 1
+fi
+
 # Check if ALEO pool is enabled
 if [ "${ENABLE_ALEO_POOL}" != "true" ]; then
     log "ALEO pool is disabled, skipping..."
@@ -129,9 +135,57 @@ rm -rf aleo-pool-server
 log "  ALEO Pool Server built and installed"
 
 # =============================================================================
-# 4. CONFIGURE SNARKOS NODE
+# 4. GENERATE POOL WALLET KEYPAIR
 # =============================================================================
-log "4. Configuring snarkOS node..."
+log "4. Generating ALEO pool wallet keypair..."
+
+mkdir -p ${ALEO_DIR}/wallet
+
+# Generate new ALEO account using snarkos
+log "  Creating new ALEO account..."
+ACCOUNT_OUTPUT=$(${ALEO_DIR}/bin/snarkos account new 2>&1)
+
+# Extract private key, view key, and address from output
+ALEO_PRIVATE_KEY=$(echo "${ACCOUNT_OUTPUT}" | grep "Private Key" | awk '{print $NF}')
+ALEO_VIEW_KEY=$(echo "${ACCOUNT_OUTPUT}" | grep "View Key" | awk '{print $NF}')
+ALEO_POOL_ADDRESS=$(echo "${ACCOUNT_OUTPUT}" | grep "Address" | awk '{print $NF}')
+
+if [ -z "${ALEO_PRIVATE_KEY}" ] || [ -z "${ALEO_POOL_ADDRESS}" ]; then
+    log_error "Failed to generate ALEO account"
+    log_error "Output: ${ACCOUNT_OUTPUT}"
+    exit 1
+fi
+
+# Save keys securely
+cat > ${ALEO_DIR}/wallet/pool-wallet.keys << EOF
+# ALEO Pool Wallet Keys
+# *** KEEP THIS FILE SECURE - BACKUP IMMEDIATELY! ***
+# Generated: $(date)
+
+Private Key: ${ALEO_PRIVATE_KEY}
+View Key: ${ALEO_VIEW_KEY}
+Address: ${ALEO_POOL_ADDRESS}
+EOF
+
+chmod 600 ${ALEO_DIR}/wallet/pool-wallet.keys
+
+# Save just the address for easy reference
+echo "${ALEO_POOL_ADDRESS}" > ${ALEO_DIR}/wallet/pool-wallet.address
+chmod 644 ${ALEO_DIR}/wallet/pool-wallet.address
+
+# Save private key separately for payment processor
+echo "${ALEO_PRIVATE_KEY}" > ${ALEO_DIR}/wallet/pool-wallet.privatekey
+chmod 600 ${ALEO_DIR}/wallet/pool-wallet.privatekey
+
+log_success "ALEO pool wallet generated"
+log "  Address: ${ALEO_POOL_ADDRESS}"
+log "  Keys file: ${ALEO_DIR}/wallet/pool-wallet.keys"
+log "  *** BACKUP ${ALEO_DIR}/wallet/pool-wallet.keys IMMEDIATELY! ***"
+
+# =============================================================================
+# 5. CONFIGURE SNARKOS NODE
+# =============================================================================
+log "5. Configuring snarkOS node..."
 
 mkdir -p ${ALEO_DIR}/data
 mkdir -p ${ALEO_DIR}/logs
@@ -152,7 +206,7 @@ cat > ${ALEO_DIR}/start-node.sh << EOF
 exec ${ALEO_DIR}/bin/snarkos start \\
     --nodisplay \\
     --node ${ALEO_LISTEN}:4130 \\
-    --rest 127.0.0.1:3030 \\
+    --rest 127.0.0.1:${ALEO_REST_PORT} \\
     --log ${ALEO_DIR}/logs/snarkos.log \\
     --verbosity 1
 EOF
@@ -162,23 +216,16 @@ chmod +x ${ALEO_DIR}/start-node.sh
 log "  snarkOS node configured"
 
 # =============================================================================
-# 5. CONFIGURE ALEO POOL SERVER
+# 6. CONFIGURE ALEO POOL SERVER
 # =============================================================================
-log "5. Configuring ALEO Pool Server..."
+log "6. Configuring ALEO Pool Server..."
 
 mkdir -p ${ALEO_POOL_DIR}/config
 mkdir -p ${ALEO_POOL_DIR}/data
 mkdir -p ${ALEO_POOL_DIR}/logs
 
-# Check if wallet address is configured
-if [[ "${ALEO_WALLET_ADDRESS}" == *"YOUR_"* ]] || [[ "${ALEO_WALLET_ADDRESS}" == *"_HERE"* ]] || [[ -z "${ALEO_WALLET_ADDRESS}" ]]; then
-    log "  WARNING: ALEO_WALLET_ADDRESS not configured!"
-    log "  You must set a valid ALEO address in config.sh before starting the pool"
-    ALEO_POOL_ADDRESS="CONFIGURE_YOUR_ALEO_ADDRESS"
-else
-    ALEO_POOL_ADDRESS="${ALEO_WALLET_ADDRESS}"
-    log "  Pool address: ${ALEO_POOL_ADDRESS:0:20}..."
-fi
+# ALEO_POOL_ADDRESS was set during keypair generation
+log "  Using generated pool address: ${ALEO_POOL_ADDRESS:0:30}..."
 
 # Create pool server configuration
 # Note: aleo-pool-server configuration format may vary - this is a template
@@ -191,11 +238,16 @@ cat > ${ALEO_POOL_DIR}/config/config.toml << EOF
 listen = "0.0.0.0:${ALEO_STRATUM_PORT}"
 
 # snarkOS REST API connection
-node_url = "http://127.0.0.1:3030"
+node_url = "http://127.0.0.1:${ALEO_REST_PORT}"
 
 [pool]
 # Pool address - rewards go here
+# Generated during installation: ${ALEO_DIR}/wallet/pool-wallet.address
 address = "${ALEO_POOL_ADDRESS}"
+
+# Pool private key - required for payment processing
+# Read from: ${ALEO_DIR}/wallet/pool-wallet.privatekey
+private_key = "${ALEO_PRIVATE_KEY}"
 
 # Pool name (shown in stratum)
 name = "Solo Pool"
@@ -225,9 +277,9 @@ chmod +x ${ALEO_POOL_DIR}/start-pool.sh
 log "  ALEO Pool Server configured"
 
 # =============================================================================
-# 6. CREATE SETUP NOTES
+# 7. CREATE SETUP NOTES
 # =============================================================================
-log "6. Creating setup notes..."
+log "7. Creating setup notes..."
 
 cat > ${ALEO_DIR}/SETUP_NOTES.txt << EOF
 ALEO Solo Mining Pool Setup Notes
@@ -240,8 +292,13 @@ This installation includes:
 Architecture:
   Your ASIC --> Pool Server (stratum:${ALEO_STRATUM_PORT}) --> snarkOS (node) --> ALEO Network
 
-Pool Address: ${ALEO_POOL_ADDRESS}
-(All mining rewards go to this address)
+POOL WALLET (AUTO-GENERATED):
+- Address: ${ALEO_POOL_ADDRESS}
+- Private Key: ${ALEO_DIR}/wallet/pool-wallet.privatekey
+- Keys Backup: ${ALEO_DIR}/wallet/pool-wallet.keys
+
+*** IMPORTANT: BACKUP ${ALEO_DIR}/wallet/pool-wallet.keys IMMEDIATELY! ***
+This file contains your private key. If lost, you lose access to all pool funds.
 
 DIRECTORIES:
 - Node: ${ALEO_DIR}
@@ -292,6 +349,6 @@ log_success "ALEO snarkOS v${SNARKOS_VERSION} and Pool Server installed"
 log "  Node: ${ALEO_DIR}"
 log "  Pool: ${ALEO_POOL_DIR}"
 log "  Stratum port: ${ALEO_STRATUM_PORT}"
+log "  Pool address: ${ALEO_POOL_ADDRESS}"
 log ""
-log "  IMPORTANT: Configure ALEO_WALLET_ADDRESS in config.sh"
-log "  before starting the pool!"
+log "  *** BACKUP ${ALEO_DIR}/wallet/pool-wallet.keys IMMEDIATELY! ***"

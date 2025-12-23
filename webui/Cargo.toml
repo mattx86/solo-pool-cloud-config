@@ -53,6 +53,12 @@ mime_guess = "2"
 notify = "6"
 regex = "1"
 
+# Database for persistent worker stats
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# URL encoding/decoding for API paths
+urlencoding = "2"
+
 [profile.release]
 lto = true
 codegen-units = 1

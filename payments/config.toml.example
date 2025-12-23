@@ -1,0 +1,127 @@
+# Solo Pool Payment Processor Configuration
+# Copy this file to config.toml and adjust settings as needed
+#
+# MINING MODES:
+# - monero_only: XMR only via monero-pool (port 3336 stratum, 4243 API)
+# - merge: XMR + XTM via merge mining proxy (port 18081)
+# - tari_only: XTM solo mining (no payment processor needed - direct coinbase rewards)
+#
+# The install script automatically configures based on MONERO_TARI_MODE
+
+[service]
+# How often to sync shares from pool APIs (seconds)
+share_scan_interval_secs = 60
+
+# How often to process payments (seconds)
+# Default: 3600 (1 hour)
+payment_interval_secs = 3600
+
+# Log level: trace, debug, info, warn, error
+log_level = "info"
+
+[database]
+# SQLite database path for share tracking and payment history
+path = "/opt/solo-pool/payments/db/payments.db"
+
+[api]
+# API server listen address
+listen = "127.0.0.1"
+# API server port
+port = 8090
+
+# =============================================================================
+# MONERO (XMR) CONFIGURATION
+# =============================================================================
+# Only enabled in monero_only or merge modes (not tari_only)
+[xmr]
+# Enable XMR payment processing
+enabled = true
+
+# Pool wallet address (receives block rewards)
+pool_wallet_address = "YOUR_XMR_POOL_WALLET_ADDRESS"
+
+# monero-wallet-rpc URL (MONERO_WALLET_RPC_PORT, default 18082)
+wallet_rpc_url = "http://127.0.0.1:18082/json_rpc"
+
+# Pool API URL (varies by mode)
+# - monero_only mode: monero-pool API at MONERO_POOL_API_PORT (default 4243)
+# - merge mode: Merge mining proxy API at MERGE_PROXY_API_PORT (default 18081)
+pool_api_url = "http://127.0.0.1:4243"
+
+# Pool type - determines which API implementation to use
+# - "monero_pool" for monero_only mode (monero-pool API)
+# - "merge_proxy" for merge mode (Tari merge mining proxy API)
+pool_type = "monero_pool"
+
+# Path to pool data directory
+pool_data_path = "/opt/solo-pool/pool/xmr-monero-pool/data"
+
+# Minimum payout threshold (in atomic units - piconero)
+# Any balance > 0 will be paid out. Set higher if desired.
+# Example: 0.001 XMR = 1,000,000,000 piconero
+min_payout = "1"
+
+# Ring size for transactions (Monero default is 16)
+mixin = 16
+
+# =============================================================================
+# TARI (XTM) CONFIGURATION
+# =============================================================================
+# Enabled in merge mode or tari_only mode
+[xtm]
+# Enable XTM payment processing
+enabled = true
+
+# Pool wallet address
+pool_wallet_address = "YOUR_XTM_POOL_WALLET_ADDRESS"
+
+# minotari_console_wallet GRPC URL (TARI_WALLET_GRPC_PORT, default 18143)
+wallet_rpc_url = "http://127.0.0.1:18143"
+
+# Pool API URL (varies by mode)
+# - merge mode: Merge mining proxy API at MERGE_PROXY_API_PORT (default 18081)
+# - tari_only mode: Minotari miner API at TARI_MINER_API_PORT (default 18084)
+pool_api_url = "http://127.0.0.1:18081"
+
+# Pool type - determines which API implementation to use
+# - "merge_proxy" for merge mode (Tari merge mining proxy API)
+# - "minotari_miner" for tari_only mode (Minotari miner API)
+pool_type = "merge_proxy"
+
+# Path to pool data directory (varies by mode)
+# - merge mode: /opt/solo-pool/pool/xmr-xtm-minotari-merge-proxy/data
+# - tari_only mode: /opt/solo-pool/pool/xtm-minotari-miner/data
+pool_data_path = "/opt/solo-pool/pool/xmr-xtm-minotari-merge-proxy/data"
+
+# Minimum payout threshold (in microTari)
+# Any balance > 0 will be paid out. Set higher if desired.
+# Example: 0.001 XTM = 1,000 uT
+min_payout = "1"
+
+# =============================================================================
+# ALEO CONFIGURATION
+# =============================================================================
+[aleo]
+# Enable ALEO payment processing
+enabled = true
+
+# Pool wallet address (Aleo address format: aleo1...)
+pool_wallet_address = "YOUR_ALEO_POOL_WALLET_ADDRESS"
+
+# Pool private key for signing transactions
+# WARNING: Keep this secure!
+pool_private_key = "YOUR_ALEO_PRIVATE_KEY"
+
+# snarkOS node RPC URL (ALEO_RPC_PORT, default 3033)
+node_rpc_url = "http://127.0.0.1:3033"
+
+# ALEO pool server API URL (ALEO_POOL_API_PORT, default 4000)
+pool_api_url = "http://127.0.0.1:4000"
+
+# Path to ALEO pool data directory
+pool_data_path = "/opt/solo-pool/pool/aleo-pool-server/data"
+
+# Minimum payout threshold (in microcredits)
+# Any balance > 0 will be paid out. Set higher if desired.
+# Example: 0.001 ALEO = 1,000 microcredits
+min_payout = "1"
