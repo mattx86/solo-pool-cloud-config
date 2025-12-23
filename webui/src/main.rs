@@ -1,38 +1,46 @@
 use axum::{
     body::Body,
     extract::State,
-    http::{header, StatusCode, Uri},
-    response::{Html, IntoResponse, Json, Response},
-    routing::{delete, get},
+    http::{header, Request, StatusCode, Uri},
+    middleware::{self, Next},
+    response::{IntoResponse, Json, Redirect, Response},
+    routing::{delete, get, post},
     Router,
 };
 use axum_server::tls_rustls::RustlsConfig;
 use rust_embed::Embed;
-use std::sync::Arc;
+use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::path::Path;
+use std::sync::Arc;
 use tokio::sync::RwLock;
-use tower_http::{
-    cors::CorsLayer,
-    trace::TraceLayer,
-};
+use tower_cookies::{Cookie, CookieManagerLayer, Cookies};
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod access_log;
 mod api;
+mod auth;
 mod config;
 mod db;
 mod models;
 
 use access_log::{AccessLogLayer, AccessLogWriter};
+use auth::AuthState;
 use config::Config;
 use db::Database;
-use models::{PoolStats, AppState, detect_server_ip};
+use models::{detect_server_ip, AppState, PoolStats};
 
 /// Embedded static files (compiled into binary at build time)
 #[derive(Embed)]
 #[folder = "src/static"]
 struct StaticAssets;
+
+/// Combined application state
+struct CombinedState {
+    app: Arc<AppState>,
+    auth: Arc<AuthState>,
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -67,7 +75,37 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("Starting Solo Pool Web UI");
     tracing::info!("Error log: {}", error_log_path.display());
-    tracing::info!("Loaded configuration: {:?}", config);
+
+    // Initialize authentication
+    let auth_state = match AuthState::new(&config.auth) {
+        Ok(auth) => {
+            if config.auth.enabled {
+                tracing::info!(
+                    "Authentication enabled, credentials loaded from {}",
+                    config.auth.credentials_file
+                );
+            } else {
+                tracing::warn!("Authentication is DISABLED");
+            }
+            Arc::new(auth)
+        }
+        Err(e) => {
+            if config.auth.enabled {
+                tracing::error!("Failed to load credentials: {}", e);
+                tracing::error!(
+                    "Create credentials file at {} with SOLO_POOL_WEBUI_USER and SOLO_POOL_WEBUI_PASS",
+                    config.auth.credentials_file
+                );
+                return Err(e);
+            } else {
+                tracing::warn!("Authentication disabled, skipping credential load");
+                Arc::new(AuthState::new(&config::AuthConfig {
+                    enabled: false,
+                    ..Default::default()
+                })?)
+            }
+        }
+    };
 
     // Detect server IP for stratum URLs
     tracing::info!("Detecting server IP...");
@@ -84,7 +122,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Database initialized with WAL mode");
 
     // Initialize app state
-    let state = Arc::new(AppState {
+    let app_state = Arc::new(AppState {
         config: config.clone(),
         stats: RwLock::new(PoolStats::default()),
         server_ip,
@@ -92,9 +130,18 @@ async fn main() -> anyhow::Result<()> {
     });
 
     // Spawn background task to fetch stats
-    let state_clone = state.clone();
+    let state_clone = app_state.clone();
     tokio::spawn(async move {
         api::stats_updater(state_clone).await;
+    });
+
+    // Spawn session cleanup task
+    let auth_clone = auth_state.clone();
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(tokio::time::Duration::from_secs(300)).await;
+            auth_clone.sessions.cleanup().await;
+        }
     });
 
     // Set up access logging if enabled
@@ -114,18 +161,37 @@ async fn main() -> anyhow::Result<()> {
         None
     };
 
-    // Build router
+    // Build router with authentication
+    let auth_state_for_middleware = auth_state.clone();
+    let cookie_name = config.auth.cookie_name.clone();
+    let auth_enabled = config.auth.enabled;
+
     let mut app = Router::new()
+        // Auth routes (always accessible)
+        .route("/api/auth/login", post(login))
+        .route("/api/auth/logout", post(logout))
+        .route("/api/auth/check", get(check_auth))
         // API routes
         .route("/api/stats", get(get_stats))
         .route("/api/stats/:pool", get(get_pool_stats))
         .route("/api/workers/:pool/:worker", delete(delete_worker))
         .route("/api/health", get(health_check))
+        // Login page (needs special handling)
+        .route("/login", get(login_page))
         // Serve embedded static files
         .fallback(static_handler)
+        // Authentication middleware
+        .layer(middleware::from_fn(move |cookies: Cookies, request: Request<Body>, next: Next| {
+            let auth = auth_state_for_middleware.clone();
+            let cookie_name = cookie_name.clone();
+            async move {
+                require_auth(auth, cookies, cookie_name, auth_enabled, request, next).await
+            }
+        }))
+        .layer(CookieManagerLayer::new())
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
-        .with_state(state);
+        .with_state((app_state, auth_state));
 
     // Add access logging layer if enabled
     if let Some(layer) = access_log_layer {
@@ -137,15 +203,30 @@ async fn main() -> anyhow::Result<()> {
     // Start HTTP server
     let http_addr: SocketAddr = format!("{}:{}", config.server.host, config.server.port)
         .parse()
-        .map_err(|e| anyhow::anyhow!("Invalid HTTP address '{}:{}': {}", config.server.host, config.server.port, e))?;
+        .map_err(|e| {
+            anyhow::anyhow!(
+                "Invalid HTTP address '{}:{}': {}",
+                config.server.host,
+                config.server.port,
+                e
+            )
+        })?;
 
     tracing::info!("HTTP server listening on http://{}", http_addr);
 
     // Check if HTTPS is enabled
     if config.server.https.enabled {
-        let https_addr: SocketAddr = format!("{}:{}", config.server.host, config.server.https.port)
-            .parse()
-            .map_err(|e| anyhow::anyhow!("Invalid HTTPS address '{}:{}': {}", config.server.host, config.server.https.port, e))?;
+        let https_addr: SocketAddr =
+            format!("{}:{}", config.server.host, config.server.https.port)
+                .parse()
+                .map_err(|e| {
+                    anyhow::anyhow!(
+                        "Invalid HTTPS address '{}:{}': {}",
+                        config.server.host,
+                        config.server.https.port,
+                        e
+                    )
+                })?;
 
         // Load TLS certificate and key
         let cert_path = &config.server.https.cert_path;
@@ -154,7 +235,14 @@ async fn main() -> anyhow::Result<()> {
         if std::path::Path::new(cert_path).exists() && std::path::Path::new(key_path).exists() {
             let tls_config = RustlsConfig::from_pem_file(cert_path, key_path)
                 .await
-                .map_err(|e| anyhow::anyhow!("Failed to load TLS certificate from '{}' and '{}': {}", cert_path, key_path, e))?;
+                .map_err(|e| {
+                    anyhow::anyhow!(
+                        "Failed to load TLS certificate from '{}' and '{}': {}",
+                        cert_path,
+                        key_path,
+                        e
+                    )
+                })?;
 
             tracing::info!("HTTPS server listening on https://{}", https_addr);
 
@@ -177,7 +265,8 @@ async fn main() -> anyhow::Result<()> {
         } else {
             tracing::warn!(
                 "HTTPS enabled but certificate files not found: cert={}, key={}",
-                cert_path, key_path
+                cert_path,
+                key_path
             );
             tracing::warn!("Starting HTTP-only server");
 
@@ -195,15 +284,167 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn get_stats(
-    State(state): State<Arc<AppState>>,
-) -> Json<PoolStats> {
+/// Authentication middleware
+async fn require_auth(
+    auth: Arc<AuthState>,
+    cookies: Cookies,
+    cookie_name: String,
+    auth_enabled: bool,
+    request: Request<Body>,
+    next: Next,
+) -> Response {
+    // Skip auth if disabled
+    if !auth_enabled {
+        return next.run(request).await;
+    }
+
+    let path = request.uri().path();
+
+    // Allow login page and auth endpoints
+    if path == "/login"
+        || path == "/login.html"
+        || path.starts_with("/api/auth/")
+        || path == "/css/style.css"
+        || path == "/css/login.css"
+        || path == "/api/health"
+    {
+        return next.run(request).await;
+    }
+
+    // Check for valid session
+    if let Some(session_cookie) = cookies.get(&cookie_name) {
+        if auth.sessions.validate(session_cookie.value()).await.is_some() {
+            return next.run(request).await;
+        }
+    }
+
+    // Not authenticated - redirect to login or return 401 for API
+    if path.starts_with("/api/") {
+        return (StatusCode::UNAUTHORIZED, "Authentication required").into_response();
+    }
+
+    Redirect::to("/login").into_response()
+}
+
+#[derive(Deserialize)]
+struct LoginRequest {
+    username: String,
+    password: String,
+}
+
+#[derive(Serialize)]
+struct LoginResponse {
+    success: bool,
+    username: Option<String>,
+    error: Option<String>,
+}
+
+#[derive(Serialize)]
+struct AuthCheckResponse {
+    authenticated: bool,
+    username: Option<String>,
+}
+
+/// Login endpoint
+async fn login(
+    State((_, auth)): State<(Arc<AppState>, Arc<AuthState>)>,
+    cookies: Cookies,
+    Json(req): Json<LoginRequest>,
+) -> Json<LoginResponse> {
+    if auth.verify(&req.username, &req.password) {
+        let session_id = auth.sessions.create(req.username.clone()).await;
+
+        // Set session cookie
+        let cookie = Cookie::build((auth.cookie_name.clone(), session_id))
+            .path("/")
+            .http_only(true)
+            .same_site(tower_cookies::cookie::SameSite::Lax)
+            .build();
+
+        cookies.add(cookie);
+
+        tracing::info!("User '{}' logged in successfully", req.username);
+
+        Json(LoginResponse {
+            success: true,
+            username: Some(req.username),
+            error: None,
+        })
+    } else {
+        tracing::warn!("Failed login attempt for user '{}'", req.username);
+
+        Json(LoginResponse {
+            success: false,
+            username: None,
+            error: Some("Invalid username or password".to_string()),
+        })
+    }
+}
+
+/// Logout endpoint
+async fn logout(
+    State((_, auth)): State<(Arc<AppState>, Arc<AuthState>)>,
+    cookies: Cookies,
+) -> Json<serde_json::Value> {
+    if let Some(session_cookie) = cookies.get(&auth.cookie_name) {
+        auth.sessions.remove(session_cookie.value()).await;
+    }
+
+    // Remove session cookie
+    cookies.remove(Cookie::from(auth.cookie_name.clone()));
+
+    Json(serde_json::json!({ "success": true }))
+}
+
+/// Check authentication status
+async fn check_auth(
+    State((_, auth)): State<(Arc<AppState>, Arc<AuthState>)>,
+    cookies: Cookies,
+) -> Json<AuthCheckResponse> {
+    if !auth.enabled {
+        return Json(AuthCheckResponse {
+            authenticated: true,
+            username: Some("admin".to_string()),
+        });
+    }
+
+    if let Some(session_cookie) = cookies.get(&auth.cookie_name) {
+        if let Some(username) = auth.sessions.validate(session_cookie.value()).await {
+            return Json(AuthCheckResponse {
+                authenticated: true,
+                username: Some(username),
+            });
+        }
+    }
+
+    Json(AuthCheckResponse {
+        authenticated: false,
+        username: None,
+    })
+}
+
+/// Serve login page
+async fn login_page() -> impl IntoResponse {
+    match StaticAssets::get("login.html") {
+        Some(content) => Response::builder()
+            .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, "text/html")
+            .body(Body::from(content.data.into_owned()))
+            .unwrap(),
+        None => Response::builder()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .body(Body::from("Login page not found"))
+            .unwrap(),
+    }
+}
+
+async fn get_stats(State((state, _)): State<(Arc<AppState>, Arc<AuthState>)>) -> Json<PoolStats> {
     let stats = state.stats.read().await;
     Json(stats.clone())
 }
 
 async fn get_pool_stats(
-    State(state): State<Arc<AppState>>,
+    State((state, _)): State<(Arc<AppState>, Arc<AuthState>)>,
     axum::extract::Path(pool): axum::extract::Path<String>,
 ) -> Result<Json<models::AlgorithmStats>, StatusCode> {
     let stats = state.stats.read().await;
@@ -226,7 +467,7 @@ async fn health_check() -> &'static str {
 
 /// Delete a worker from the database
 async fn delete_worker(
-    State(state): State<Arc<AppState>>,
+    State((state, _)): State<(Arc<AppState>, Arc<AuthState>)>,
     axum::extract::Path((pool, worker)): axum::extract::Path<(String, String)>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     // URL decode the worker name (it may contain special characters)
@@ -234,7 +475,11 @@ async fn delete_worker(
         .map(|s| s.into_owned())
         .unwrap_or(worker);
 
-    tracing::info!("Delete request for worker '{}' in pool '{}'", worker_name, pool);
+    tracing::info!(
+        "Delete request for worker '{}' in pool '{}'",
+        worker_name,
+        pool
+    );
 
     match state.db.delete_worker(&pool, &worker_name) {
         Ok(deleted) => {

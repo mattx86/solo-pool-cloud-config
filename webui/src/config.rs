@@ -4,6 +4,48 @@ use serde::Deserialize;
 pub struct Config {
     pub server: ServerConfig,
     pub pools: PoolsConfig,
+    /// Authentication configuration
+    #[serde(default)]
+    pub auth: AuthConfig,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AuthConfig {
+    /// Enable authentication (default: true)
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    /// Path to credentials file
+    #[serde(default = "default_credentials_path")]
+    pub credentials_file: String,
+    /// Session timeout in seconds (default: 24 hours)
+    #[serde(default = "default_session_timeout")]
+    pub session_timeout_secs: u64,
+    /// Cookie name for session
+    #[serde(default = "default_cookie_name")]
+    pub cookie_name: String,
+}
+
+impl Default for AuthConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            credentials_file: default_credentials_path(),
+            session_timeout_secs: default_session_timeout(),
+            cookie_name: default_cookie_name(),
+        }
+    }
+}
+
+fn default_credentials_path() -> String {
+    "/opt/solo-pool/.credentials".to_string()
+}
+
+fn default_session_timeout() -> u64 {
+    86400 // 24 hours
+}
+
+fn default_cookie_name() -> String {
+    "solo_pool_session".to_string()
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -283,6 +325,7 @@ impl Default for Config {
                 https: HttpsConfig::default(),
                 logging: LogConfig::default(),
             },
+            auth: AuthConfig::default(),
             pools: PoolsConfig {
                 btc: Some(CkPoolConfig {
                     enabled: true,

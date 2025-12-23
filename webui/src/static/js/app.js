@@ -62,11 +62,56 @@ function unhideWorker(poolId, workerName) {
 }
 
 // Initialize dashboard
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Check authentication first
+    const authenticated = await checkAuth();
+    if (!authenticated) {
+        window.location.href = '/login';
+        return;
+    }
+
     initDashboard();
     fetchStats();
     setInterval(fetchStats, REFRESH_INTERVAL);
 });
+
+// Check authentication status
+async function checkAuth() {
+    try {
+        const response = await fetch('/api/auth/check');
+        if (response.ok) {
+            const data = await response.json();
+            // Display username
+            const userNameEl = document.getElementById('userName');
+            const userInfoEl = document.getElementById('userInfo');
+            if (userNameEl && data.username) {
+                userNameEl.textContent = data.username;
+                userInfoEl.style.display = 'flex';
+            }
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Auth check failed:', error);
+        return false;
+    }
+}
+
+// Logout function
+async function logout() {
+    try {
+        const response = await fetch('/api/auth/logout', {
+            method: 'POST'
+        });
+        if (response.ok) {
+            window.location.href = '/login';
+        } else {
+            console.error('Logout failed');
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
+}
 
 function initDashboard() {
     const grid = document.getElementById('poolsGrid');

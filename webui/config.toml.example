@@ -24,6 +24,19 @@ access_log_enabled = true
 error_log_enabled = true
 
 # =============================================================================
+# Authentication Configuration
+# Protects the WebUI with username/password login
+# =============================================================================
+[auth]
+enabled = true
+# Credentials file containing SOLO_POOL_WEBUI_USER and SOLO_POOL_WEBUI_PASS
+credentials_file = "/opt/solo-pool/.credentials"
+# Session timeout in seconds (default: 24 hours)
+session_timeout_secs = 86400
+# Cookie name for session management
+cookie_name = "solo_pool_session"
+
+# =============================================================================
 # CKPool-based pools (BTC, BCH, DGB)
 # Uses Unix socket API exclusively for real-time stats
 # Each pool instance must have its own socket directory configured via -s flag

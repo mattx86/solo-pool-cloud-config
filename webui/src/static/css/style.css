@@ -60,10 +60,56 @@ header h1 {
     background-clip: text;
 }
 
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+}
+
 .header-info {
     display: flex;
     align-items: center;
     gap: 15px;
+}
+
+/* User Info and Logout */
+.user-info {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding-left: 20px;
+    border-left: 1px solid var(--border-color);
+}
+
+.user-name {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+    border-color: var(--error);
+    color: var(--error);
+    background: rgba(244, 67, 54, 0.1);
+}
+
+.logout-btn svg {
+    width: 16px;
+    height: 16px;
 }
 
 .last-updated {
@@ -712,6 +758,18 @@ footer {
         flex-direction: column;
         gap: 15px;
         text-align: center;
+    }
+
+    .header-right {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .user-info {
+        padding-left: 0;
+        border-left: none;
+        padding-top: 10px;
+        border-top: 1px solid var(--border-color);
     }
 
     .pools-grid {

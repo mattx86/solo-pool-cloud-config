@@ -191,6 +191,8 @@ write_files:
       WEBUI_HTTPS_PORT="8443"
       # Stats refresh interval in seconds (how often to poll pool backends)
       WEBUI_REFRESH_INTERVAL="15"
+      # WebUI authentication username (password is auto-generated)
+      WEBUI_USER="admin"
 
       # ---------------------------------------------------------------------
       # SYSTEM USER - Dedicated user for running pool services
