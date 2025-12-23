@@ -488,3 +488,340 @@ function restoreHiddenWorkers(poolId) {
         }
     }
 }
+
+// =============================================================================
+// Tab Navigation
+// =============================================================================
+
+let currentTab = 'pools';
+let paymentStats = null;
+let allPayments = [];
+const PAYMENTS_REFRESH_INTERVAL = 30000; // 30 seconds
+
+function switchTab(tabName) {
+    currentTab = tabName;
+
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.toggle('active', content.id === `tab-${tabName}`);
+    });
+
+    // Fetch payments data when switching to payments tab
+    if (tabName === 'payments') {
+        fetchPaymentStats();
+    }
+}
+
+// =============================================================================
+// Payments Tab Functions
+// =============================================================================
+
+async function fetchPaymentStats() {
+    try {
+        const response = await fetch('/api/payments/stats');
+
+        if (!response.ok) {
+            if (response.status === 503) {
+                updatePaymentsStatus(false, 'Payment processor not available');
+                showPaymentsUnavailable();
+                return;
+            }
+            throw new Error('Failed to fetch payment stats');
+        }
+
+        paymentStats = await response.json();
+        updatePaymentsStatus(true);
+        renderPaymentStats(paymentStats);
+
+        // Also fetch recent payments for each coin
+        await fetchAllRecentPayments();
+    } catch (error) {
+        console.error('Error fetching payment stats:', error);
+        updatePaymentsStatus(false, error.message);
+    }
+}
+
+function showPaymentsUnavailable() {
+    const grid = document.getElementById('paymentStatsGrid');
+    grid.innerHTML = `
+        <div class="payment-stats-card" style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+            <div style="font-size: 2rem; margin-bottom: 15px;">⚠️</div>
+            <h3 style="margin-bottom: 10px; color: var(--text-secondary);">Payment Processor Not Available</h3>
+            <p style="color: var(--text-muted);">The payment processor service is not running or not configured.
+            Payment statistics will appear here once the service is available.</p>
+        </div>
+    `;
+
+    const tableBody = document.getElementById('paymentsTableBody');
+    tableBody.innerHTML = '<tr><td colspan="6" class="no-data">No payments data available</td></tr>';
+}
+
+function updatePaymentsStatus(online, message) {
+    const indicator = document.getElementById('paymentsStatusIndicator');
+    const statusText = document.querySelector('.payments-status .status-text');
+
+    if (online) {
+        indicator.classList.add('online');
+        statusText.textContent = 'Connected';
+    } else {
+        indicator.classList.remove('online');
+        statusText.textContent = message || 'Disconnected';
+    }
+}
+
+function renderPaymentStats(stats) {
+    const grid = document.getElementById('paymentStatsGrid');
+    grid.innerHTML = '';
+
+    const coins = [
+        { id: 'xmr', name: 'Monero', symbol: 'XMR' },
+        { id: 'xtm', name: 'Tari', symbol: 'XTM' },
+        { id: 'aleo', name: 'Aleo', symbol: 'ALEO' }
+    ];
+
+    coins.forEach(coin => {
+        const coinStats = stats[coin.id];
+        if (coinStats) {
+            const card = createPaymentStatsCard(coin, coinStats);
+            grid.appendChild(card);
+        }
+    });
+
+    // If no coins have stats, show a message
+    if (grid.children.length === 0) {
+        grid.innerHTML = `
+            <div class="payment-stats-card" style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                <p style="color: var(--text-muted);">No payment statistics available yet.
+                Stats will appear once miners start submitting shares.</p>
+            </div>
+        `;
+    }
+}
+
+function createPaymentStatsCard(coin, stats) {
+    const card = document.createElement('div');
+    card.className = 'payment-stats-card';
+
+    card.innerHTML = `
+        <div class="payment-stats-card-header">
+            <div class="coin-icon ${coin.id}">${coin.symbol}</div>
+            <h3>${coin.name}</h3>
+        </div>
+        <div class="payment-stats-row">
+            <span class="payment-stats-label">Total Miners</span>
+            <span class="payment-stats-value highlight">${stats.total_miners}</span>
+        </div>
+        <div class="payment-stats-row">
+            <span class="payment-stats-label">Pending Balance</span>
+            <span class="payment-stats-value">${formatCoinAmount(stats.total_pending, coin.id)}</span>
+        </div>
+        <div class="payment-stats-row">
+            <span class="payment-stats-label">Total Paid</span>
+            <span class="payment-stats-value">${formatCoinAmount(stats.total_paid, coin.id)}</span>
+        </div>
+        <div class="payment-stats-row">
+            <span class="payment-stats-label">Pending Payments</span>
+            <span class="payment-stats-value">${stats.pending_payments}</span>
+        </div>
+    `;
+
+    return card;
+}
+
+function formatCoinAmount(amount, coin) {
+    const num = parseFloat(amount);
+    if (isNaN(num)) return '0';
+
+    // Different decimal places for different coins
+    const decimals = {
+        'xmr': 12,
+        'xtm': 6,
+        'aleo': 6
+    };
+
+    const dec = decimals[coin] || 8;
+    return num.toFixed(Math.min(dec, 8));
+}
+
+async function fetchAllRecentPayments() {
+    allPayments = [];
+    const coins = ['xmr', 'xtm', 'aleo'];
+
+    try {
+        const promises = coins.map(coin =>
+            fetch(`/api/payments/coin/${coin}?limit=20`)
+                .then(r => r.ok ? r.json() : [])
+                .catch(() => [])
+        );
+
+        const results = await Promise.all(promises);
+
+        results.forEach((payments, index) => {
+            payments.forEach(p => {
+                p.coin = coins[index]; // Ensure coin is set
+            });
+            allPayments.push(...payments);
+        });
+
+        // Sort by date, newest first
+        allPayments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        renderPaymentsTable(allPayments);
+    } catch (error) {
+        console.error('Error fetching recent payments:', error);
+    }
+}
+
+function filterPayments() {
+    const filter = document.getElementById('paymentsCoinFilter').value;
+
+    if (filter === 'all') {
+        renderPaymentsTable(allPayments);
+    } else {
+        const filtered = allPayments.filter(p => p.coin.toLowerCase() === filter);
+        renderPaymentsTable(filtered);
+    }
+}
+
+function renderPaymentsTable(payments) {
+    const tbody = document.getElementById('paymentsTableBody');
+
+    if (!payments || payments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="no-data">No payments found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = payments.slice(0, 50).map(payment => `
+        <tr>
+            <td><span class="coin-badge ${payment.coin.toLowerCase()}">${payment.coin.toUpperCase()}</span></td>
+            <td class="address-cell" title="${escapeHtml(payment.wallet_address)}">${truncateAddress(payment.wallet_address)}</td>
+            <td class="amount-cell">${formatCoinAmount(payment.amount, payment.coin)}</td>
+            <td><span class="status-badge ${payment.status}">${payment.status}</span></td>
+            <td>${payment.tx_hash ? `<span class="tx-hash" onclick="copyToClipboard('${escapeHtml(payment.tx_hash)}')" title="${escapeHtml(payment.tx_hash)}">${truncateTxHash(payment.tx_hash)}</span>` : '-'}</td>
+            <td class="date-cell">${formatDate(payment.created_at)}</td>
+        </tr>
+    `).join('');
+}
+
+function truncateTxHash(hash) {
+    if (!hash) return '-';
+    if (hash.length <= 16) return hash;
+    return hash.substring(0, 8) + '...' + hash.substring(hash.length - 8);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleString([], {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+// =============================================================================
+// Miner Lookup
+// =============================================================================
+
+async function lookupMiner() {
+    const coin = document.getElementById('minerCoin').value;
+    const address = document.getElementById('minerAddress').value.trim();
+
+    if (!address) {
+        showTooltip('Please enter a wallet address', true);
+        return;
+    }
+
+    const container = document.getElementById('minerInfoContainer');
+    container.style.display = 'block';
+    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    try {
+        const response = await fetch(`/api/payments/miner/${coin}/${encodeURIComponent(address)}`);
+
+        if (!response.ok) {
+            throw new Error('Miner not found');
+        }
+
+        const minerInfo = await response.json();
+        renderMinerInfo(minerInfo);
+    } catch (error) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 30px; color: var(--text-muted);">
+                <p>No data found for this address.</p>
+                <p style="font-size: 0.85rem; margin-top: 10px;">The miner may not have submitted any shares yet.</p>
+            </div>
+        `;
+    }
+}
+
+function renderMinerInfo(info) {
+    const container = document.getElementById('minerInfoContainer');
+
+    const coinSymbol = info.coin.toUpperCase();
+
+    container.innerHTML = `
+        <div class="miner-info-header">
+            <h4><span class="coin-badge ${info.coin}">${coinSymbol}</span> Miner Statistics</h4>
+            <span class="miner-info-address">${truncateAddress(info.wallet_address)}</span>
+        </div>
+
+        <div class="miner-info-grid">
+            <div class="miner-info-item">
+                <div class="miner-info-label">Pending Balance</div>
+                <div class="miner-info-value highlight">${formatCoinAmount(info.pending_balance, info.coin)} ${coinSymbol}</div>
+            </div>
+            <div class="miner-info-item">
+                <div class="miner-info-label">Total Paid</div>
+                <div class="miner-info-value">${formatCoinAmount(info.total_paid, info.coin)} ${coinSymbol}</div>
+            </div>
+            <div class="miner-info-item">
+                <div class="miner-info-label">Total Shares</div>
+                <div class="miner-info-value">${formatNumber(info.total_shares)}</div>
+            </div>
+            <div class="miner-info-item">
+                <div class="miner-info-label">Last Share</div>
+                <div class="miner-info-value" style="font-size: 0.9rem;">${info.last_share ? formatDate(info.last_share) : 'Never'}</div>
+            </div>
+        </div>
+
+        ${info.recent_payments && info.recent_payments.length > 0 ? `
+            <div class="miner-payments-list">
+                <h5>Recent Payments</h5>
+                ${info.recent_payments.map(p => `
+                    <div class="miner-payment-item">
+                        <span class="miner-payment-amount">${formatCoinAmount(p.amount, info.coin)} ${coinSymbol}</span>
+                        <span class="status-badge ${p.status}">${p.status}</span>
+                        <span class="miner-payment-date">${formatDate(p.created_at)}</span>
+                    </div>
+                `).join('')}
+            </div>
+        ` : `
+            <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+                <p>No payments yet</p>
+            </div>
+        `}
+    `;
+}
+
+function showTooltip(message, isError = false) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'copy-tooltip' + (isError ? ' error' : '');
+    tooltip.textContent = message;
+    document.body.appendChild(tooltip);
+    setTimeout(() => tooltip.remove(), isError ? 3000 : 1500);
+}
+
+// Start payments refresh when on payments tab
+setInterval(() => {
+    if (currentTab === 'payments') {
+        fetchPaymentStats();
+    }
+}, PAYMENTS_REFRESH_INTERVAL);

@@ -80,6 +80,11 @@ pub struct ApiConfig {
     /// API port
     #[serde(default = "default_api_port")]
     pub port: u16,
+
+    /// API authentication token (required for all endpoints except health)
+    /// If empty, authentication is disabled
+    #[serde(default)]
+    pub token: String,
 }
 
 fn default_api_listen() -> String {
@@ -264,6 +269,7 @@ impl Default for Config {
             api: ApiConfig {
                 listen: default_api_listen(),
                 port: default_api_port(),
+                token: String::new(),
             },
             xmr: None,
             xtm: None,

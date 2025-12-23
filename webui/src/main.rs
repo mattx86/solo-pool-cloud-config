@@ -1,6 +1,6 @@
 use axum::{
     body::Body,
-    extract::State,
+    extract::{Query, State},
     http::{header, Request, StatusCode, Uri},
     middleware::{self, Next},
     response::{IntoResponse, Json, Redirect, Response},
@@ -176,6 +176,11 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/stats/:pool", get(get_pool_stats))
         .route("/api/workers/:pool/:worker", delete(delete_worker))
         .route("/api/health", get(health_check))
+        // Payment processor proxy routes
+        .route("/api/payments/stats", get(proxy_payments_stats))
+        .route("/api/payments/stats/:coin", get(proxy_payments_coin_stats))
+        .route("/api/payments/coin/:coin", get(proxy_payments_list))
+        .route("/api/payments/miner/:coin/:address", get(proxy_payments_miner))
         // Login page (needs special handling)
         .route("/login", get(login_page))
         // Serve embedded static files
@@ -499,6 +504,88 @@ async fn delete_worker(
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
+}
+
+// =============================================================================
+// Payment Processor Proxy Routes
+// =============================================================================
+
+/// Proxy request to payment processor API
+async fn proxy_to_payments(
+    state: &AppState,
+    path: &str,
+) -> Result<Response, (StatusCode, String)> {
+    let url = format!("{}{}", state.config.server.payments_api_url, path);
+
+    let client = reqwest::Client::new();
+    let mut request = client.get(&url).timeout(std::time::Duration::from_secs(5));
+
+    // Add API token if configured
+    if !state.config.server.payments_api_token.is_empty() {
+        request = request.header("Authorization", format!("Bearer {}", state.config.server.payments_api_token));
+    }
+
+    match request.send().await {
+        Ok(response) => {
+            let status = StatusCode::from_u16(response.status().as_u16())
+                .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+
+            match response.text().await {
+                Ok(body) => {
+                    Response::builder()
+                        .status(status)
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from(body))
+                        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
+                }
+                Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
+            }
+        }
+        Err(e) => {
+            if e.is_connect() {
+                Err((StatusCode::SERVICE_UNAVAILABLE, "Payment processor not available".to_string()))
+            } else {
+                Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
+            }
+        }
+    }
+}
+
+/// Proxy payment stats
+async fn proxy_payments_stats(
+    State((state, _)): State<(Arc<AppState>, Arc<AuthState>)>,
+) -> Result<Response, (StatusCode, String)> {
+    proxy_to_payments(&state, "/api/stats").await
+}
+
+/// Proxy payment stats for specific coin
+async fn proxy_payments_coin_stats(
+    State((state, _)): State<(Arc<AppState>, Arc<AuthState>)>,
+    axum::extract::Path(coin): axum::extract::Path<String>,
+) -> Result<Response, (StatusCode, String)> {
+    proxy_to_payments(&state, &format!("/api/stats/{}", coin)).await
+}
+
+/// Proxy payment list for a coin
+async fn proxy_payments_list(
+    State((state, _)): State<(Arc<AppState>, Arc<AuthState>)>,
+    axum::extract::Path(coin): axum::extract::Path<String>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> Result<Response, (StatusCode, String)> {
+    let query = if params.is_empty() {
+        String::new()
+    } else {
+        format!("?{}", params.iter().map(|(k, v)| format!("{}={}", k, v)).collect::<Vec<_>>().join("&"))
+    };
+    proxy_to_payments(&state, &format!("/api/payments/{}{}", coin, query)).await
+}
+
+/// Proxy miner info
+async fn proxy_payments_miner(
+    State((state, _)): State<(Arc<AppState>, Arc<AuthState>)>,
+    axum::extract::Path((coin, address)): axum::extract::Path<(String, String)>,
+) -> Result<Response, (StatusCode, String)> {
+    proxy_to_payments(&state, &format!("/api/miner/{}/{}", coin, urlencoding::encode(&address))).await
 }
 
 /// Handler for embedded static files

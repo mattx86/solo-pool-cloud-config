@@ -65,6 +65,16 @@ pub struct ServerConfig {
     /// Logging configuration
     #[serde(default)]
     pub logging: LogConfig,
+    /// Payment processor API URL (for proxying payment requests)
+    #[serde(default = "default_payments_api_url")]
+    pub payments_api_url: String,
+    /// Payment processor API token (for authenticating with payment service)
+    #[serde(default)]
+    pub payments_api_token: String,
+}
+
+fn default_payments_api_url() -> String {
+    "http://127.0.0.1:8081".to_string()
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -324,6 +334,8 @@ impl Default for Config {
                 db_dir: default_db_dir(),
                 https: HttpsConfig::default(),
                 logging: LogConfig::default(),
+                payments_api_url: default_payments_api_url(),
+                payments_api_token: String::new(),
             },
             auth: AuthConfig::default(),
             pools: PoolsConfig {

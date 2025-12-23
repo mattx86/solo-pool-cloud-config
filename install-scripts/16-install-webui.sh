@@ -34,6 +34,14 @@ log "Installing Solo Pool Web UI..."
 # WebUI directory - use config variable with fallback
 WEBUI_DIR="${WEBUI_DIR:-${BASE_DIR}/webui}"
 
+# Generate payments API token (used by both webui and payments service)
+PAYMENTS_API_TOKEN_FILE="${BASE_DIR}/.payments_api_token"
+PAYMENTS_API_TOKEN=$(openssl rand -hex 32)
+echo "${PAYMENTS_API_TOKEN}" > "${PAYMENTS_API_TOKEN_FILE}"
+chmod 600 "${PAYMENTS_API_TOKEN_FILE}"
+chown ${POOL_USER}:${POOL_USER} "${PAYMENTS_API_TOKEN_FILE}"
+log "  Generated payments API token: ${PAYMENTS_API_TOKEN_FILE}"
+
 # Use config variables with defaults
 WEBUI_HTTP_ENABLED="${WEBUI_HTTP_ENABLED:-true}"
 WEBUI_HTTP_PORT="${WEBUI_HTTP_PORT:-8080}"
@@ -343,6 +351,10 @@ key_path = "${KEY_FILE}"
 log_dir = "${WEBUI_DIR}/logs"
 access_log_enabled = true
 error_log_enabled = true
+
+# Payment processor API (for proxying payment requests)
+payments_api_url = "http://127.0.0.1:${PAYMENTS_API_PORT:-8081}"
+payments_api_token = "${PAYMENTS_API_TOKEN}"
 
 [auth]
 enabled = true
@@ -672,9 +684,12 @@ CONFIGURATION:
   Restart the service after changes.
 
 API ENDPOINTS:
+  Authentication:
   POST   /api/auth/login              - Login (username, password)
   POST   /api/auth/logout             - Logout
   GET    /api/auth/check              - Check authentication status
+
+  Pool Stats:
   GET    /api/stats                   - All pool statistics (requires auth)
   GET    /api/stats/btc               - Bitcoin pool stats
   GET    /api/stats/bch               - Bitcoin Cash pool stats
@@ -684,6 +699,14 @@ API ENDPOINTS:
   GET    /api/stats/merge             - XMR+XTM merge mining stats
   GET    /api/stats/aleo              - ALEO pool stats
   DELETE /api/workers/:pool/:worker   - Delete worker from database
+
+  Payment Processor (proxied):
+  GET    /api/payments/stats              - All payment stats
+  GET    /api/payments/stats/:coin        - Payment stats for specific coin
+  GET    /api/payments/coin/:coin         - Recent payments for a coin
+  GET    /api/payments/miner/:coin/:addr  - Miner balance and payment history
+
+  Other:
   GET    /api/health                  - Health check (no auth)
 
 LOGS:

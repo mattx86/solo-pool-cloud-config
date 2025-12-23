@@ -25,4 +25,3 @@ echo "Starting wallet services (for payment processing)..."
 
 echo ""
 echo "Done. Wait for nodes to sync before starting pools."
-echo "NOTE: For Tari, run ${TARI_DIR:-/opt/solo-pool/node/tari}/wallet/init-wallet.sh after node sync."

@@ -1,6 +1,7 @@
 //! REST API for payment processor
 //!
 //! Endpoints:
+//! - GET /api/health - Health check (no auth required)
 //! - GET /api/stats - Overall payment processor stats
 //! - GET /api/stats/:coin - Stats for a specific coin
 //! - GET /api/miner/:coin/:address - Miner balance and history
@@ -9,9 +10,11 @@
 
 use crate::db::{Coin, Database, MinerBalance, Payment};
 use axum::{
+    body::Body,
     extract::{Path, Query, State},
-    http::StatusCode,
-    response::IntoResponse,
+    http::{Request, StatusCode},
+    middleware::{self, Next},
+    response::{IntoResponse, Response},
     routing::get,
     Json, Router,
 };
@@ -22,10 +25,13 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct ApiState {
     pub db: Database,
+    pub api_token: String,
 }
 
 /// Create the API router
 pub fn create_router(state: ApiState) -> Router {
+    let api_token = state.api_token.clone();
+
     Router::new()
         .route("/api/health", get(health_check))
         .route("/api/stats", get(get_all_stats))
@@ -33,7 +39,45 @@ pub fn create_router(state: ApiState) -> Router {
         .route("/api/miner/:coin/:address", get(get_miner_info))
         .route("/api/payments/:coin", get(get_coin_payments))
         .route("/api/payments/:coin/:address", get(get_miner_payments))
+        .layer(middleware::from_fn(move |req: Request<Body>, next: Next| {
+            let token = api_token.clone();
+            async move { require_auth(token, req, next).await }
+        }))
         .with_state(Arc::new(state))
+}
+
+/// Authentication middleware
+async fn require_auth(
+    api_token: String,
+    request: Request<Body>,
+    next: Next,
+) -> Response {
+    // Skip auth if token is not configured
+    if api_token.is_empty() {
+        return next.run(request).await;
+    }
+
+    let path = request.uri().path();
+
+    // Allow health check without auth
+    if path == "/api/health" {
+        return next.run(request).await;
+    }
+
+    // Check for valid Authorization header
+    if let Some(auth_header) = request.headers().get("Authorization") {
+        if let Ok(auth_str) = auth_header.to_str() {
+            if auth_str.starts_with("Bearer ") {
+                let token = &auth_str[7..];
+                if token == api_token {
+                    return next.run(request).await;
+                }
+            }
+        }
+    }
+
+    // Not authenticated
+    (StatusCode::UNAUTHORIZED, "Invalid or missing API token").into_response()
 }
 
 /// Health check endpoint

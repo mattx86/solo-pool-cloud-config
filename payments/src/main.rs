@@ -58,8 +58,17 @@ async fn main() -> anyhow::Result<()> {
     let (shutdown_tx, _) = broadcast::channel::<()>(1);
 
     // Start API server
-    let api_state = ApiState { db: db.clone() };
+    let api_state = ApiState {
+        db: db.clone(),
+        api_token: config.api.token.clone(),
+    };
     let api_router = api::create_router(api_state);
+
+    if config.api.token.is_empty() {
+        info!("API authentication disabled (no token configured)");
+    } else {
+        info!("API authentication enabled");
+    }
     let api_addr: SocketAddr = format!("{}:{}", config.api.listen, config.api.port)
         .parse()
         .expect("Invalid API address");

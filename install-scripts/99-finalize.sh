@@ -163,7 +163,8 @@ FILES_BASE_URL="${SCRIPTS_BASE_URL}/files"
 
 # Download and install convenience scripts
 for script in start-nodes.sh stop-nodes.sh start-pools.sh stop-pools.sh \
-              start-all.sh stop-all.sh status.sh sync-status.sh; do
+              start-all.sh stop-all.sh status.sh sync-status.sh \
+              start-btc.sh start-bch.sh start-dgb.sh start-xmr.sh start-xtm.sh start-aleo.sh; do
     log "  Downloading ${script}..."
     if wget -q "${FILES_BASE_URL}/scripts/${script}" -O "${BASE_DIR}/${script}" 2>/dev/null; then
         chmod +x "${BASE_DIR}/${script}"

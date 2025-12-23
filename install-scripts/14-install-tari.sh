@@ -130,12 +130,13 @@ chmod 600 ${TARI_DIR}/config/config.toml
 log "  Minotari node configured"
 
 # =============================================================================
-# 3. CREATE POOL WALLET
+# 3. PREPARE POOL WALLET (actual creation happens after node sync)
 # =============================================================================
-log "3. Creating Tari pool wallet..."
+log "3. Preparing Tari pool wallet..."
 
 # Create wallet directory
 mkdir -p ${TARI_DIR}/wallet
+mkdir -p ${TARI_DIR}/wallet/data
 
 # Generate a secure wallet password
 XTM_WALLET_PASSWORD=$(apg -a 1 -m 32 -M NCL -n 1)
@@ -144,9 +145,7 @@ XTM_WALLET_PASSWORD=$(apg -a 1 -m 32 -M NCL -n 1)
 echo "${XTM_WALLET_PASSWORD}" > ${TARI_DIR}/wallet/pool-wallet.password
 chmod 600 ${TARI_DIR}/wallet/pool-wallet.password
 
-# Initialize wallet with minotari_console_wallet
-# The wallet will generate a new seed phrase on first run
-log "  Initializing pool wallet..."
+log "  Password generated and saved"
 
 # Create wallet config for console wallet
 cat > ${TARI_DIR}/wallet/config.toml << EOF
@@ -163,67 +162,7 @@ EOF
 
 chmod 600 ${TARI_DIR}/wallet/config.toml
 
-# Create wallet initialization script
-# This will be run on first start to create the wallet
-cat > ${TARI_DIR}/wallet/init-wallet.sh << 'INITEOF'
-#!/bin/bash
-# Initialize Tari Pool Wallet
-# Run this once after node is synced to create the pool wallet
-
-TARI_DIR="${TARI_DIR}"
-WALLET_DIR="${TARI_DIR}/wallet"
-PASSWORD_FILE="${WALLET_DIR}/pool-wallet.password"
-
-if [ -f "${WALLET_DIR}/data/wallet.sqlite3" ]; then
-    echo "Wallet already exists"
-    exit 0
-fi
-
-echo "Creating new Tari pool wallet..."
-
-# Read password
-PASSWORD=$(cat "${PASSWORD_FILE}")
-
-# Initialize wallet (creates new wallet with random seed)
-${TARI_DIR}/bin/minotari_console_wallet \
-    --config "${WALLET_DIR}/config.toml" \
-    --password "${PASSWORD}" \
-    --non-interactive \
-    --command "get-balance" 2>/dev/null
-
-# Export seed words for backup
-echo "Exporting seed words for backup..."
-${TARI_DIR}/bin/minotari_console_wallet \
-    --config "${WALLET_DIR}/config.toml" \
-    --password "${PASSWORD}" \
-    --non-interactive \
-    --command "export-seed-words" > "${WALLET_DIR}/SEED_BACKUP.txt" 2>/dev/null
-
-chmod 600 "${WALLET_DIR}/SEED_BACKUP.txt"
-
-# Get wallet address
-echo "Getting wallet address..."
-${TARI_DIR}/bin/minotari_console_wallet \
-    --config "${WALLET_DIR}/config.toml" \
-    --password "${PASSWORD}" \
-    --non-interactive \
-    --command "get-address" | grep -E '^[a-f0-9]{64}' | head -1 > "${WALLET_DIR}/pool-wallet.address"
-
-if [ -s "${WALLET_DIR}/pool-wallet.address" ]; then
-    echo "Pool wallet created successfully!"
-    echo "Address: $(cat ${WALLET_DIR}/pool-wallet.address)"
-    echo ""
-    echo "*** IMPORTANT: Backup ${WALLET_DIR}/SEED_BACKUP.txt immediately! ***"
-else
-    echo "WARNING: Could not extract wallet address. Run this script again after node sync."
-fi
-INITEOF
-
-# Replace variables in init script
-sed -i "s|\${TARI_DIR}|${TARI_DIR}|g" ${TARI_DIR}/wallet/init-wallet.sh
-chmod +x ${TARI_DIR}/wallet/init-wallet.sh
-
-# Create wallet-rpc start script
+# Create wallet start script
 log "  Creating wallet start script..."
 cat > ${TARI_DIR}/start-wallet.sh << EOF
 #!/bin/bash
@@ -240,14 +179,19 @@ EOF
 
 chmod +x ${TARI_DIR}/start-wallet.sh
 
+# Create placeholder files (will be populated after node sync)
+touch ${TARI_DIR}/wallet/pool-wallet.address
+touch ${TARI_DIR}/wallet/SEED_BACKUP.txt
+chmod 644 ${TARI_DIR}/wallet/pool-wallet.address
+chmod 600 ${TARI_DIR}/wallet/SEED_BACKUP.txt
+
 # Set ownership
 chown -R ${POOL_USER}:${POOL_USER} ${TARI_DIR}/wallet
 chown ${POOL_USER}:${POOL_USER} ${TARI_DIR}/start-wallet.sh
 
-log_success "Pool wallet setup prepared"
+log_success "Pool wallet prepared"
 log "  Wallet config: ${TARI_DIR}/wallet/config.toml"
-log "  Init script: ${TARI_DIR}/wallet/init-wallet.sh"
-log "  NOTE: Run init-wallet.sh after node is synced to generate wallet"
+log "  NOTE: Wallet will be initialized after node sync via start-xtm.sh"
 
 # =============================================================================
 # 4. CONFIGURE BASED ON MODE
@@ -367,13 +311,14 @@ fi
 # =============================================================================
 log "5. Wallet setup info..."
 log "  Pool wallet location: ${TARI_DIR}/wallet/"
-log "  Current payment address: ${XTM_WALLET_ADDRESS}"
+log "  Configured payment address: ${XTM_WALLET_ADDRESS}"
 log ""
-log "  To use the local pool wallet for PPLNS distribution:"
-log "    1. Start node: sudo systemctl start node-xtm-minotari"
-log "    2. Wait for sync"
-log "    3. Initialize wallet: ${TARI_DIR}/wallet/init-wallet.sh"
-log "    4. Update config with address from: ${TARI_DIR}/wallet/pool-wallet.address"
-log "    5. Start wallet: sudo systemctl start wallet-xtm"
+log "  Wallet Initialization:"
+log "    The wallet will be automatically initialized when the node is synced."
+log "    Use start-xtm.sh or start-all.sh to start the node and initialize the wallet."
 log ""
-log "  *** BACKUP ${TARI_DIR}/wallet/SEED_BACKUP.txt after initialization! ***"
+log "  After initialization:"
+log "    Wallet address: cat ${TARI_DIR}/wallet/pool-wallet.address"
+log "    Seed backup:    cat ${TARI_DIR}/wallet/SEED_BACKUP.txt"
+log ""
+log "  *** BACKUP SEED_BACKUP.txt immediately after initialization! ***"

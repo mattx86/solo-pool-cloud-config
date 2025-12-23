@@ -77,7 +77,7 @@ write_files:
       ALEO_STRATUM_PORT="3339"
 
       # ---------------------------------------------------------------------
-      # POOL API PORTS - Internal ports for payment processor
+      # POOL API PORTS - Internal ports for pool software stats
       # ---------------------------------------------------------------------
       # monero-pool WebUI/API port (for stats/shares)
       MONERO_POOL_API_PORT="4243"
@@ -87,6 +87,12 @@ write_files:
       TARI_MINER_API_PORT="18084"
       # ALEO pool server stats API
       ALEO_POOL_API_PORT="4000"
+
+      # ---------------------------------------------------------------------
+      # PAYMENT PROCESSOR
+      # ---------------------------------------------------------------------
+      # Payment processor REST API port (for WebUI integration)
+      PAYMENTS_API_PORT="8081"
 
       # ---------------------------------------------------------------------
       # NODE RPC PORTS - For pool software to communicate with nodes

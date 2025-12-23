@@ -539,7 +539,9 @@ log "Enabling services..."
 
 # Enable wallet services (required for payment processing)
 [ "${ENABLE_MONERO_POOL}" = "true" ] && systemctl enable wallet-xmr-rpc >/dev/tty1 2>&1
-[ "${ENABLE_TARI_POOL}" = "true" ] && [ "${MONERO_TARI_MODE}" != "monero_only" ] && systemctl enable wallet-xtm >/dev/tty1 2>&1
+if [ "${ENABLE_TARI_POOL}" = "true" ] && [ "${MONERO_TARI_MODE}" != "monero_only" ]; then
+    systemctl enable wallet-xtm >/dev/tty1 2>&1
+fi
 
 # Enable pool services (they depend on nodes)
 [ "${ENABLE_BITCOIN_POOL}" = "true" ] && systemctl enable pool-btc-ckpool >/dev/tty1 2>&1

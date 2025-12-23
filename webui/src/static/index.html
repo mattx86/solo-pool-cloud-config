@@ -29,9 +29,84 @@
             </div>
         </header>
 
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="pools" onclick="switchTab('pools')">Pool Stats</button>
+            <button class="tab-btn" data-tab="payments" onclick="switchTab('payments')">Payments</button>
+        </nav>
+
         <main>
-            <div class="pools-grid" id="poolsGrid">
-                <!-- Pool cards will be inserted here dynamically -->
+            <!-- Pool Stats Tab -->
+            <div class="tab-content active" id="tab-pools">
+                <div class="pools-grid" id="poolsGrid">
+                    <!-- Pool cards will be inserted here dynamically -->
+                </div>
+            </div>
+
+            <!-- Payments Tab -->
+            <div class="tab-content" id="tab-payments">
+                <div class="payments-container">
+                    <div class="payments-header">
+                        <h2>Payment Processor</h2>
+                        <div class="payments-status" id="paymentsStatus">
+                            <span class="status-text">Connecting...</span>
+                            <span class="status-indicator" id="paymentsStatusIndicator"></span>
+                        </div>
+                    </div>
+
+                    <!-- Payment Stats Overview -->
+                    <div class="payment-stats-grid" id="paymentStatsGrid">
+                        <!-- Payment stats cards will be inserted here dynamically -->
+                    </div>
+
+                    <!-- Recent Payments Section -->
+                    <div class="recent-payments-section">
+                        <div class="section-header">
+                            <h3>Recent Payments</h3>
+                            <select id="paymentsCoinFilter" onchange="filterPayments()">
+                                <option value="all">All Coins</option>
+                                <option value="xmr">XMR</option>
+                                <option value="xtm">XTM</option>
+                                <option value="aleo">ALEO</option>
+                            </select>
+                        </div>
+                        <div class="payments-table-container">
+                            <table class="payments-table">
+                                <thead>
+                                    <tr>
+                                        <th>Coin</th>
+                                        <th>Address</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>TX Hash</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="paymentsTableBody">
+                                    <!-- Payment rows will be inserted here dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Miner Lookup Section -->
+                    <div class="miner-lookup-section">
+                        <div class="section-header">
+                            <h3>Miner Lookup</h3>
+                        </div>
+                        <div class="miner-lookup-form">
+                            <select id="minerCoin">
+                                <option value="xmr">XMR</option>
+                                <option value="xtm">XTM</option>
+                                <option value="aleo">ALEO</option>
+                            </select>
+                            <input type="text" id="minerAddress" placeholder="Enter wallet address..." />
+                            <button onclick="lookupMiner()">Lookup</button>
+                        </div>
+                        <div class="miner-info-container" id="minerInfoContainer" style="display: none;">
+                            <!-- Miner info will be inserted here -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
 
