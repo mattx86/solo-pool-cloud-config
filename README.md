@@ -52,6 +52,23 @@ A built-in web dashboard provides real-time statistics for all enabled pools:
 
 Worker statistics are persisted in an SQLite database (`/opt/solo-pool/webui/db/stats.db`) and survive WebUI restarts. Offline workers can be deleted from the database via the dashboard.
 
+### Authentication
+
+The dashboard is protected by username/password authentication. Credentials are auto-generated during installation:
+
+- **Username**: Configurable via `WEBUI_USER` (default: `admin`)
+- **Password**: Auto-generated 16-character password using `apg`
+- **Credentials file**: `/opt/solo-pool/.credentials`
+
+To view your credentials after installation:
+```bash
+sudo cat /opt/solo-pool/.credentials
+```
+
+Sessions are stored in-memory and last 24 hours by default.
+
+### Access URLs
+
 Access the dashboard at:
 - HTTPS: `https://YOUR_SERVER_IP:8443` (self-signed certificate, enabled by default)
 - HTTP: `http://YOUR_SERVER_IP:8080` (disabled by default)
@@ -286,6 +303,7 @@ sudo ufw allow 8333/tcp comment 'Bitcoin P2P'
 
 ```
 /opt/solo-pool/
+├── .credentials                     # WebUI login credentials (auto-generated)
 ├── install-scripts/                 # Installation scripts and config
 │   ├── config.sh                    # Configuration variables
 │   ├── install.log                  # Installation log
@@ -421,6 +439,7 @@ WEBUI_HTTP_PORT: "8080"
 WEBUI_HTTPS_ENABLED: "true"
 WEBUI_HTTPS_PORT: "8443"
 WEBUI_REFRESH_INTERVAL: "15"     # Stats refresh interval in seconds
+WEBUI_USER: "admin"              # Dashboard login username (password auto-generated)
 ```
 
 ## Deployment
@@ -614,6 +633,7 @@ tail -f /opt/solo-pool/webui/logs/error.log
 
 **Important configuration files:**
 - `/opt/solo-pool/install-scripts/config.sh` - Your configuration
+- `/opt/solo-pool/.credentials` - WebUI login credentials
 - `/opt/solo-pool/pool/*/` - Pool configurations and logs
 - `/opt/solo-pool/webui/config.toml` - WebUI configuration
 - `/opt/solo-pool/webui/certs/` - TLS certificates (if using custom certs)
@@ -649,6 +669,7 @@ tail -f /opt/solo-pool/webui/logs/error.log
 2. Check firewall: `sudo ufw status | grep 808`
 3. Check logs: `sudo journalctl -u solo-pool-webui -n 50`
 4. Verify ports in config: `cat /opt/solo-pool/webui/config.toml`
+5. View login credentials: `sudo cat /opt/solo-pool/.credentials`
 
 ### Payment Processor Issues
 
