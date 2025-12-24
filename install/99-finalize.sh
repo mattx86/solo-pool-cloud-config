@@ -182,7 +182,8 @@ mkdir -p ${BIN_DIR}
 # Download and install convenience scripts
 for script in start-nodes.sh stop-nodes.sh start-pools.sh stop-pools.sh \
               start-all.sh stop-all.sh restart-all.sh status.sh sync-status.sh \
-              start-btc.sh start-bch.sh start-dgb.sh start-xmr.sh start-xtm.sh start-aleo.sh; do
+              start-btc.sh start-bch.sh start-dgb.sh start-xmr.sh start-xtm.sh start-aleo.sh \
+              maintenance.sh backup.sh; do
     log "  Downloading ${script}..."
     if wget -q "${BIN_SCRIPTS_URL}/${script}" -O "${BIN_DIR}/${script}" 2>/dev/null; then
         chmod +x "${BIN_DIR}/${script}"
@@ -209,7 +210,58 @@ else
 fi
 
 # =============================================================================
-# 5. SUMMARY
+# 5. CONFIGURE MAINTENANCE
+# =============================================================================
+log "5. Configuring daily maintenance..."
+
+# Create directories
+mkdir -p ${BASE_DIR}/config
+mkdir -p ${BASE_DIR}/logs
+mkdir -p ${INSTALL_DIR}/files/config
+
+TEMPLATE_DIR="${INSTALL_DIR}/files/config"
+CONFIG_TEMPLATES_URL="${FILES_URL}/config"
+
+# Download maintenance templates
+log "  Downloading maintenance templates..."
+wget -q "${CONFIG_TEMPLATES_URL}/logrotate.conf.template" -O "${TEMPLATE_DIR}/logrotate.conf.template" 2>/dev/null || true
+wget -q "${CONFIG_TEMPLATES_URL}/solo-pool.cron.template" -O "${TEMPLATE_DIR}/solo-pool.cron.template" 2>/dev/null || true
+
+# Export variables for template substitution
+export BASE_DIR BIN_DIR BITCOIN_DIR BCHN_DIR DIGIBYTE_DIR MONERO_DIR TARI_DIR ALEO_DIR
+export BTC_CKPOOL_DIR BCH_CKPOOL_DIR DGB_CKPOOL_DIR XMR_MONERO_POOL_DIR
+export XTM_MINER_DIR XMR_XTM_MERGE_DIR ALEO_POOL_DIR WEBUI_DIR PAYMENTS_DIR
+export MAINTENANCE_HOUR MAINTENANCE_MINUTE POOL_USER BACKUP_DIR BACKUP_RETENTION_DAYS
+
+# Install logrotate configuration from template
+log "  Installing logrotate configuration..."
+if [ -f "${TEMPLATE_DIR}/logrotate.conf.template" ]; then
+    envsubst < "${TEMPLATE_DIR}/logrotate.conf.template" > ${BASE_DIR}/config/logrotate.conf
+    chmod 644 ${BASE_DIR}/config/logrotate.conf
+    log "  Logrotate config: ${BASE_DIR}/config/logrotate.conf"
+else
+    log_error "  Logrotate template not found"
+fi
+
+# Install cron job from template
+log "  Installing cron job..."
+if [ -f "${TEMPLATE_DIR}/solo-pool.cron.template" ]; then
+    envsubst < "${TEMPLATE_DIR}/solo-pool.cron.template" > /etc/cron.d/solo-pool
+    chmod 644 /etc/cron.d/solo-pool
+    log "  Cron job: /etc/cron.d/solo-pool"
+    log "  Schedule: ${MAINTENANCE_MINUTE} ${MAINTENANCE_HOUR} * * * (daily)"
+else
+    log_error "  Cron template not found"
+fi
+
+# Set ownership
+chown -R ${POOL_USER}:${POOL_USER} ${BASE_DIR}/config
+chown -R ${POOL_USER}:${POOL_USER} ${BASE_DIR}/logs
+
+log "  Maintenance configured"
+
+# =============================================================================
+# 6. SUMMARY
 # =============================================================================
 log ""
 log "=============================================="

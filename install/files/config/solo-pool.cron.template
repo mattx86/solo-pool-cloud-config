@@ -1,0 +1,15 @@
+# Solo Pool Daily Maintenance
+# Auto-generated during installation
+#
+# Schedule: ${MAINTENANCE_MINUTE} ${MAINTENANCE_HOUR} * * * (default: 2:15 AM daily)
+#
+# Tasks performed:
+# - SQLite database optimization (VACUUM, ANALYZE)
+# - Log rotation for all node/pool/wallet services
+# - Cleanup of old log archives
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Daily maintenance (SQLite + log rotation)
+${MAINTENANCE_MINUTE} ${MAINTENANCE_HOUR} * * * ${POOL_USER} ${BIN_DIR}/maintenance.sh >> ${BASE_DIR}/logs/maintenance.log 2>&1

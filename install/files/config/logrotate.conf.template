@@ -1,0 +1,186 @@
+# Solo Pool Log Rotation Configuration
+# Auto-generated during installation
+# Run via cron: /etc/cron.d/solo-pool
+#
+# Retention policy:
+#   - Retain 30 days of logs
+#   - Compress logs older than 7 days (via lastaction script)
+#   - Delete logs older than 30 days
+
+# Global settings
+nocompress
+missingok
+notifempty
+dateext
+dateformat -%Y%m%d
+rotate 30
+maxage 30
+sharedscripts
+
+# =============================================================================
+# NODE LOGS
+# =============================================================================
+
+# Bitcoin Core
+${BITCOIN_DIR}/logs/*.log {
+    daily
+    size 100M
+    copytruncate
+}
+
+# Bitcoin Cash Node
+${BCHN_DIR}/logs/*.log {
+    daily
+    size 100M
+    copytruncate
+}
+
+# DigiByte Core
+${DIGIBYTE_DIR}/logs/*.log {
+    daily
+    size 100M
+    copytruncate
+}
+
+# Monero (monerod)
+${MONERO_DIR}/logs/*.log {
+    daily
+    size 100M
+    copytruncate
+}
+
+# Tari (minotari_node)
+${TARI_DIR}/logs/*.log {
+    daily
+    size 100M
+    copytruncate
+}
+
+# ALEO (snarkOS)
+${ALEO_DIR}/logs/*.log {
+    daily
+    size 100M
+    copytruncate
+}
+
+# =============================================================================
+# POOL LOGS
+# =============================================================================
+
+# CKPool - Bitcoin
+${BTC_CKPOOL_DIR}/logs/*.log {
+    daily
+    size 50M
+    copytruncate
+}
+
+# CKPool - Bitcoin Cash
+${BCH_CKPOOL_DIR}/logs/*.log {
+    daily
+    size 50M
+    copytruncate
+}
+
+# CKPool - DigiByte
+${DGB_CKPOOL_DIR}/logs/*.log {
+    daily
+    size 50M
+    copytruncate
+}
+
+# monero-pool
+${XMR_MONERO_POOL_DIR}/logs/*.log {
+    daily
+    size 50M
+    copytruncate
+}
+
+# Tari miner (tari_only mode)
+${XTM_MINER_DIR}/logs/*.log {
+    daily
+    size 50M
+    copytruncate
+}
+
+# Merge mining proxy
+${XMR_XTM_MERGE_DIR}/logs/*.log {
+    daily
+    size 50M
+    copytruncate
+}
+
+# ALEO pool server
+${ALEO_POOL_DIR}/logs/*.log {
+    daily
+    size 50M
+    copytruncate
+}
+
+# =============================================================================
+# WALLET LOGS
+# =============================================================================
+
+# Monero wallet RPC
+${MONERO_DIR}/wallet/logs/*.log {
+    daily
+    size 50M
+    copytruncate
+}
+
+# Tari wallet
+${TARI_DIR}/wallet/logs/*.log {
+    daily
+    size 50M
+    copytruncate
+}
+
+# =============================================================================
+# SERVICE LOGS
+# =============================================================================
+
+# WebUI
+${WEBUI_DIR}/logs/*.log {
+    daily
+    size 50M
+    copytruncate
+}
+
+# Payment Processor
+${PAYMENTS_DIR}/logs/*.log {
+    daily
+    size 50M
+    copytruncate
+}
+
+# Startup logs
+${BASE_DIR}/logs/startup/*.log {
+    daily
+    size 10M
+    copytruncate
+}
+
+# =============================================================================
+# POST-ROTATION: Compress logs older than 7 days
+# =============================================================================
+# This runs once after all rotations complete
+${BASE_DIR}/logs/maintenance.log {
+    daily
+    size 10M
+    copytruncate
+    lastaction
+        # Compress rotated logs older than 7 days across all log directories
+        for dir in \
+            "${BITCOIN_DIR}/logs" "${BCHN_DIR}/logs" "${DIGIBYTE_DIR}/logs" \
+            "${MONERO_DIR}/logs" "${TARI_DIR}/logs" "${ALEO_DIR}/logs" \
+            "${BTC_CKPOOL_DIR}/logs" "${BCH_CKPOOL_DIR}/logs" "${DGB_CKPOOL_DIR}/logs" \
+            "${XMR_MONERO_POOL_DIR}/logs" "${XTM_MINER_DIR}/logs" "${XMR_XTM_MERGE_DIR}/logs" \
+            "${ALEO_POOL_DIR}/logs" "${WEBUI_DIR}/logs" "${PAYMENTS_DIR}/logs" \
+            "${MONERO_DIR}/wallet/logs" "${TARI_DIR}/wallet/logs" "${BASE_DIR}/logs/startup" \
+            "${BASE_DIR}/logs"; do
+            if [ -d "$dir" ]; then
+                find "$dir" -maxdepth 1 -name "*.log-*" -mtime +7 ! -name "*.gz" \
+                    -exec gzip -9 {} \; 2>/dev/null || true
+            fi
+        done
+    endscript
+}

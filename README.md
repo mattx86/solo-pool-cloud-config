@@ -362,12 +362,20 @@ All components follow a standardized directory layout:
 │   ├── start-xtm.sh                 # Tari: node → sync → wallet → stratum
 │   ├── start-aleo.sh                # ALEO: node → sync → stratum
 │   ├── status.sh                    # Check service status
-│   └── sync-status.sh               # Check blockchain sync progress
+│   ├── sync-status.sh               # Check blockchain sync progress
+│   ├── maintenance.sh               # Daily maintenance (SQLite + logs + backup)
+│   └── backup.sh                    # Create compressed backup
+├── backups/                         # Daily backups (auto-generated)
+│   └── solo-pool-backup-*.tar.gz    # Compressed backups (30-day retention)
+├── config/                          # System configuration
+│   ├── logrotate.conf               # Log rotation config
+│   └── logrotate.state              # Logrotate state file
 ├── install/                         # Installation scripts and config
 │   ├── config.sh                    # Configuration variables
 │   ├── install.log                  # Installation log
 │   └── *.sh                         # Downloaded setup scripts
 ├── logs/
+│   ├── maintenance.log              # Maintenance task logs
 │   └── startup/                     # Per-chain startup logs
 │       ├── btc.log
 │       ├── xmr.log
@@ -525,7 +533,9 @@ solo-pool-cloud-config/
 │   ├── start-xtm.sh
 │   ├── start-aleo.sh
 │   ├── status.sh
-│   └── sync-status.sh
+│   ├── sync-status.sh
+│   ├── maintenance.sh
+│   └── backup.sh
 ├── install/                      # Installation scripts and deployment files
 │   ├── 01-system-update.sh
 │   ├── 02-cis-hardening.sh
@@ -759,6 +769,49 @@ P2P ports are intentionally not opened to reduce attack surface. Nodes work fine
 
 ## Maintenance
 
+### Automated Daily Maintenance
+
+A cron job runs daily at the scheduled time (default: 2:15 AM) to perform:
+
+1. **SQLite Optimization**: VACUUM and ANALYZE on WebUI and Payments databases
+2. **Log Rotation**: Rotate logs and compress rotated logs older than 7 days
+3. **Cleanup**: Remove old log archives (30+ days)
+4. **Backup**: Create compressed backup of `/opt/solo-pool` (excluding blockchain data)
+5. **Disk Usage Report**: Log disk usage for monitoring
+
+**Log Retention Policy**:
+- Logs are rotated daily
+- Uncompressed for first 7 days (easy grep access)
+- Compressed after 7 days (gzip)
+- Deleted after 30 days
+
+**Configuration Variables** (in `cloud-config.yaml`):
+```yaml
+MAINTENANCE_HOUR: "2"       # Hour (0-23)
+MAINTENANCE_MINUTE: "15"    # Minute (0-59)
+BACKUP_DIR: "/opt/solo-pool/backups"  # Backup location
+BACKUP_RETENTION_DAYS: "30" # Delete backups older than this
+```
+
+**Configuration Files**:
+```bash
+/opt/solo-pool/config/logrotate.conf  # Log rotation config
+/etc/cron.d/solo-pool                  # Cron schedule
+/opt/solo-pool/logs/maintenance.log    # Maintenance logs
+```
+
+**Manual Maintenance**:
+```bash
+# Run maintenance manually
+/opt/solo-pool/bin/maintenance.sh
+
+# Run backup only
+/opt/solo-pool/bin/backup.sh
+
+# View maintenance logs
+cat /opt/solo-pool/logs/maintenance.log
+```
+
 ### Update Node Software
 
 ```bash
@@ -792,12 +845,47 @@ tail -f /opt/solo-pool/webui/logs/error.log
 
 ### Backup
 
-**CRITICAL - Pool Wallet Seeds/Keys (funds at risk if lost):**
+#### Automated Backups
+
+Daily backups are created automatically as part of maintenance (default: 2:15 AM).
+
+**What's backed up:**
+- Configuration files (`install/`, `config/`, pool configs)
+- Wallet keys and seeds
+- WebUI and Payments databases
+- Credentials and tokens
+- Current log files (not rotated archives)
+
+**What's excluded (to save space):**
+- Blockchain data (`node/*/data/`)
+- Backup directory itself
+- Compressed log archives
+
+**Backup location and format:**
+```bash
+/opt/solo-pool/backups/solo-pool-backup-YYYYMMDD_HHMMSS_-0600.tar.gz
+```
+Filename includes timestamp and timezone offset for clarity.
+
+**Retention:** 30 days (configurable via `BACKUP_RETENTION_DAYS`)
+
+**Manual backup:**
+```bash
+/opt/solo-pool/bin/backup.sh
+```
+
+#### CRITICAL - Pool Wallet Seeds/Keys
+
+**Funds are at risk if lost. Backup these files immediately after installation:**
+
 - `/opt/solo-pool/node/monero/wallet/keys/SEED_BACKUP.txt` - XMR wallet seed phrase
 - `/opt/solo-pool/node/tari/wallet/keys/SEED_BACKUP.txt` - XTM wallet seed phrase
 - `/opt/solo-pool/node/aleo/wallet/keys/pool-wallet.privatekey` - ALEO private key
 
-**Important configuration files:**
+These are included in daily backups, but you should also keep an off-server copy.
+
+#### Important Configuration Files
+
 - `/opt/solo-pool/install/config.sh` - Your configuration
 - `/opt/solo-pool/.credentials` - WebUI login credentials
 - `/opt/solo-pool/.payments_api_token` - API token for payment processor

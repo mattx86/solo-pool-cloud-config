@@ -189,6 +189,22 @@ write_files:
       WEBUI_USER="admin"
 
       # ---------------------------------------------------------------------
+      # MAINTENANCE SCHEDULING
+      # ---------------------------------------------------------------------
+      # Daily maintenance time (SQLite optimization, log rotation, backup)
+      # Uses system timezone. Default: 2:15 AM
+      MAINTENANCE_HOUR="2"
+      MAINTENANCE_MINUTE="15"
+
+      # ---------------------------------------------------------------------
+      # BACKUP CONFIGURATION
+      # ---------------------------------------------------------------------
+      # Directory to store backups (excluded from backup itself)
+      BACKUP_DIR="${BASE_DIR}/backups"
+      # Maximum age of backups in days (older backups are deleted)
+      BACKUP_RETENTION_DAYS="30"
+
+      # ---------------------------------------------------------------------
       # SYSTEM USER - Dedicated user for running pool services
       # ---------------------------------------------------------------------
       POOL_USER="pool"
