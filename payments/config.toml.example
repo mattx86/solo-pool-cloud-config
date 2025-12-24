@@ -21,7 +21,7 @@ log_level = "info"
 
 [database]
 # SQLite database path for share tracking and payment history
-path = "/opt/solo-pool/payments/db/payments.db"
+path = "/opt/solo-pool/payments/data/payments.db"
 
 [api]
 # API server listen address

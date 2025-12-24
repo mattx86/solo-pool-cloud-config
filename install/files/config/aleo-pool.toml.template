@@ -1,0 +1,27 @@
+# ALEO Pool Server Configuration
+# Solo mining pool for ALEO ASICs
+
+[server]
+# Stratum listener (ASICs connect here)
+listen = "0.0.0.0:${ALEO_STRATUM_PORT}"
+
+# snarkOS REST API connection
+node_url = "http://127.0.0.1:${ALEO_REST_PORT}"
+
+[pool]
+# Pool address - rewards go here
+address = "${ALEO_POOL_ADDRESS}"
+
+# Pool private key - required for payment processing
+private_key = "${ALEO_PRIVATE_KEY}"
+
+# Pool name (shown in stratum)
+name = "Solo Pool"
+
+# Difficulty settings
+starting_difficulty = 100
+minimum_difficulty = 1
+
+[logging]
+level = "info"
+path = "${ALEO_POOL_DIR}/logs/pool.log"

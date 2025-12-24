@@ -1,0 +1,6 @@
+#!/bin/bash
+# monero-pool Start Script
+# Monero mining pool with PPLNS payouts
+
+cd ${XMR_MONERO_POOL_DIR}
+exec ${XMR_MONERO_POOL_DIR}/bin/monero-pool -c ${XMR_MONERO_POOL_DIR}/config/pool.conf

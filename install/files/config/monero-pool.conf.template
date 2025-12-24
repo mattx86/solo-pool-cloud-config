@@ -1,0 +1,38 @@
+# monero-pool configuration
+# See: https://github.com/jtgrassie/monero-pool
+
+# Pool wallet address (receives block rewards)
+# Uses the generated pool wallet from /opt/solo-pool/node/monero/wallet/
+pool-wallet = ${XMR_POOL_WALLET_ADDRESS}
+
+# Stratum listen address and port
+pool-start-diff = ${XMR_STARTING_DIFF}
+pool-fixed-diff = 0
+pool-fee = 0
+pool-port = ${XMR_STRATUM_PORT}
+pool-listen = 0.0.0.0:${XMR_STRATUM_PORT}
+
+# Web UI disabled (API only via payment processor)
+webui-listen =
+
+# Monero daemon RPC
+rpc-host = 127.0.0.1
+rpc-port = ${MONERO_RPC_PORT}
+rpc-timeout = 15
+
+# Wallet RPC (for payouts)
+wallet-rpc-host = 127.0.0.1
+wallet-rpc-port = ${MONERO_WALLET_RPC_PORT}
+
+# Data directory (LMDB database for shares)
+data-dir = ${XMR_MONERO_POOL_DIR}/data
+
+# Logging
+log-level = 0
+log-file = ${XMR_MONERO_POOL_DIR}/logs/pool.log
+
+# Block template refresh interval (seconds)
+block-notified = 0
+
+# Payment processing
+payment-threshold = 0

@@ -160,7 +160,7 @@ fn default_log_dir() -> String {
 }
 
 fn default_db_dir() -> String {
-    "/opt/solo-pool/webui/db".to_string()
+    "/opt/solo-pool/webui/data".to_string()
 }
 
 fn default_true() -> bool {
@@ -311,7 +311,7 @@ impl Config {
     pub fn load() -> anyhow::Result<Self> {
         // Try to load from config file, fall back to defaults
         let config_path = std::env::var("CONFIG_PATH")
-            .unwrap_or_else(|_| "/opt/solo-pool/webui/config.toml".to_string());
+            .unwrap_or_else(|_| "/opt/solo-pool/webui/config/config.toml".to_string());
 
         if std::path::Path::new(&config_path).exists() {
             let content = std::fs::read_to_string(&config_path)?;

@@ -16,7 +16,7 @@
 # =============================================================================
 
 write_files:
-  - path: /opt/solo-pool/install-scripts/config.sh
+  - path: /opt/solo-pool/install/config.sh
     permissions: '0600'
     owner: root:root
     content: |
@@ -28,7 +28,7 @@ write_files:
       # SCRIPT SOURCE - Where to download setup scripts from
       # ---------------------------------------------------------------------
       # Change this to your GitHub raw URL or web server hosting the scripts
-      SCRIPTS_BASE_URL="https://raw.githubusercontent.com/mattx86/solo-pool-cloud-config/refs/heads/main/install-scripts"
+      SCRIPTS_BASE_URL="https://raw.githubusercontent.com/mattx86/solo-pool-cloud-config/refs/heads/main/install"
 
       # ---------------------------------------------------------------------
       # POOL SELECTION - Enable/disable each pool (true/false)
@@ -47,18 +47,6 @@ write_files:
       #          "tari_only" (XTM solo via minotari_miner)
       # ---------------------------------------------------------------------
       MONERO_TARI_MODE="merge"
-
-      # ---------------------------------------------------------------------
-      # WALLET ADDRESSES
-      # ---------------------------------------------------------------------
-      # NOTE: BTC/BCH/DGB wallets are NOT configured here. CKPool runs in
-      # BTCSOLO mode where miners provide their own wallet address as the
-      # stratum username. Block rewards go directly to the miner's wallet.
-      #
-      # XMR/XTM/ALEO: Required for monero-pool, Tari, and ALEO pool operation
-      XMR_WALLET_ADDRESS="YOUR_XMR_WALLET_ADDRESS_HERE"
-      XTM_WALLET_ADDRESS="YOUR_XTM_WALLET_ADDRESS_HERE"
-      ALEO_WALLET_ADDRESS="YOUR_ALEO_WALLET_ADDRESS_HERE"
 
       # ---------------------------------------------------------------------
       # SSH CONFIGURATION
@@ -209,7 +197,8 @@ write_files:
       # DIRECTORY STRUCTURE
       # ---------------------------------------------------------------------
       BASE_DIR="/opt/solo-pool"
-      INSTALL_DIR="${BASE_DIR}/install-scripts"
+      BIN_DIR="${BASE_DIR}/bin"
+      INSTALL_DIR="${BASE_DIR}/install"
       NODE_DIR="${BASE_DIR}/node"
       POOL_DIR="${BASE_DIR}/pool"
 
@@ -233,6 +222,9 @@ write_files:
       # WebUI directory
       WEBUI_DIR="${BASE_DIR}/webui"
 
+      # Payments processor directory
+      PAYMENTS_DIR="${BASE_DIR}/payments"
+
       # CKPool socket directories (for API communication with WebUI)
       BTC_CKPOOL_SOCKET_DIR="/tmp/ckpool-btc"
       BCH_CKPOOL_SOCKET_DIR="/tmp/ckpool-bch"
@@ -241,7 +233,7 @@ write_files:
       # ---------------------------------------------------------------------
       # VERSION PINNING - Node Software
       # ---------------------------------------------------------------------
-      BITCOIN_VERSION="28.3"
+      BITCOIN_VERSION="30.0"
       BCHN_VERSION="28.0.1"
       DIGIBYTE_VERSION="8.26.1"
       MONERO_VERSION="0.18.4.4"
@@ -312,7 +304,7 @@ write_files:
 
 runcmd:
   # Create directory structure first (needed for log file)
-  - mkdir -p /opt/solo-pool/install-scripts
+  - mkdir -p /opt/solo-pool/install
 
   # Ensure /dev/tty1 is available for output (create symlink if needed for cloud environments)
   - |
@@ -320,24 +312,24 @@ runcmd:
       # Some cloud environments don't have tty1, use console instead
       ln -sf /dev/console /dev/tty1 2>/dev/null || true
     fi
-    LOG_FILE="/opt/solo-pool/install-scripts/install.log"
+    LOG_FILE="/opt/solo-pool/install/install.log"
     echo "=============================================="  | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
     echo "Solo Mining Pool Setup - Starting"             | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
     echo "$(date)"                                       | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
     echo "=============================================="  | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
 
   # Make config readable
-  - chmod 600 /opt/solo-pool/install-scripts/config.sh
+  - chmod 600 /opt/solo-pool/install/config.sh
 
   # Source config to get SCRIPTS_BASE_URL
   - |
-    source /opt/solo-pool/install-scripts/config.sh
+    source /opt/solo-pool/install/config.sh
     log "Scripts will be downloaded from: ${SCRIPTS_BASE_URL}"
 
   # Download all scripts
   - |
-    source /opt/solo-pool/install-scripts/config.sh
-    cd /opt/solo-pool/install-scripts
+    source /opt/solo-pool/install/config.sh
+    cd /opt/solo-pool/install
 
     SCRIPTS=(
       "01-system-update.sh"
@@ -371,8 +363,8 @@ runcmd:
 
   # Execute scripts in order
   - |
-    source /opt/solo-pool/install-scripts/config.sh
-    cd /opt/solo-pool/install-scripts
+    source /opt/solo-pool/install/config.sh
+    cd /opt/solo-pool/install
 
     log ""
     log "=============================================="
@@ -500,9 +492,10 @@ runcmd:
 final_message: |
   Solo Mining Pool server setup complete!
 
-  Install Scripts: /opt/solo-pool/install-scripts/
-  Configuration: /opt/solo-pool/install-scripts/config.sh
-  Install Log: /opt/solo-pool/install-scripts/install.log
+  Management Scripts: /opt/solo-pool/bin/
+  Install Scripts: /opt/solo-pool/install/
+  Configuration: /opt/solo-pool/install/config.sh
+  Install Log: /opt/solo-pool/install/install.log
   Nodes: /opt/solo-pool/node/
   Pools: /opt/solo-pool/pool/
 

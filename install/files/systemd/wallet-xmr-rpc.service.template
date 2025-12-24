@@ -1,0 +1,24 @@
+[Unit]
+Description=Monero Wallet RPC (Pool Payments)
+After=network-online.target node-xmr-monerod.service
+Wants=network-online.target
+Requires=node-xmr-monerod.service
+
+[Service]
+Type=simple
+User=${POOL_USER}
+Group=${POOL_USER}
+
+ExecStart=${MONERO_DIR}/bin/start-wallet-rpc.sh
+ExecStop=/bin/kill -SIGTERM $MAINPID
+
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=120
+TimeoutStopSec=60
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,24 @@
+# Minotari Miner Configuration (Solo Tari Mining)
+
+[miner]
+# Network
+network = "mainnet"
+
+# Base node connection
+base_node_grpc_address = "127.0.0.1:${TARI_NODE_GRPC_PORT}"
+
+# Wallet for receiving rewards
+wallet_grpc_address = "127.0.0.1:${TARI_WALLET_GRPC_PORT}"
+wallet_payment_address = "${XTM_WALLET_ADDRESS}"
+
+# Mining configuration
+num_mining_threads = 0  # 0 = auto-detect
+mine_on_tip_only = true
+validate_tip_timeout_sec = 30
+
+# Stratum server (miners connect here)
+stratum_enabled = true
+stratum_listener_address = "0.0.0.0:${XTM_STRATUM_PORT}"
+
+# Logging
+log_path = "${XTM_MINER_DIR}/logs"

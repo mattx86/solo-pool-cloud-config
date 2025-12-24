@@ -8,6 +8,9 @@ port = 8080
 # Stats refresh interval in seconds
 refresh_interval_secs = 10
 
+# Database directory for worker stats
+db_dir = "/opt/solo-pool/webui/data"
+
 # HTTPS Configuration
 # Uses a self-signed certificate by default (10-year validity)
 [server.https]

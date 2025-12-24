@@ -1,0 +1,14 @@
+#!/bin/bash
+# Monero Wallet RPC Start Script
+# Used by payment processor to send payments to miners
+
+exec ${MONERO_DIR}/bin/monero-wallet-rpc \
+    --wallet-file=${MONERO_DIR}/wallet/keys/pool-wallet \
+    --password-file=${MONERO_DIR}/wallet/keys/pool-wallet.password \
+    --rpc-bind-ip=127.0.0.1 \
+    --rpc-bind-port=${MONERO_WALLET_RPC_PORT} \
+    --daemon-address=127.0.0.1:${MONERO_RPC_PORT} \
+    --disable-rpc-login \
+    --trusted-daemon \
+    --log-file=${MONERO_DIR}/wallet/logs/wallet-rpc.log \
+    --log-level=1

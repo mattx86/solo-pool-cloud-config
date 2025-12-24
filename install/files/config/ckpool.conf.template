@@ -1,0 +1,22 @@
+{
+    "btcd" : [
+        {
+            "url" : "127.0.0.1:${NODE_RPC_PORT}",
+            "auth" : "${NODE_RPC_USER}",
+            "pass" : "${NODE_RPC_PASSWORD}",
+            "notify" : true
+        }
+    ],
+    "_comment" : "btcaddress is ignored in BTCSOLO mode (-B flag); miners use their wallet address as username",
+    "btcaddress" : "ignored_in_btcsolo_mode",
+    "btcsig" : "${POOL_SIG}",
+    "blockpoll" : 100,
+    "update_interval" : 30,
+    "serverurl" : [
+        "0.0.0.0:${STRATUM_PORT}"
+    ],
+    "mindiff" : 1,
+    "startdiff" : ${START_DIFF},
+    "maxdiff" : 0,
+    "logdir" : "${CKPOOL_DIR}/logs"
+}

@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Source configuration to get settings
+if [ -f "/opt/solo-pool/install/config.sh" ]; then
+    source /opt/solo-pool/install/config.sh 2>/dev/null
+fi
+
+# Get public IP address (try multiple methods)
+get_public_ip() {
+    local ip=""
+    # Try curl with various services
+    ip=$(curl -s --connect-timeout 2 https://ifconfig.me 2>/dev/null) ||
+    ip=$(curl -s --connect-timeout 2 https://api.ipify.org 2>/dev/null) ||
+    ip=$(curl -s --connect-timeout 2 https://icanhazip.com 2>/dev/null) ||
+    ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+    echo "${ip:-<IP_ADDRESS>}"
+}
+
+echo ""
+echo "=========================================="
+echo "     Solo Mining Pool Server"
+echo "=========================================="
+echo ""
+
+# Show WebUI URLs if enabled
+if [ "${ENABLE_WEBUI}" = "true" ]; then
+    PUBLIC_IP=$(get_public_ip)
+    echo "Web Dashboard:"
+    if [ "${WEBUI_HTTP_ENABLED}" = "true" ]; then
+        echo "  http://${PUBLIC_IP}:${WEBUI_HTTP_PORT:-8080}"
+    fi
+    if [ "${WEBUI_HTTPS_ENABLED}" = "true" ]; then
+        echo "  https://${PUBLIC_IP}:${WEBUI_HTTPS_PORT:-8443}"
+    fi
+    echo ""
+fi
+
+echo "Master Service (auto-starts on boot):"
+echo "  sudo systemctl start solo-pool   - Start all services"
+echo "  sudo systemctl stop solo-pool    - Stop all services"
+echo "  sudo systemctl restart solo-pool - Restart all services"
+echo "  sudo systemctl status solo-pool  - Check status"
+echo ""
+echo "Quick Commands:"
+echo "  ${BIN_DIR}/start-all.sh    - Start all services"
+echo "  ${BIN_DIR}/stop-all.sh     - Stop all services"
+echo "  ${BIN_DIR}/restart-all.sh  - Restart all services"
+echo "  ${BIN_DIR}/status.sh       - Check service status"
+echo "  ${BIN_DIR}/sync-status.sh  - Check blockchain sync"
+echo ""
+echo "Configuration: ${INSTALL_DIR}/config.sh"
+echo "Nodes:         ${NODE_DIR}/"
+echo "Pools:         ${POOL_DIR}/"
+echo ""

@@ -1,0 +1,27 @@
+# Minotari Node Configuration
+
+[common]
+# Base path for data
+base_path = "${TARI_DIR}/data"
+
+[base_node]
+# Network (mainnet, stagenet, nextnet)
+network = "mainnet"
+
+# P2P configuration
+p2p_listen_address = "${TARI_P2P_LISTEN}"
+enable_mining = false
+
+# Database
+db_type = "lmdb"
+lmdb_path = "${TARI_DIR}/data/db"
+pruned_mode_cleanup_interval = 50
+
+# gRPC for wallet and mining
+grpc_enabled = true
+grpc_address = "127.0.0.1:${TARI_NODE_GRPC_PORT}"
+
+[wallet]
+grpc_enabled = true
+grpc_address = "127.0.0.1:${TARI_WALLET_GRPC_PORT}"
+password = "${XTM_NODE_WALLET_PASSWORD}"

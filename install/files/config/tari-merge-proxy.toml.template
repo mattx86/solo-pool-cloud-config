@@ -1,0 +1,28 @@
+# Minotari Merge Mining Proxy Configuration
+
+[merge_mining_proxy]
+# Network
+network = "mainnet"
+
+# Stratum listener (miners connect here)
+listener_address = "0.0.0.0:${XMR_XTM_MERGE_STRATUM_PORT}"
+
+# Monero node connection
+monerod_url = "http://127.0.0.1:${MONERO_RPC_PORT}"
+monerod_username = ""
+monerod_password = ""
+monerod_use_auth = false
+
+# Tari node connection (gRPC)
+grpc_base_node_address = "127.0.0.1:${TARI_NODE_GRPC_PORT}"
+grpc_console_wallet_address = "127.0.0.1:${TARI_WALLET_GRPC_PORT}"
+
+# Wallet for Tari coinbase
+wallet_payment_address = "${XTM_WALLET_ADDRESS}"
+
+# Mining configuration
+coinbase_extra = "Solo Pool Merge"
+wait_for_initial_sync_at_startup = true
+
+# Logging
+log_path = "${XMR_XTM_MERGE_DIR}/logs"

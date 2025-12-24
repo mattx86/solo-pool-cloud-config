@@ -30,12 +30,12 @@ This repository contains a cloud-config for deploying a Ubuntu 24.04 system capa
 
 | Software | Version | Source |
 |----------|---------|--------|
-| Bitcoin Core | 28.3 | [bitcoin/bitcoin](https://github.com/bitcoin/bitcoin) |
+| Bitcoin Core | 30.0 | [bitcoin/bitcoin](https://github.com/bitcoin/bitcoin) |
 | Bitcoin Cash Node (BCHN) | 28.0.1 | [bitcoin-cash-node/bitcoin-cash-node](https://gitlab.com/bitcoin-cash-node/bitcoin-cash-node) |
-| DigiByte Core | 8.26.1 | [digibyte/digibyte](https://github.com/digibyte/digibyte) |
+| DigiByte Core | 8.26.1 | [DigiByte-Core/digibyte](https://github.com/DigiByte-Core/digibyte) |
 | Monero | 0.18.4.4 | [monero-project/monero](https://github.com/monero-project/monero) |
 | Tari (minotari) | 5.1.0 | [tari-project/tari](https://github.com/tari-project/tari) |
-| snarkOS | 4.4.0 | [AleoNet/snarkOS](https://github.com/AleoNet/snarkOS) |
+| snarkOS | 4.4.0 | [ProvableHQ/snarkOS](https://github.com/ProvableHQ/snarkOS) |
 | CKPool | commit 590fb2a | [ckolivas/ckpool](https://bitbucket.org/ckolivas/ckpool) |
 | monero-pool | master | [jtgrassie/monero-pool](https://github.com/jtgrassie/monero-pool) |
 | aleo-pool-server | commit 992792e | [foxpy/aleo-pool-server](https://github.com/foxpy/aleo-pool-server) |
@@ -51,7 +51,7 @@ A built-in web dashboard provides real-time statistics for all enabled pools:
 - **Blocks found** - Block discovery history
 - **Zero fees** - All pools are fee-free (0% pool fee)
 
-Worker statistics are persisted in an SQLite database (`/opt/solo-pool/webui/db/stats.db`) and survive WebUI restarts. Offline workers can be deleted from the database via the dashboard.
+Worker statistics are persisted in an SQLite database (`/opt/solo-pool/webui/data/stats.db`) and survive WebUI restarts. Offline workers can be deleted from the database via the dashboard.
 
 ### Payments Tab
 - **Payment Stats** - Overview of pending and paid balances per coin (XMR, XTM, ALEO)
@@ -91,38 +91,40 @@ For XMR, XTM, and ALEO pools, the installation script automatically generates po
 
 | Pool | Wallet Location | Backup File | Service |
 |------|-----------------|-------------|---------|
-| XMR | `/opt/solo-pool/node/monero/wallet/` | `SEED_BACKUP.txt` | `wallet-xmr-rpc` |
-| XTM | `/opt/solo-pool/node/tari/wallet/` | `SEED_BACKUP.txt` | `wallet-xtm` |
-| ALEO | `/opt/solo-pool/node/aleo/wallet/` | `pool-wallet.privatekey` | N/A (uses private key directly) |
+| XMR | `/opt/solo-pool/node/monero/wallet/keys/` | `SEED_BACKUP.txt` | `wallet-xmr-rpc` |
+| XTM | `/opt/solo-pool/node/tari/wallet/keys/` | `SEED_BACKUP.txt` | `wallet-xtm` |
+| ALEO | `/opt/solo-pool/node/aleo/wallet/keys/` | `pool-wallet.privatekey` | N/A (uses private key directly) |
 
 ### Wallet Initialization
 
-**XMR Wallet**: Initialized automatically when `start-xmr.sh` runs (after node sync). The wallet-rpc service starts after initialization.
+All pool wallets are **automatically generated during installation**. No manual configuration is needed.
 
-**XTM Wallet**: Initialized automatically when `start-xtm.sh` runs (after node sync). The wallet address and seed words are generated at that time.
+**XMR Wallet**: Generated during `13-install-monero.sh`. The `wallet-xmr-rpc` service syncs the wallet after node sync.
 
-**ALEO Wallet**: A keypair is generated during installation. The private key is used directly by the payment processor.
+**XTM Wallet**: Generated during `14-install-tari.sh`. The `wallet-xtm` service connects after node sync.
+
+**ALEO Wallet**: Generated during `15-install-aleo.sh`. The private key is used directly by the payment processor.
 
 ```bash
-# View wallet addresses (after node sync and initialization)
-cat /opt/solo-pool/node/monero/wallet/pool-wallet.address
-cat /opt/solo-pool/node/tari/wallet/pool-wallet.address
-cat /opt/solo-pool/node/aleo/wallet/pool-wallet.address
+# View wallet addresses (available immediately after install)
+cat /opt/solo-pool/node/monero/wallet/keys/pool-wallet.address
+cat /opt/solo-pool/node/tari/wallet/keys/pool-wallet.address
+cat /opt/solo-pool/node/aleo/wallet/keys/pool-wallet.address
 ```
 
 ### Critical Backup Warning
 
-**BACKUP these files after node sync completes:**
+**BACKUP these files immediately after installation:**
 
 ```bash
 # XMR seed phrase (24 words)
-/opt/solo-pool/node/monero/wallet/SEED_BACKUP.txt
+/opt/solo-pool/node/monero/wallet/keys/SEED_BACKUP.txt
 
 # XTM seed phrase (24 words)
-/opt/solo-pool/node/tari/wallet/SEED_BACKUP.txt
+/opt/solo-pool/node/tari/wallet/keys/SEED_BACKUP.txt
 
 # ALEO private key
-/opt/solo-pool/node/aleo/wallet/pool-wallet.privatekey
+/opt/solo-pool/node/aleo/wallet/keys/pool-wallet.privatekey
 ```
 
 **If you lose these backup files and the server is lost, your pool funds are UNRECOVERABLE.**
@@ -160,8 +162,8 @@ The payment processor listens on port `8081` by default (configurable via `PAYME
 The payment processor API is protected by bearer token authentication. A shared token is automatically generated during installation and configured for both services:
 
 - **Token file**: `/opt/solo-pool/.payments_api_token`
-- **WebUI config**: `payments_api_token` in `/opt/solo-pool/webui/config.toml`
-- **Payments config**: `token` in `/opt/solo-pool/payments/config.toml`
+- **WebUI config**: `payments_api_token` in `/opt/solo-pool/webui/config/config.toml`
+- **Payments config**: `token` in `/opt/solo-pool/payments/config/config.toml`
 
 The token is a 64-character hex string generated using `openssl rand -hex 32`. All API endpoints (except `/api/health`) require the token in the `Authorization` header:
 
@@ -334,116 +336,210 @@ sudo ufw allow 8333/tcp comment 'Bitcoin P2P'
 
 ## Directory Structure
 
+All components follow a standardized directory layout:
+- **bin/** - Executables and start scripts
+- **config/** - Configuration files
+- **data/** - Runtime data (blockchain, databases)
+- **logs/** - Log files
+- **wallet/keys/** - Wallet keys and addresses (wallets only)
+
 ```
 /opt/solo-pool/
 ├── .credentials                     # WebUI login credentials (auto-generated)
-├── start-all.sh                     # Start all chains (parallel)
-├── start-btc.sh                     # Bitcoin: node → sync → stratum
-├── start-bch.sh                     # Bitcoin Cash: node → sync → stratum
-├── start-dgb.sh                     # DigiByte: node → sync → stratum
-├── start-xmr.sh                     # Monero: node → sync → wallet → stratum
-├── start-xtm.sh                     # Tari: node → sync → wallet → stratum
-├── start-aleo.sh                    # ALEO: node → sync → stratum
+├── .payments_api_token              # API token for payments service auth
+├── bin/                             # Management scripts
+│   ├── start-all.sh                 # Start all chains (parallel)
+│   ├── stop-all.sh                  # Stop all services
+│   ├── restart-all.sh               # Restart all services
+│   ├── start-nodes.sh               # Start all node services
+│   ├── stop-nodes.sh                # Stop all node services
+│   ├── start-pools.sh               # Start all pool services
+│   ├── stop-pools.sh                # Stop all pool services
+│   ├── start-btc.sh                 # Bitcoin: node → sync → stratum
+│   ├── start-bch.sh                 # Bitcoin Cash: node → sync → stratum
+│   ├── start-dgb.sh                 # DigiByte: node → sync → stratum
+│   ├── start-xmr.sh                 # Monero: node → sync → wallet → stratum
+│   ├── start-xtm.sh                 # Tari: node → sync → wallet → stratum
+│   ├── start-aleo.sh                # ALEO: node → sync → stratum
+│   ├── status.sh                    # Check service status
+│   └── sync-status.sh               # Check blockchain sync progress
+├── install/                         # Installation scripts and config
+│   ├── config.sh                    # Configuration variables
+│   ├── install.log                  # Installation log
+│   └── *.sh                         # Downloaded setup scripts
 ├── logs/
 │   └── startup/                     # Per-chain startup logs
 │       ├── btc.log
 │       ├── xmr.log
 │       └── ...
-├── install-scripts/                 # Installation scripts and config
-│   ├── config.sh                    # Configuration variables
-│   ├── install.log                  # Installation log
-│   └── *.sh                         # Downloaded setup scripts
 ├── node/
 │   ├── bitcoin/
 │   │   ├── bin/                     # bitcoind, bitcoin-cli
+│   │   ├── config/
+│   │   │   └── bitcoin.conf
 │   │   ├── data/                    # Blockchain data
-│   │   └── bitcoin.conf
+│   │   └── logs/
 │   ├── bchn/
 │   │   ├── bin/
+│   │   ├── config/
+│   │   │   └── bitcoin.conf
 │   │   ├── data/
-│   │   └── bitcoin.conf
+│   │   └── logs/
 │   ├── digibyte/
 │   │   ├── bin/
+│   │   ├── config/
+│   │   │   └── digibyte.conf
 │   │   ├── data/
-│   │   └── digibyte.conf
+│   │   └── logs/
 │   ├── monero/
 │   │   ├── bin/                     # monerod, monero-wallet-cli, monero-wallet-rpc
-│   │   ├── data/
-│   │   ├── wallet/                  # Pool wallet (created after sync)
-│   │   │   ├── .initialized         # Marker file (created by start-xmr.sh)
-│   │   │   ├── pool-wallet          # Wallet files
-│   │   │   ├── pool-wallet.address  # Wallet address
-│   │   │   ├── pool-wallet.password # Wallet password
-│   │   │   ├── SEED_BACKUP.txt      # ⚠️ BACKUP THIS!
 │   │   │   └── start-wallet-rpc.sh
-│   │   └── monerod.conf
+│   │   ├── config/
+│   │   │   └── monerod.conf
+│   │   ├── data/
+│   │   ├── logs/
+│   │   └── wallet/                  # Pool wallet (created after sync)
+│   │       ├── keys/
+│   │       │   ├── .initialized     # Marker file (created by start-xmr.sh)
+│   │       │   ├── pool-wallet      # Wallet files
+│   │       │   ├── pool-wallet.address
+│   │       │   ├── pool-wallet.password
+│   │       │   └── SEED_BACKUP.txt  # ⚠️ BACKUP THIS!
+│   │       ├── data/
+│   │       └── logs/
 │   ├── tari/
 │   │   ├── bin/                     # minotari_node, minotari_console_wallet, etc.
-│   │   ├── data/
+│   │   │   └── start-wallet.sh
 │   │   ├── config/
-│   │   ├── wallet/                  # Pool wallet (created after sync)
-│   │   │   ├── .initialized         # Marker file (created by start-xtm.sh)
-│   │   │   ├── config.toml
-│   │   │   ├── pool-wallet.password
-│   │   │   ├── pool-wallet.address
-│   │   │   └── SEED_BACKUP.txt      # ⚠️ BACKUP THIS!
-│   │   ├── start-wallet.sh
-│   │   └── config.toml
+│   │   │   └── config.toml
+│   │   ├── data/
+│   │   ├── logs/
+│   │   └── wallet/                  # Pool wallet (created after sync)
+│   │       ├── keys/
+│   │       │   ├── .initialized     # Marker file (created by start-xtm.sh)
+│   │       │   ├── pool-wallet.password
+│   │       │   ├── pool-wallet.address
+│   │       │   └── SEED_BACKUP.txt  # ⚠️ BACKUP THIS!
+│   │       ├── config/
+│   │       │   └── config.toml
+│   │       ├── data/
+│   │       └── logs/
 │   └── aleo/
 │       ├── bin/
+│       │   ├── start-node.sh
+│       │   └── snarkos
+│       ├── config/
 │       ├── data/
-│       ├── wallet/                  # Pool wallet keypair
-│       │   ├── pool-wallet.address
-│       │   ├── pool-wallet.viewkey
-│       │   └── pool-wallet.privatekey  # ⚠️ BACKUP THIS!
 │       ├── logs/
-│       ├── start-prover.sh
+│       ├── wallet/                  # Pool wallet keypair
+│       │   ├── keys/
+│       │   │   ├── pool-wallet.keys
+│       │   │   ├── pool-wallet.address
+│       │   │   └── pool-wallet.privatekey  # ⚠️ BACKUP THIS!
+│       │   └── data/
 │       └── SETUP_NOTES.txt
-└── pool/
-    ├── btc-ckpool/
-    │   ├── bin/
-    │   ├── logs/
-    │   └── ckpool.conf
-    ├── bch-ckpool/
-    │   ├── bin/
-    │   ├── logs/
-    │   └── ckpool.conf
-    ├── dgb-ckpool/
-    │   ├── bin/
-    │   ├── logs/
-    │   └── ckpool.conf
-    ├── xmr-monero-pool/
-    │   ├── bin/
-    │   ├── data/
-    │   ├── logs/
-    │   └── pool.conf
-    ├── xtm-minotari-miner/          # (tari_only mode)
-    │   ├── config/
-    │   └── logs/
-    ├── xmr-xtm-minotari-merge-proxy/ # (merge mode)
-    │   ├── config/
-    │   └── logs/
-    └── aleo-pool-server/
-        ├── bin/
-        └── logs/
+├── pool/
+│   ├── btc-ckpool/
+│   │   ├── bin/
+│   │   │   └── ckpool
+│   │   ├── config/
+│   │   │   └── ckpool.conf
+│   │   ├── data/
+│   │   └── logs/
+│   ├── bch-ckpool/
+│   │   ├── bin/
+│   │   ├── config/
+│   │   │   └── ckpool.conf
+│   │   ├── data/
+│   │   └── logs/
+│   ├── dgb-ckpool/
+│   │   ├── bin/
+│   │   ├── config/
+│   │   │   └── ckpool.conf
+│   │   ├── data/
+│   │   └── logs/
+│   ├── xmr-monero-pool/
+│   │   ├── bin/
+│   │   ├── config/
+│   │   │   └── pool.conf
+│   │   ├── data/
+│   │   └── logs/
+│   ├── xtm-minotari-miner/          # (tari_only mode)
+│   │   ├── bin/
+│   │   ├── config/
+│   │   │   └── config.toml
+│   │   ├── data/
+│   │   └── logs/
+│   ├── xmr-xtm-minotari-merge-proxy/ # (merge mode)
+│   │   ├── bin/
+│   │   ├── config/
+│   │   │   └── config.toml
+│   │   ├── data/
+│   │   └── logs/
+│   └── aleo-pool-server/
+│       ├── bin/
+│       │   └── start-pool.sh
+│       ├── config/
+│       │   └── config.toml
+│       ├── data/
+│       └── logs/
 ├── webui/                           # Web dashboard
 │   ├── bin/
 │   │   └── solo-pool-webui          # Dashboard binary
+│   ├── config/
+│   │   └── config.toml              # Dashboard configuration
+│   ├── data/
+│   │   └── stats.db                 # SQLite database for worker stats
 │   ├── certs/                       # TLS certificates
 │   │   ├── server.crt
 │   │   └── server.key
-│   ├── db/
-│   │   └── stats.db                 # SQLite database for worker stats
-│   ├── logs/
-│   │   ├── access.log               # Apache Combined Log Format
-│   │   └── error.log
-│   └── config.toml                  # Dashboard configuration
-├── payments/                        # Payment processor (XMR, XTM, ALEO)
-│   ├── solo-pool-payments           # Payment processor binary
-│   ├── config.toml                  # Payment configuration
-│   ├── db/
-│   │   └── payments.db              # SQLite database
 │   └── logs/
+│       ├── access.log               # Apache Combined Log Format
+│       └── error.log
+└── payments/                        # Payment processor (XMR, XTM, ALEO)
+    ├── bin/
+    │   └── solo-pool-payments       # Payment processor binary
+    ├── config/
+    │   └── config.toml              # Payment configuration
+    ├── data/
+    │   └── payments.db              # SQLite database
+    └── logs/
+```
+
+## Repository Structure
+
+```
+solo-pool-cloud-config/
+├── bin/                          # Management scripts (matches /opt/solo-pool/bin/)
+│   ├── start-all.sh
+│   ├── stop-all.sh
+│   ├── restart-all.sh
+│   ├── start-nodes.sh
+│   ├── stop-nodes.sh
+│   ├── start-pools.sh
+│   ├── stop-pools.sh
+│   ├── start-btc.sh
+│   ├── start-bch.sh
+│   ├── start-dgb.sh
+│   ├── start-xmr.sh
+│   ├── start-xtm.sh
+│   ├── start-aleo.sh
+│   ├── status.sh
+│   └── sync-status.sh
+├── install/                      # Installation scripts and deployment files
+│   ├── 01-system-update.sh
+│   ├── 02-cis-hardening.sh
+│   ├── ...
+│   ├── 99-finalize.sh
+│   └── files/                    # Static files for deployment
+│       ├── config/               # Configuration templates
+│       ├── motd/                 # MOTD scripts
+│       ├── notes/                # Setup notes
+│       └── systemd/              # Systemd service files
+├── payments/                     # Payment processor source
+├── webui/                        # WebUI dashboard source
+├── cloud-config.yaml             # Main cloud-init deployment config
+└── README.md
 ```
 
 ## Configuration
@@ -454,7 +550,7 @@ Edit the following variables in the cloud-config/cloud-init before deployment:
 
 ```yaml
 # Base URL where scripts are hosted (e.g., GitHub raw URL)
-SCRIPTS_BASE_URL: "https://raw.githubusercontent.com/mattx86/solo-pool-cloud-config/refs/heads/main/install-scripts"
+SCRIPTS_BASE_URL: "https://raw.githubusercontent.com/mattx86/solo-pool-cloud-config/refs/heads/main/install"
 
 # Pool Selection
 ENABLE_BITCOIN_POOL: "true"
@@ -466,14 +562,6 @@ ENABLE_ALEO_POOL: "true"
 
 # Monero/Tari Mining Mode: "merge", "monero_only", "tari_only"
 MONERO_TARI_MODE: "merge"
-
-# Wallet Addresses (REQUIRED for pools you enable)
-BTC_WALLET_ADDRESS: "your-btc-address-here"
-BCH_WALLET_ADDRESS: "your-bch-address-here"
-DGB_WALLET_ADDRESS: "your-dgb-address-here"
-XMR_WALLET_ADDRESS: "your-xmr-address-here"
-XTM_WALLET_ADDRESS: "your-xtm-address-here"
-ALEO_WALLET_ADDRESS: "your-aleo-address-here"
 
 # Optional: Custom SSH port (default: 22)
 SSH_PORT: "22"
@@ -494,7 +582,7 @@ WEBUI_USER: "admin"              # Dashboard login username (password auto-gener
 
 1. Create a new server/instance with Ubuntu 24.04
 2. Paste the contents of `cloud-config.yaml` into the cloud-config/user-data field
-3. Adjust the configuration variables at the top (wallet addresses, enabled pools, etc.)
+3. Adjust the configuration variables at the top (enabled pools, WebUI settings, etc.)
 4. Launch the server
 
 **Provider-specific field names:**
@@ -513,13 +601,13 @@ WEBUI_USER: "admin"              # Dashboard login username (password auto-gener
 
 ```bash
 # View live installation output (install log)
-tail -f /opt/solo-pool/install-scripts/install.log
+tail -f /opt/solo-pool/install/install.log
 
 # Or view cloud-init output
 tail -f /var/log/cloud-init-output.log
 
 # Or connect to tty1 if available
-# All output is directed to both /dev/tty1 and /opt/solo-pool/install-scripts/install.log
+# All output is directed to both /dev/tty1 and /opt/solo-pool/install/install.log
 ```
 
 ### Verify Services
@@ -567,19 +655,19 @@ All chains start **in parallel** for fastest startup - faster-syncing chains don
 
 ```bash
 # Start all services (recommended)
-/opt/solo-pool/start-all.sh           # Foreground mode - see all output
-/opt/solo-pool/start-all.sh --daemon  # Background mode with logging
+/opt/solo-pool/bin/start-all.sh           # Foreground mode - see all output
+/opt/solo-pool/bin/start-all.sh --daemon  # Background mode with logging
 
 # Monitor startup progress (daemon mode)
 tail -f /opt/solo-pool/logs/startup/*.log
 
 # Start individual coins
-/opt/solo-pool/start-btc.sh   # Bitcoin only
-/opt/solo-pool/start-bch.sh   # Bitcoin Cash only
-/opt/solo-pool/start-dgb.sh   # DigiByte only
-/opt/solo-pool/start-xmr.sh   # Monero only
-/opt/solo-pool/start-xtm.sh   # Tari only
-/opt/solo-pool/start-aleo.sh  # ALEO only
+/opt/solo-pool/bin/start-btc.sh   # Bitcoin only
+/opt/solo-pool/bin/start-bch.sh   # Bitcoin Cash only
+/opt/solo-pool/bin/start-dgb.sh   # DigiByte only
+/opt/solo-pool/bin/start-xmr.sh   # Monero only
+/opt/solo-pool/bin/start-xtm.sh   # Tari only
+/opt/solo-pool/bin/start-aleo.sh  # ALEO only
 ```
 
 ### Master Service
@@ -593,6 +681,9 @@ sudo systemctl start solo-pool
 # Stop all services via systemd
 sudo systemctl stop solo-pool
 
+# Restart all services via systemd
+sudo systemctl restart solo-pool
+
 # Check master service status
 sudo systemctl status solo-pool
 
@@ -600,23 +691,24 @@ sudo systemctl status solo-pool
 sudo systemctl disable solo-pool
 ```
 
-### Legacy Scripts
+### Additional Scripts
 
 For manual control of individual service groups:
 
 ```bash
-# Start/stop all services (legacy - use start-all.sh instead)
-/opt/solo-pool/stop-all.sh     # Stop all services
+# Stop/restart all services
+/opt/solo-pool/bin/stop-all.sh     # Stop all services
+/opt/solo-pool/bin/restart-all.sh  # Restart all services
 
-# Start/stop individual service groups (legacy)
-/opt/solo-pool/start-nodes.sh  # Start all node services
-/opt/solo-pool/stop-nodes.sh   # Stop all node services
-/opt/solo-pool/start-pools.sh  # Start all pool services
-/opt/solo-pool/stop-pools.sh   # Stop all pool services
+# Start/stop individual service groups
+/opt/solo-pool/bin/start-nodes.sh  # Start all node services
+/opt/solo-pool/bin/stop-nodes.sh   # Stop all node services
+/opt/solo-pool/bin/start-pools.sh  # Start all pool services
+/opt/solo-pool/bin/stop-pools.sh   # Stop all pool services
 
 # Check status
-/opt/solo-pool/status.sh       # Check all service status
-/opt/solo-pool/sync-status.sh  # Check blockchain sync progress
+/opt/solo-pool/bin/status.sh       # Check all service status
+/opt/solo-pool/bin/sync-status.sh  # Check blockchain sync progress
 ```
 
 ### Firewall Ports
@@ -701,19 +793,20 @@ tail -f /opt/solo-pool/webui/logs/error.log
 ### Backup
 
 **CRITICAL - Pool Wallet Seeds/Keys (funds at risk if lost):**
-- `/opt/solo-pool/node/monero/wallet/SEED_BACKUP.txt` - XMR wallet seed phrase
-- `/opt/solo-pool/node/tari/wallet/SEED_BACKUP.txt` - XTM wallet seed phrase
-- `/opt/solo-pool/node/aleo/wallet/pool-wallet.privatekey` - ALEO private key
+- `/opt/solo-pool/node/monero/wallet/keys/SEED_BACKUP.txt` - XMR wallet seed phrase
+- `/opt/solo-pool/node/tari/wallet/keys/SEED_BACKUP.txt` - XTM wallet seed phrase
+- `/opt/solo-pool/node/aleo/wallet/keys/pool-wallet.privatekey` - ALEO private key
 
 **Important configuration files:**
-- `/opt/solo-pool/install-scripts/config.sh` - Your configuration
+- `/opt/solo-pool/install/config.sh` - Your configuration
 - `/opt/solo-pool/.credentials` - WebUI login credentials
-- `/opt/solo-pool/pool/*/` - Pool configurations and logs
-- `/opt/solo-pool/webui/config.toml` - WebUI configuration
+- `/opt/solo-pool/.payments_api_token` - API token for payment processor
+- `/opt/solo-pool/pool/*/config/` - Pool configurations
+- `/opt/solo-pool/webui/config/config.toml` - WebUI configuration
 - `/opt/solo-pool/webui/certs/` - TLS certificates (if using custom certs)
-- `/opt/solo-pool/webui/db/` - WebUI database (worker stats history)
-- `/opt/solo-pool/payments/config.toml` - Payment processor configuration
-- `/opt/solo-pool/payments/db/` - Payment database (share history, balances)
+- `/opt/solo-pool/webui/data/` - WebUI database (worker stats history)
+- `/opt/solo-pool/payments/config/config.toml` - Payment processor configuration
+- `/opt/solo-pool/payments/data/` - Payment database (share history, balances)
 
 ## Troubleshooting
 
@@ -742,7 +835,7 @@ tail -f /opt/solo-pool/webui/logs/error.log
 1. Check service is running: `sudo systemctl status solo-pool-webui`
 2. Check firewall: `sudo ufw status | grep 808`
 3. Check logs: `sudo journalctl -u solo-pool-webui -n 50`
-4. Verify ports in config: `cat /opt/solo-pool/webui/config.toml`
+4. Verify ports in config: `cat /opt/solo-pool/webui/config/config.toml`
 5. View login credentials: `sudo cat /opt/solo-pool/.credentials`
 
 ### Payment Processor Issues
@@ -750,30 +843,30 @@ tail -f /opt/solo-pool/webui/logs/error.log
 1. Check service is running: `sudo systemctl status solo-pool-payments`
 2. Check logs: `sudo journalctl -u solo-pool-payments -n 50`
 3. Verify pool API is accessible: `curl http://127.0.0.1:PORT/api/stats`
-4. Check database: `sqlite3 /opt/solo-pool/payments/db/payments.db ".tables"`
-5. For ALEO: Ensure private key is set in config.toml
+4. Check database: `sqlite3 /opt/solo-pool/payments/data/payments.db ".tables"`
+5. For ALEO: Ensure private key is set in `config/config.toml`
 
 ### Wallet Service Issues
 
 **XMR (wallet-xmr-rpc):**
 1. Check service status: `sudo systemctl status wallet-xmr-rpc`
 2. Ensure monerod is synced: `sudo journalctl -u node-xmr-monerod | tail -20`
-3. Check wallet was initialized: `ls -la /opt/solo-pool/node/monero/wallet/.initialized`
+3. Check wallet was initialized: `ls -la /opt/solo-pool/node/monero/wallet/keys/.initialized`
 4. Check wallet-rpc logs: `sudo journalctl -u wallet-xmr-rpc -n 50`
 5. Check startup log: `tail -f /opt/solo-pool/logs/startup/xmr.log`
-6. Re-run initialization: `/opt/solo-pool/start-xmr.sh`
+6. Re-run initialization: `/opt/solo-pool/bin/start-xmr.sh`
 
 **XTM (wallet-xtm):**
 1. Ensure node is synced first: `sudo systemctl status node-xtm-minotari`
-2. Check wallet was initialized: `ls -la /opt/solo-pool/node/tari/wallet/.initialized`
-3. Check wallet address: `cat /opt/solo-pool/node/tari/wallet/pool-wallet.address`
+2. Check wallet was initialized: `ls -la /opt/solo-pool/node/tari/wallet/keys/.initialized`
+3. Check wallet address: `cat /opt/solo-pool/node/tari/wallet/keys/pool-wallet.address`
 4. Check wallet logs: `sudo journalctl -u wallet-xtm -n 50`
 5. Check startup log: `tail -f /opt/solo-pool/logs/startup/xtm.log`
-6. Re-run initialization: `/opt/solo-pool/start-xtm.sh`
+6. Re-run initialization: `/opt/solo-pool/bin/start-xtm.sh`
 
 **ALEO:**
-1. Verify keypair was generated: `ls -la /opt/solo-pool/node/aleo/wallet/`
-2. Check address file: `cat /opt/solo-pool/node/aleo/wallet/pool-wallet.address`
+1. Verify keypair was generated: `ls -la /opt/solo-pool/node/aleo/wallet/keys/`
+2. Check address file: `cat /opt/solo-pool/node/aleo/wallet/keys/pool-wallet.address`
 3. Ensure private key is in payment processor config
 
 ## License

@@ -1,0 +1,33 @@
+# Monero Daemon Configuration for Solo Mining Pool
+
+# Data directory
+data-dir=${MONERO_DIR}/data
+
+# Network
+p2p-bind-ip=${XMR_P2P_BIND}
+p2p-bind-port=18080
+no-igd=1
+${XMR_IN_PEERS}
+
+# RPC
+rpc-bind-ip=127.0.0.1
+rpc-bind-port=${MONERO_RPC_PORT}
+confirm-external-bind=1
+restricted-rpc=0
+
+# Mining
+# Enable stratum server mode (for merge mining proxy)
+# For solo via monero-stratum, this is not needed
+
+# Logging
+log-level=0
+log-file=${MONERO_DIR}/logs/monerod.log
+max-log-file-size=10485760
+
+# Performance
+db-sync-mode=safe
+block-sync-size=10
+prep-blocks-threads=4
+
+# ZMQ for notifications
+zmq-pub=tcp://127.0.0.1:${MONERO_ZMQ_PORT}

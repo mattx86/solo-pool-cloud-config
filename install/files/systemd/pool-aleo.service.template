@@ -1,0 +1,23 @@
+[Unit]
+Description=ALEO Pool Server (Stratum)
+After=network-online.target node-aleo-snarkos.service
+Wants=network-online.target
+Requires=node-aleo-snarkos.service
+
+[Service]
+Type=simple
+User=${POOL_USER}
+Group=${POOL_USER}
+
+ExecStart=${ALEO_POOL_DIR}/bin/start-pool.sh
+
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

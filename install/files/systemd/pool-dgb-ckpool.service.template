@@ -1,0 +1,21 @@
+[Unit]
+Description=CKPool DigiByte Stratum Server
+After=node-dgb-digibyted.service
+Requires=node-dgb-digibyted.service
+
+[Service]
+Type=simple
+User=${POOL_USER}
+Group=${POOL_USER}
+
+WorkingDirectory=${DGB_CKPOOL_DIR}
+# -B enables BTCSOLO mode: miners use their wallet address as username, pool pays directly to that address
+# -s sets socket directory for API access (used by webui for live stats)
+ExecStartPre=/bin/mkdir -p ${DGB_CKPOOL_SOCKET_DIR}
+ExecStart=${DGB_CKPOOL_DIR}/bin/ckpool -B -c ${DGB_CKPOOL_DIR}/config/ckpool.conf -l ${DGB_CKPOOL_DIR}/logs -s ${DGB_CKPOOL_SOCKET_DIR}
+
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,23 @@
+[Unit]
+Description=DigiByte Core Daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=${POOL_USER}
+Group=${POOL_USER}
+
+ExecStart=${DIGIBYTE_DIR}/bin/digibyted -conf=${DIGIBYTE_DIR}/config/digibyte.conf -datadir=${DIGIBYTE_DIR}/data
+ExecStop=${DIGIBYTE_DIR}/bin/digibyte-cli -conf=${DIGIBYTE_DIR}/config/digibyte.conf stop
+
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=infinity
+TimeoutStopSec=600
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

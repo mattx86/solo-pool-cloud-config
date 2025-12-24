@@ -1,0 +1,29 @@
+# Bitcoin Cash Node Configuration for Solo Mining Pool
+
+# Network
+server=1
+daemon=0
+txindex=1
+listen=${BCH_LISTEN}
+
+# RPC Configuration
+rpcuser=bchrpc
+rpcpassword=${BCH_RPC_PASSWORD}
+rpcallowip=127.0.0.1
+rpcbind=127.0.0.1
+rpcport=${BCH_RPC_PORT}
+
+# ZMQ for block notifications
+zmqpubhashblock=tcp://127.0.0.1:${BCH_ZMQ_BLOCK_PORT}
+zmqpubhashtx=tcp://127.0.0.1:${BCH_ZMQ_TX_PORT}
+
+# Performance
+dbcache=1024
+maxconnections=50
+maxuploadtarget=5000
+
+# Data directory
+datadir=${BCHN_DIR}/data
+
+# Wallet (disabled - pool handles payouts)
+disablewallet=1

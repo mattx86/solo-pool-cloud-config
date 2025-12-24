@@ -64,7 +64,7 @@ pub struct DatabaseConfig {
 }
 
 fn default_db_path() -> PathBuf {
-    PathBuf::from("/opt/solo-pool/payments/db/payments.db")
+    PathBuf::from("/opt/solo-pool/payments/data/payments.db")
 }
 
 fn default_min_payout() -> Decimal {

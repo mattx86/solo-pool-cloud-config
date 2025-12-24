@@ -1,0 +1,7 @@
+#!/bin/bash
+# ALEO Pool Server Start Script
+# Provides stratum interface for ALEO ASICs
+
+cd ${ALEO_POOL_DIR}
+exec ${ALEO_POOL_DIR}/bin/aleo-pool-server \
+    --config ${ALEO_POOL_DIR}/config/config.toml

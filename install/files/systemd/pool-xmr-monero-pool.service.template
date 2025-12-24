@@ -1,0 +1,21 @@
+[Unit]
+Description=monero-pool Monero Mining Pool
+After=node-xmr-monerod.service wallet-xmr-rpc.service
+Requires=node-xmr-monerod.service wallet-xmr-rpc.service
+
+[Service]
+Type=simple
+User=${POOL_USER}
+Group=${POOL_USER}
+
+WorkingDirectory=${XMR_MONERO_POOL_DIR}
+ExecStart=${XMR_MONERO_POOL_DIR}/bin/start-monero-pool.sh
+
+Restart=on-failure
+RestartSec=10
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
