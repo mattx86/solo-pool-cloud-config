@@ -610,12 +610,12 @@ Some coins use different P2P/RPC ports on testnet:
 
 | Service | Mainnet Port | Testnet Port |
 |---------|--------------|--------------|
-| Bitcoin RPC | 8332 | 18332 |
-| Bitcoin P2P | 8333 | 18333 |
-| BCH RPC | 8334 | 18334 |
+| Bitcoin RPC | 8332 | 48332 (testnet4) |
+| Bitcoin P2P | 8333 | 48333 (testnet4) |
+| BCH RPC | 8334 | 48334 (testnet4) |
 | DGB RPC | 14022 | 14023 |
-| Monero RPC | 18081 | 38081 |
-| Monero P2P | 18080 | 38080 |
+| Monero RPC | 18081 | 38081 (stagenet) |
+| Monero P2P | 18080 | 38080 (stagenet) |
 
 Stratum ports (3333-3339) remain the same regardless of network mode.
 

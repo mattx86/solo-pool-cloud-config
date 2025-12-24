@@ -75,9 +75,9 @@ fi
 
 # Determine network mode settings
 if [ "${NETWORK_MODE}" = "testnet" ]; then
-    export NETWORK_FLAG="testnet=1"
-    export EFFECTIVE_RPC_PORT="18332"
-    log "  Network mode: TESTNET"
+    export NETWORK_FLAG="testnet4=1"
+    export EFFECTIVE_RPC_PORT="48332"
+    log "  Network mode: TESTNET4"
 else
     export NETWORK_FLAG=""
     export EFFECTIVE_RPC_PORT="${BITCOIN_RPC_PORT}"
