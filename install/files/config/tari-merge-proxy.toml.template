@@ -2,7 +2,7 @@
 
 [merge_mining_proxy]
 # Network
-network = "mainnet"
+network = "${TARI_NETWORK}"
 
 # Stratum listener (miners connect here)
 listener_address = "0.0.0.0:${XMR_XTM_MERGE_STRATUM_PORT}"

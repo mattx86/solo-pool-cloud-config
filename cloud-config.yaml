@@ -31,6 +31,16 @@ write_files:
       SCRIPTS_BASE_URL="https://raw.githubusercontent.com/mattx86/solo-pool-cloud-config/refs/heads/main/install"
 
       # ---------------------------------------------------------------------
+      # NETWORK MODE - Testing vs Production
+      # ---------------------------------------------------------------------
+      # Options: "mainnet" (production) or "testnet" (testing)
+      # - mainnet: Real coins, real blockchain, production use
+      # - testnet: Public test networks for testing without real funds
+      #            Bitcoin/BCH/DGB use testnet, Monero uses stagenet,
+      #            Tari uses esmeralda, ALEO uses testnet
+      NETWORK_MODE="mainnet"
+
+      # ---------------------------------------------------------------------
       # POOL SELECTION - Enable/disable each pool (true/false)
       # ---------------------------------------------------------------------
       ENABLE_BITCOIN_POOL="true"

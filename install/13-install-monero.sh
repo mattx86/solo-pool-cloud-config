@@ -83,8 +83,23 @@ else
     export XMR_IN_PEERS="in-peers=0"
 fi
 
+# Determine network mode settings
+if [ "${NETWORK_MODE}" = "testnet" ]; then
+    export NETWORK_FLAG="stagenet=1"
+    export EFFECTIVE_RPC_PORT="38081"
+    export XMR_P2P_PORT="38080"
+    export XMR_WALLET_ADDR_REGEX='^5[0-9A-Za-z]{94}'
+    log "  Network mode: STAGENET"
+else
+    export NETWORK_FLAG=""
+    export EFFECTIVE_RPC_PORT="${MONERO_RPC_PORT}"
+    export XMR_P2P_PORT="18080"
+    export XMR_WALLET_ADDR_REGEX='^4[0-9A-Za-z]{94}'
+    log "  Network mode: MAINNET"
+fi
+
 # Export variables for template
-export MONERO_DIR MONERO_RPC_PORT MONERO_ZMQ_PORT
+export MONERO_DIR MONERO_RPC_PORT MONERO_ZMQ_PORT NETWORK_FLAG XMR_P2P_PORT
 
 # Generate config from template
 envsubst < "${TEMPLATE_DIR}/monerod.conf.template" > ${MONERO_DIR}/config/monerod.conf
@@ -120,7 +135,14 @@ log "  Generating new pool wallet..."
 
 # Create wallet using monero-wallet-cli in non-interactive mode
 # This generates a new wallet with a random seed
-${MONERO_DIR}/bin/monero-wallet-cli \
+# Add --stagenet flag if in testnet mode
+if [ "${NETWORK_MODE}" = "testnet" ]; then
+    WALLET_NETWORK_FLAG="--stagenet"
+else
+    WALLET_NETWORK_FLAG=""
+fi
+
+${MONERO_DIR}/bin/monero-wallet-cli ${WALLET_NETWORK_FLAG} \
     --generate-new-wallet=${MONERO_DIR}/wallet/keys/pool-wallet \
     --password="${XMR_WALLET_PASSWORD}" \
     --mnemonic-language=English \
@@ -128,10 +150,10 @@ ${MONERO_DIR}/bin/monero-wallet-cli \
 
 # Extract the wallet address from the wallet file
 log "  Extracting wallet address..."
-export XMR_POOL_WALLET_ADDRESS=$(${MONERO_DIR}/bin/monero-wallet-cli \
+export XMR_POOL_WALLET_ADDRESS=$(${MONERO_DIR}/bin/monero-wallet-cli ${WALLET_NETWORK_FLAG} \
     --wallet-file=${MONERO_DIR}/wallet/keys/pool-wallet \
     --password="${XMR_WALLET_PASSWORD}" \
-    --command address 2>/dev/null | grep -oP '^4[0-9A-Za-z]{94}' | head -1)
+    --command address 2>/dev/null | grep -oP "${XMR_WALLET_ADDR_REGEX}" | head -1)
 
 if [ -z "${XMR_POOL_WALLET_ADDRESS}" ]; then
     log_error "Failed to extract wallet address"
@@ -144,13 +166,13 @@ chmod 644 ${MONERO_DIR}/wallet/keys/pool-wallet.address
 
 # Export the mnemonic seed for backup (CRITICAL!)
 log "  Exporting mnemonic seed for backup..."
-${MONERO_DIR}/bin/monero-wallet-cli \
+${MONERO_DIR}/bin/monero-wallet-cli ${WALLET_NETWORK_FLAG} \
     --wallet-file=${MONERO_DIR}/wallet/keys/pool-wallet \
     --password="${XMR_WALLET_PASSWORD}" \
     --command "seed" 2>/dev/null | grep -A 25 "NOTE:" > ${MONERO_DIR}/wallet/keys/SEED_BACKUP.txt
 
 # Also try to get just the seed words
-SEED_WORDS=$(${MONERO_DIR}/bin/monero-wallet-cli \
+SEED_WORDS=$(${MONERO_DIR}/bin/monero-wallet-cli ${WALLET_NETWORK_FLAG} \
     --wallet-file=${MONERO_DIR}/wallet/keys/pool-wallet \
     --password="${XMR_WALLET_PASSWORD}" \
     --command "seed" 2>/dev/null | grep -E '^[a-z]+ [a-z]+' | head -1)

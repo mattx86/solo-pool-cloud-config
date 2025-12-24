@@ -22,6 +22,13 @@ if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
     exit 0
 fi
 
+# Determine network mode
+if [ "${NETWORK_MODE}" = "testnet" ]; then
+    TARI_NETWORK="esmeralda"
+else
+    TARI_NETWORK="mainnet"
+fi
+
 log() {
     echo "[XTM] $(date '+%H:%M:%S') $1"
 }
@@ -116,7 +123,7 @@ if [ ! -f "${WALLET_INITIALIZED}" ]; then
         ${TARI_DIR}/bin/minotari_console_wallet \
             --config ${WALLET_CONFIG} \
             --password "${WALLET_PASSWORD}" \
-            --network mainnet \
+            --network ${TARI_NETWORK} \
             --non-interactive \
             --command "get-balance" 2>/dev/null || true
 
@@ -128,7 +135,7 @@ if [ ! -f "${WALLET_INITIALIZED}" ]; then
     ${TARI_DIR}/bin/minotari_console_wallet \
         --config ${WALLET_CONFIG} \
         --password "${WALLET_PASSWORD}" \
-        --network mainnet \
+        --network ${TARI_NETWORK} \
         --non-interactive \
         --command "export-seed-words" > "${WALLET_KEYS_DIR}/SEED_BACKUP.txt" 2>/dev/null || true
 
@@ -141,7 +148,7 @@ if [ ! -f "${WALLET_INITIALIZED}" ]; then
         WALLET_ADDRESS=$(${TARI_DIR}/bin/minotari_console_wallet \
             --config ${WALLET_CONFIG} \
             --password "${WALLET_PASSWORD}" \
-            --network mainnet \
+            --network ${TARI_NETWORK} \
             --non-interactive \
             --command "get-address" 2>/dev/null | grep -E '^[a-f0-9]{64}' | head -1)
 

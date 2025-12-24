@@ -16,6 +16,15 @@ if [ "${ENABLE_MONERO_POOL}" != "true" ]; then
     exit 0
 fi
 
+# Determine network mode
+if [ "${NETWORK_MODE}" = "testnet" ]; then
+    XMR_NETWORK_FLAG="--stagenet"
+    XMR_WALLET_REGEX='^5[0-9A-Za-z]{94}'
+else
+    XMR_NETWORK_FLAG=""
+    XMR_WALLET_REGEX='^4[0-9A-Za-z]{94}'
+fi
+
 log() {
     echo "[XMR] $(date '+%H:%M:%S') $1"
 }
@@ -110,7 +119,7 @@ if [ ! -f "${WALLET_INITIALIZED}" ]; then
         fi
 
         # Create wallet
-        ${MONERO_DIR}/bin/monero-wallet-cli \
+        ${MONERO_DIR}/bin/monero-wallet-cli ${XMR_NETWORK_FLAG} \
             --daemon-address 127.0.0.1:${MONERO_RPC_PORT:-18081} \
             --generate-new-wallet "${WALLET_FILE}" \
             --password "${WALLET_PASSWORD}" \
@@ -124,7 +133,7 @@ if [ ! -f "${WALLET_INITIALIZED}" ]; then
 
         # Export seed for backup
         log "Exporting seed words for backup..."
-        ${MONERO_DIR}/bin/monero-wallet-cli \
+        ${MONERO_DIR}/bin/monero-wallet-cli ${XMR_NETWORK_FLAG} \
             --wallet-file "${WALLET_FILE}" \
             --password "${WALLET_PASSWORD}" \
             --command "seed" > "${WALLET_KEYS_DIR}/SEED_BACKUP.txt" 2>/dev/null
@@ -132,10 +141,10 @@ if [ ! -f "${WALLET_INITIALIZED}" ]; then
         chmod 600 "${WALLET_KEYS_DIR}/SEED_BACKUP.txt"
 
         # Get wallet address
-        WALLET_ADDRESS=$(${MONERO_DIR}/bin/monero-wallet-cli \
+        WALLET_ADDRESS=$(${MONERO_DIR}/bin/monero-wallet-cli ${XMR_NETWORK_FLAG} \
             --wallet-file "${WALLET_FILE}" \
             --password "${WALLET_PASSWORD}" \
-            --command "address" 2>/dev/null | grep -oP '^4[0-9A-Za-z]{94}' | head -1)
+            --command "address" 2>/dev/null | grep -oP "${XMR_WALLET_REGEX}" | head -1)
 
         if [ -n "${WALLET_ADDRESS}" ]; then
             echo "${WALLET_ADDRESS}" > "${WALLET_KEYS_DIR}/pool-wallet.address"

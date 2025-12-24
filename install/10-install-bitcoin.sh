@@ -73,11 +73,22 @@ else
     export BTC_LISTEN=0
 fi
 
+# Determine network mode settings
+if [ "${NETWORK_MODE}" = "testnet" ]; then
+    export NETWORK_FLAG="testnet=1"
+    export EFFECTIVE_RPC_PORT="18332"
+    log "  Network mode: TESTNET"
+else
+    export NETWORK_FLAG=""
+    export EFFECTIVE_RPC_PORT="${BITCOIN_RPC_PORT}"
+    log "  Network mode: MAINNET"
+fi
+
 # Generate RPC password
 export BTC_RPC_PASSWORD=$(apg -a 1 -m 64 -M NCL -n 1)
 
 # Export variables for template
-export BITCOIN_DIR BITCOIN_RPC_PORT BITCOIN_ZMQ_BLOCK_PORT BITCOIN_ZMQ_TX_PORT
+export BITCOIN_DIR BITCOIN_RPC_PORT BITCOIN_ZMQ_BLOCK_PORT BITCOIN_ZMQ_TX_PORT NETWORK_FLAG
 
 # Generate config from template
 envsubst < "${TEMPLATE_DIR}/bitcoin.conf.template" > ${BITCOIN_DIR}/config/bitcoin.conf
@@ -138,7 +149,8 @@ rm -rf ckpool-btc
 log "  Creating CKPool configuration from template..."
 
 # Export variables for CKPool template
-export NODE_RPC_PORT="${BITCOIN_RPC_PORT}"
+# Use EFFECTIVE_RPC_PORT which is set based on network mode
+export NODE_RPC_PORT="${EFFECTIVE_RPC_PORT}"
 export NODE_RPC_USER="bitcoinrpc"
 export NODE_RPC_PASSWORD="${BTC_RPC_PASSWORD}"
 export POOL_SIG="Solo Pool"

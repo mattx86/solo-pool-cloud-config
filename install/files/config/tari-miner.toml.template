@@ -2,7 +2,7 @@
 
 [miner]
 # Network
-network = "mainnet"
+network = "${TARI_NETWORK}"
 
 # Base node connection
 base_node_grpc_address = "127.0.0.1:${TARI_NODE_GRPC_PORT}"

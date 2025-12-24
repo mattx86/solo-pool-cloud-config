@@ -562,6 +562,9 @@ Edit the following variables in the cloud-config/cloud-init before deployment:
 # Base URL where scripts are hosted (e.g., GitHub raw URL)
 SCRIPTS_BASE_URL: "https://raw.githubusercontent.com/mattx86/solo-pool-cloud-config/refs/heads/main/install"
 
+# Network Mode: "mainnet" (production) or "testnet" (testing)
+NETWORK_MODE: "mainnet"
+
 # Pool Selection
 ENABLE_BITCOIN_POOL: "true"
 ENABLE_BCH_POOL: "true"
@@ -585,6 +588,56 @@ WEBUI_HTTPS_PORT: "8443"
 WEBUI_REFRESH_INTERVAL: "15"     # Stats refresh interval in seconds
 WEBUI_USER: "admin"              # Dashboard login username (password auto-generated)
 ```
+
+## Testing Mode (Testnet)
+
+The pool supports a testnet mode for testing the payment processor and pool functionality without risking real funds. Set `NETWORK_MODE="testnet"` in cloud-config.yaml before deployment.
+
+### Network Mappings
+
+| Coin | Mainnet | Testnet (NETWORK_MODE="testnet") |
+|------|---------|----------------------------------|
+| Bitcoin (BTC) | mainnet | testnet4 |
+| Bitcoin Cash (BCH) | mainnet | testnet4 |
+| DigiByte (DGB) | mainnet | testnet |
+| Monero (XMR) | mainnet | stagenet |
+| Tari (XTM) | mainnet | esmeralda |
+| ALEO | mainnet | testnet |
+
+### Testnet Port Differences
+
+Some coins use different P2P/RPC ports on testnet:
+
+| Service | Mainnet Port | Testnet Port |
+|---------|--------------|--------------|
+| Bitcoin RPC | 8332 | 18332 |
+| Bitcoin P2P | 8333 | 18333 |
+| BCH RPC | 8334 | 18334 |
+| DGB RPC | 14022 | 14023 |
+| Monero RPC | 18081 | 38081 |
+| Monero P2P | 18080 | 38080 |
+
+Stratum ports (3333-3339) remain the same regardless of network mode.
+
+### Testing Workflow
+
+1. Deploy with `NETWORK_MODE="testnet"` in cloud-config.yaml
+2. Wait for testnet nodes to sync (typically faster than mainnet)
+3. Check sync status: `/opt/solo-pool/bin/sync-status.sh`
+4. Get testnet coins from faucets:
+   - **BTC testnet4**: https://mempool.space/testnet4/faucet
+   - **XMR stagenet**: https://stagenet-faucet.xmr-tw.org/
+   - **Tari esmeralda**: Community faucets or testnet mining
+5. Connect miners to stratum ports and mine
+6. Verify payments are processed correctly
+
+### Testnet Wallet Addresses
+
+Testnet wallet addresses have different prefixes than mainnet:
+- **Monero stagenet**: Addresses start with `5` (mainnet starts with `4`)
+- **Bitcoin testnet**: Addresses start with `tb1`, `m`, `n`, or `2`
+
+The installation scripts automatically handle these differences based on `NETWORK_MODE`.
 
 ## Deployment
 

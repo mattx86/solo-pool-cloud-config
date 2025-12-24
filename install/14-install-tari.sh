@@ -45,6 +45,15 @@ log "Installing Tari node and mining software v${TARI_VERSION}..."
 # Template directory
 TEMPLATE_DIR="/opt/solo-pool/install/files/config"
 
+# Determine network mode settings
+if [ "${NETWORK_MODE}" = "testnet" ]; then
+    export TARI_NETWORK="esmeralda"
+    log "  Network mode: ESMERALDA (testnet)"
+else
+    export TARI_NETWORK="mainnet"
+    log "  Network mode: MAINNET"
+fi
+
 # =============================================================================
 # 1. DOWNLOAD TARI BINARIES
 # =============================================================================
@@ -106,7 +115,7 @@ fi
 export XTM_NODE_WALLET_PASSWORD=$(apg -a 1 -m 32 -M NCL -n 1)
 
 # Export variables for template
-export TARI_DIR TARI_NODE_GRPC_PORT TARI_WALLET_GRPC_PORT
+export TARI_DIR TARI_NODE_GRPC_PORT TARI_WALLET_GRPC_PORT TARI_NETWORK
 
 # Generate config from template
 log "  Creating minotari node configuration from template..."
@@ -138,8 +147,9 @@ chmod 600 ${TARI_DIR}/wallet/keys/pool-wallet.password
 
 log "  Password generated and saved"
 
-# Create wallet config from template
+# Create wallet config from template (TARI_NETWORK already exported)
 log "  Creating wallet configuration from template..."
+export TARI_NETWORK
 envsubst < "${TEMPLATE_DIR}/tari-wallet.toml.template" > ${TARI_DIR}/wallet/config/config.toml
 chmod 600 ${TARI_DIR}/wallet/config/config.toml
 
@@ -241,7 +251,7 @@ if [ "${MONERO_TARI_MODE}" = "merge" ]; then
 
     # Export variables for template
     export XMR_XTM_MERGE_STRATUM_PORT MONERO_RPC_PORT XTM_WALLET_ADDRESS XMR_XTM_MERGE_DIR
-    export TARI_NODE_GRPC_PORT TARI_WALLET_GRPC_PORT
+    export TARI_NODE_GRPC_PORT TARI_WALLET_GRPC_PORT TARI_NETWORK
 
     # Create merge mining proxy config from template
     log "  Creating merge mining proxy configuration from template..."
@@ -271,7 +281,7 @@ elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
 
     # Export variables for template
     export XTM_STRATUM_PORT XTM_WALLET_ADDRESS XTM_MINER_DIR
-    export TARI_NODE_GRPC_PORT TARI_WALLET_GRPC_PORT
+    export TARI_NODE_GRPC_PORT TARI_WALLET_GRPC_PORT TARI_NETWORK
 
     # Create miner config from template
     log "  Creating miner configuration from template..."

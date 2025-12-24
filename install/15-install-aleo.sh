@@ -36,6 +36,15 @@ log "Installing ALEO snarkOS v${SNARKOS_VERSION} and ALEO Pool Server..."
 # Template directory
 TEMPLATE_DIR="/opt/solo-pool/install/files/config"
 
+# Determine network mode settings
+if [ "${NETWORK_MODE}" = "testnet" ]; then
+    export ALEO_NETWORK="testnet"
+    log "  Network mode: TESTNET"
+else
+    export ALEO_NETWORK="mainnet"
+    log "  Network mode: MAINNET"
+fi
+
 # =============================================================================
 # 1. PREREQUISITES
 # =============================================================================
@@ -206,7 +215,7 @@ else
 fi
 
 # Export variables for template
-export ALEO_DIR ALEO_REST_PORT
+export ALEO_DIR ALEO_REST_PORT ALEO_NETWORK
 
 # Create snarkOS node start script from template
 log "  Creating snarkOS start script from template..."

@@ -17,6 +17,13 @@ if [ "${ENABLE_ALEO_POOL}" != "true" ]; then
     exit 0
 fi
 
+# Determine network mode
+if [ "${NETWORK_MODE}" = "testnet" ]; then
+    ALEO_NETWORK="testnet"
+else
+    ALEO_NETWORK="mainnet"
+fi
+
 log() {
     echo "[ALEO] $(date '+%H:%M:%S') $1"
 }
@@ -31,7 +38,7 @@ sudo systemctl start node-aleo-snarkos
 log "Waiting for node to be responsive..."
 for i in $(seq 1 60); do
     # Check if REST API is responding
-    if curl -s http://127.0.0.1:${ALEO_REST_PORT:-3030}/testnet/latest/height &>/dev/null; then
+    if curl -s http://127.0.0.1:${ALEO_REST_PORT:-3030}/${ALEO_NETWORK}/latest/height &>/dev/null; then
         break
     fi
     sleep 5
@@ -47,7 +54,7 @@ log "Waiting for blockchain sync..."
 
 while true; do
     # Get current height
-    CURRENT_HEIGHT=$(curl -s http://127.0.0.1:${ALEO_REST_PORT:-3030}/testnet/latest/height 2>/dev/null)
+    CURRENT_HEIGHT=$(curl -s http://127.0.0.1:${ALEO_REST_PORT:-3030}/${ALEO_NETWORK}/latest/height 2>/dev/null)
 
     if [ -n "${CURRENT_HEIGHT}" ] && [ "${CURRENT_HEIGHT}" -gt 0 ] 2>/dev/null; then
         # Check sync status from logs

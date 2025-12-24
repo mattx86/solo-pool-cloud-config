@@ -5,6 +5,7 @@ server=1
 daemon=0
 txindex=1
 listen=${DGB_LISTEN}
+${NETWORK_FLAG}
 
 # RPC Configuration
 rpcuser=digibyterpc

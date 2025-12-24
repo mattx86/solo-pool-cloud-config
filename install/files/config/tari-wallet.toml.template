@@ -1,7 +1,7 @@
 # Tari Pool Wallet Configuration
 
 [wallet]
-network = "mainnet"
+network = "${TARI_NETWORK}"
 grpc_enabled = true
 grpc_address = "127.0.0.1:${TARI_WALLET_GRPC_PORT}"
 base_node_grpc_address = "127.0.0.1:${TARI_NODE_GRPC_PORT}"

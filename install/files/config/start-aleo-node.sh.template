@@ -4,6 +4,7 @@
 
 exec ${ALEO_DIR}/bin/snarkos start \
     --nodisplay \
+    --network ${ALEO_NETWORK} \
     --node ${ALEO_LISTEN}:4130 \
     --rest 127.0.0.1:${ALEO_REST_PORT} \
     --log ${ALEO_DIR}/logs/snarkos.log \

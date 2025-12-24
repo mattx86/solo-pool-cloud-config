@@ -4,8 +4,9 @@
 data-dir=${MONERO_DIR}/data
 
 # Network
+${NETWORK_FLAG}
 p2p-bind-ip=${XMR_P2P_BIND}
-p2p-bind-port=18080
+p2p-bind-port=${XMR_P2P_PORT}
 no-igd=1
 ${XMR_IN_PEERS}
 

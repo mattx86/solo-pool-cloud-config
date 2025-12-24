@@ -5,8 +5,8 @@
 base_path = "${TARI_DIR}/data"
 
 [base_node]
-# Network (mainnet, stagenet, nextnet)
-network = "mainnet"
+# Network (mainnet, esmeralda/stagenet, nextnet)
+network = "${TARI_NETWORK}"
 
 # P2P configuration
 p2p_listen_address = "${TARI_P2P_LISTEN}"

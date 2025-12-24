@@ -67,11 +67,22 @@ else
     export DGB_LISTEN=0
 fi
 
+# Determine network mode settings
+if [ "${NETWORK_MODE}" = "testnet" ]; then
+    export NETWORK_FLAG="testnet=1"
+    export EFFECTIVE_RPC_PORT="14023"
+    log "  Network mode: TESTNET"
+else
+    export NETWORK_FLAG=""
+    export EFFECTIVE_RPC_PORT="${DGB_RPC_PORT}"
+    log "  Network mode: MAINNET"
+fi
+
 # Generate RPC password
 export DGB_RPC_PASSWORD=$(apg -a 1 -m 64 -M NCL -n 1)
 
 # Export variables for template
-export DIGIBYTE_DIR DGB_RPC_PORT DGB_ZMQ_BLOCK_PORT DGB_ZMQ_TX_PORT
+export DIGIBYTE_DIR DGB_RPC_PORT DGB_ZMQ_BLOCK_PORT DGB_ZMQ_TX_PORT NETWORK_FLAG
 
 # Generate config from template
 envsubst < "${TEMPLATE_DIR}/digibyte.conf.template" > ${DIGIBYTE_DIR}/config/digibyte.conf
@@ -132,7 +143,8 @@ rm -rf ckpool-dgb
 log "  Creating CKPool configuration from template..."
 
 # Export variables for CKPool template
-export NODE_RPC_PORT="${DGB_RPC_PORT}"
+# Use EFFECTIVE_RPC_PORT which is set based on network mode
+export NODE_RPC_PORT="${EFFECTIVE_RPC_PORT}"
 export NODE_RPC_USER="digibyterpc"
 export NODE_RPC_PASSWORD="${DGB_RPC_PASSWORD}"
 export POOL_SIG="Solo Pool DGB"
