@@ -215,14 +215,6 @@ write_files:
       LOG_COMPRESS_AFTER_DAYS="14"
 
       # ---------------------------------------------------------------------
-      # BACKUP CONFIGURATION
-      # ---------------------------------------------------------------------
-      # Directory to store backups (excluded from backup itself)
-      BACKUP_DIR="${BASE_DIR}/backups"
-      # Maximum age of backups in days (older backups are deleted)
-      BACKUP_RETENTION_DAYS="30"
-
-      # ---------------------------------------------------------------------
       # SYSTEM USER - Dedicated user for running pool services
       # ---------------------------------------------------------------------
       POOL_USER="pool"
@@ -263,6 +255,14 @@ write_files:
       BTC_CKPOOL_SOCKET_DIR="/tmp/ckpool-btc"
       BCH_CKPOOL_SOCKET_DIR="/tmp/ckpool-bch"
       DGB_CKPOOL_SOCKET_DIR="/tmp/ckpool-dgb"
+
+      # ---------------------------------------------------------------------
+      # BACKUP CONFIGURATION
+      # ---------------------------------------------------------------------
+      # Directory to store backups (excluded from backup itself)
+      BACKUP_DIR="${BASE_DIR}/backups"
+      # Maximum age of backups in days (older backups are deleted)
+      BACKUP_RETENTION_DAYS="30"
 
       # ---------------------------------------------------------------------
       # VERSION PINNING - Node Software
