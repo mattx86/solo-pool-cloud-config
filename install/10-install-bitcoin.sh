@@ -43,7 +43,18 @@ run_cmd wget -q "${BITCOIN_SHA_URL}" -O SHA256SUMS
 
 # Verify checksum
 log "  Verifying checksum..."
-grep "bitcoin-${BITCOIN_VERSION}-x86_64-linux-gnu.tar.gz" SHA256SUMS | sha256sum -c - >/dev/null 2>&1
+# Extract expected hash from SHA256SUMS file (format varies, so be flexible)
+EXPECTED_HASH=$(grep "bitcoin-${BITCOIN_VERSION}-x86_64-linux-gnu.tar.gz" SHA256SUMS | awk '{print $1}')
+if [ -z "${EXPECTED_HASH}" ]; then
+    log_error "Could not find checksum in SHA256SUMS file"
+    exit 1
+fi
+ACTUAL_HASH=$(sha256sum bitcoin.tar.gz | awk '{print $1}')
+if [ "${EXPECTED_HASH}" != "${ACTUAL_HASH}" ]; then
+    log_error "Checksum mismatch! Expected: ${EXPECTED_HASH}, Got: ${ACTUAL_HASH}"
+    exit 1
+fi
+log "  Checksum verified"
 
 # Extract and install
 log "  Extracting..."

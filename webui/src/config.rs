@@ -87,6 +87,7 @@ pub struct LogConfig {
     pub access_log_enabled: bool,
     /// Enable error logging
     #[serde(default = "default_true")]
+    #[allow(dead_code)]
     pub error_log_enabled: bool,
 }
 

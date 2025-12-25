@@ -22,6 +22,7 @@ pub enum WalletError {
     RpcError(String),
 
     #[error("Insufficient balance: have {have}, need {need}")]
+    #[allow(dead_code)]
     InsufficientBalance { have: Decimal, need: Decimal },
 
     #[error("Invalid address: {0}")]
@@ -34,9 +35,11 @@ pub enum WalletError {
     TransactionNotFound(String),
 
     #[error("Wallet locked")]
+    #[allow(dead_code)]
     WalletLocked,
 
     #[error("Configuration error: {0}")]
+    #[allow(dead_code)]
     ConfigError(String),
 }
 

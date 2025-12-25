@@ -36,12 +36,6 @@ use models::{detect_server_ip, AppState, PoolStats};
 #[folder = "src/static"]
 struct StaticAssets;
 
-/// Combined application state
-struct CombinedState {
-    app: Arc<AppState>,
-    auth: Arc<AuthState>,
-}
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Load configuration first (needed for log paths)

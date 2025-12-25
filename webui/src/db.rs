@@ -16,6 +16,7 @@ pub struct Database {
 
 /// Worker statistics from database
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct DbWorkerStats {
     pub id: i64,
     pub pool_id: String,
@@ -33,6 +34,7 @@ pub struct DbWorkerStats {
 
 /// Pool aggregate statistics from database
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct DbPoolStats {
     pub pool_id: String,
     pub total_hashrate: f64,
@@ -210,6 +212,7 @@ impl Database {
     }
 
     /// Get all workers for a pool
+    #[allow(dead_code)]
     pub fn get_workers(&self, pool_id: &str) -> Result<Vec<DbWorkerStats>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
@@ -310,6 +313,7 @@ impl Database {
     }
 
     /// Get pool aggregate statistics
+    #[allow(dead_code)]
     pub fn get_pool_stats(&self, pool_id: &str) -> Result<Option<DbPoolStats>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
@@ -341,6 +345,7 @@ impl Database {
     }
 
     /// Get worker count for a pool
+    #[allow(dead_code)]
     pub fn get_worker_count(&self, pool_id: &str) -> Result<(u64, u64)> {
         let conn = self.conn.lock().unwrap();
         let (total, online): (i64, i64) = conn.query_row(
@@ -352,6 +357,7 @@ impl Database {
     }
 
     /// Calculate acceptance rate for a worker
+    #[allow(dead_code)]
     pub fn get_acceptance_rate(&self, pool_id: &str, worker_name: &str) -> Result<Option<f64>> {
         let conn = self.conn.lock().unwrap();
         let result: Result<(i64, i64), _> = conn.query_row(

@@ -37,26 +37,26 @@ verify_binary() {
 ERRORS=0
 
 if [ "${ENABLE_BITCOIN_POOL}" = "true" ]; then
-    verify_binary "bitcoind" "${BITCOIN_DIR}/bin/bitcoind" || ((ERRORS++))
-    verify_binary "ckpool-btc" "${BTC_CKPOOL_DIR}/bin/ckpool" || ((ERRORS++))
+    verify_binary "bitcoind" "${BITCOIN_DIR}/bin/bitcoind" || ERRORS=$((ERRORS+1))
+    verify_binary "ckpool-btc" "${BTC_CKPOOL_DIR}/bin/ckpool" || ERRORS=$((ERRORS+1))
 fi
 
 if [ "${ENABLE_BCH_POOL}" = "true" ]; then
-    verify_binary "bchn" "${BCHN_DIR}/bin/bitcoind" || ((ERRORS++))
-    verify_binary "ckpool-bch" "${BCH_CKPOOL_DIR}/bin/ckpool" || ((ERRORS++))
+    verify_binary "bchn" "${BCHN_DIR}/bin/bitcoind" || ERRORS=$((ERRORS+1))
+    verify_binary "ckpool-bch" "${BCH_CKPOOL_DIR}/bin/ckpool" || ERRORS=$((ERRORS+1))
 fi
 
 if [ "${ENABLE_DGB_POOL}" = "true" ]; then
-    verify_binary "digibyted" "${DIGIBYTE_DIR}/bin/digibyted" || ((ERRORS++))
-    verify_binary "ckpool-dgb" "${DGB_CKPOOL_DIR}/bin/ckpool" || ((ERRORS++))
+    verify_binary "digibyted" "${DIGIBYTE_DIR}/bin/digibyted" || ERRORS=$((ERRORS+1))
+    verify_binary "ckpool-dgb" "${DGB_CKPOOL_DIR}/bin/ckpool" || ERRORS=$((ERRORS+1))
 fi
 
 # Monero binaries (for merge, merged, or monero_only modes)
 case "${ENABLE_MONERO_TARI_POOL}" in
     merge|merged|monero_only)
-        verify_binary "monerod" "${MONERO_DIR}/bin/monerod" || ((ERRORS++))
+        verify_binary "monerod" "${MONERO_DIR}/bin/monerod" || ERRORS=$((ERRORS+1))
         if [ "${ENABLE_MONERO_TARI_POOL}" = "monero_only" ]; then
-            verify_binary "monero-pool" "${XMR_MONERO_POOL_DIR}/bin/monero-pool" || ((ERRORS++))
+            verify_binary "monero-pool" "${XMR_MONERO_POOL_DIR}/bin/monero-pool" || ERRORS=$((ERRORS+1))
         fi
         ;;
 esac
@@ -64,18 +64,18 @@ esac
 # Tari binaries (for merge, merged, or tari_only modes)
 case "${ENABLE_MONERO_TARI_POOL}" in
     merge|merged|tari_only)
-        verify_binary "minotari_node" "${TARI_DIR}/bin/minotari_node" || ((ERRORS++))
+        verify_binary "minotari_node" "${TARI_DIR}/bin/minotari_node" || ERRORS=$((ERRORS+1))
         if [ "${ENABLE_MONERO_TARI_POOL}" = "merge" ] || [ "${ENABLE_MONERO_TARI_POOL}" = "merged" ]; then
-            verify_binary "minotari_merge_mining_proxy" "${TARI_DIR}/bin/minotari_merge_mining_proxy" || ((ERRORS++))
+            verify_binary "minotari_merge_mining_proxy" "${TARI_DIR}/bin/minotari_merge_mining_proxy" || ERRORS=$((ERRORS+1))
         else
-            verify_binary "minotari_miner" "${TARI_DIR}/bin/minotari_miner" || ((ERRORS++))
+            verify_binary "minotari_miner" "${TARI_DIR}/bin/minotari_miner" || ERRORS=$((ERRORS+1))
         fi
         ;;
 esac
 
 if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
-    verify_binary "snarkos" "${ALEO_DIR}/bin/snarkos" || ((ERRORS++))
-    verify_binary "aleo-pool-server" "${ALEO_POOL_DIR}/bin/aleo-pool-server" || ((ERRORS++))
+    verify_binary "snarkos" "${ALEO_DIR}/bin/snarkos" || ERRORS=$((ERRORS+1))
+    verify_binary "aleo-pool-server" "${ALEO_POOL_DIR}/bin/aleo-pool-server" || ERRORS=$((ERRORS+1))
 fi
 
 # =============================================================================
@@ -97,7 +97,7 @@ check_pool_wallet() {
             log "  [OK] ${coin}: ${address:0:12}...${address: -8}"
         else
             log "  [WARNING] ${coin}: Pool wallet not found: ${wallet_file}"
-            ((WALLET_WARNINGS++))
+            WALLET_WARNINGS=$((WALLET_WARNINGS+1))
         fi
     fi
 }

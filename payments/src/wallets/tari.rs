@@ -222,6 +222,7 @@ struct RpcError {
 struct GetBalanceResponse {
     available_balance: u64,
     pending_incoming_balance: u64,
+    #[allow(dead_code)]
     pending_outgoing_balance: u64,
 }
 
@@ -229,6 +230,7 @@ struct GetBalanceResponse {
 struct TransferResponse {
     transaction_id: u64,
     #[serde(default)]
+    #[allow(dead_code)]
     is_success: bool,
 }
 

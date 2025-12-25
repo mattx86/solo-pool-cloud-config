@@ -199,29 +199,36 @@ chmod +x ${TARI_DIR}/bin/start-wallet.sh
 log "  Initializing wallet..."
 cd ${TARI_DIR}/wallet
 
-# Run wallet init command to generate new wallet
-# Note: --init creates a new wallet, --create-id generates the identity
+# Create a command file that will initialize the wallet and show the address
+# The wallet auto-creates on first run. We use an input file with commands.
+cat > /tmp/wallet_init_cmds.txt << 'EOF'
+get-balance
+exit
+EOF
+
+# Run wallet with the command file - this creates the wallet if it doesn't exist
+# and outputs wallet info including the address
 WALLET_OUTPUT=$(${TARI_DIR}/bin/minotari_console_wallet \
     --base-path ${TARI_DIR}/wallet/data \
     --config ${TARI_DIR}/wallet/config/config.toml \
     --password "${XTM_WALLET_PASSWORD}" \
-    --non-interactive \
-    --init \
-    --create-id 2>&1 || true)
+    --non-interactive-mode \
+    --input-file /tmp/wallet_init_cmds.txt 2>&1 || true)
 
-# Extract wallet address from output
-# The wallet outputs the address when initialized
-XTM_POOL_ADDRESS=$(echo "${WALLET_OUTPUT}" | grep -oP 'f[a-zA-Z0-9]{64,}' | head -1)
+# Cleanup temp file
+rm -f /tmp/wallet_init_cmds.txt
 
-# If not found in output, try to get it from the wallet
+# Extract wallet address from output (Tari addresses start with tari_ prefix or are hex)
+# Try various patterns
+XTM_POOL_ADDRESS=$(echo "${WALLET_OUTPUT}" | grep -oE 'tari://[a-zA-Z0-9]+' | head -1 | sed 's/tari:\/\///')
 if [ -z "${XTM_POOL_ADDRESS}" ]; then
-    # Run wallet to get address
-    XTM_POOL_ADDRESS=$(${TARI_DIR}/bin/minotari_console_wallet \
-        --base-path ${TARI_DIR}/wallet/data \
-        --config ${TARI_DIR}/wallet/config/config.toml \
-        --password "${XTM_WALLET_PASSWORD}" \
-        --non-interactive \
-        --command "get-balance" 2>&1 | grep -oP 'f[a-zA-Z0-9]{64,}' | head -1 || true)
+    # Try to find a 64+ character hex string (typical Tari address format)
+    XTM_POOL_ADDRESS=$(echo "${WALLET_OUTPUT}" | grep -oE '[0-9a-f]{64,}' | head -1)
+fi
+
+# If still not found, try the emoji ID format
+if [ -z "${XTM_POOL_ADDRESS}" ]; then
+    XTM_POOL_ADDRESS=$(echo "${WALLET_OUTPUT}" | grep -oE '\|[🎀-🏿]{12,}\|' | head -1 || true)
 fi
 
 # Export for use in templates
