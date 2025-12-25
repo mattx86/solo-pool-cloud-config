@@ -342,6 +342,7 @@ runcmd:
 
   # Ensure /dev/tty1 is available for output (create symlink if needed for cloud environments)
   - |
+    #!/bin/bash
     if [ ! -e /dev/tty1 ]; then
       # Some cloud environments don't have tty1, use console instead
       ln -sf /dev/console /dev/tty1 2>/dev/null || true
@@ -357,11 +358,13 @@ runcmd:
 
   # Source config to get SCRIPTS_BASE_URL
   - |
+    #!/bin/bash
     source /opt/solo-pool/install/config.sh
     log "Scripts will be downloaded from: ${SCRIPTS_BASE_URL}"
 
   # Download all scripts
   - |
+    #!/bin/bash
     source /opt/solo-pool/install/config.sh
     cd /opt/solo-pool/install
 
@@ -397,6 +400,7 @@ runcmd:
 
   # Execute scripts in order
   - |
+    #!/bin/bash
     source /opt/solo-pool/install/config.sh
     cd /opt/solo-pool/install
 
