@@ -70,10 +70,12 @@ fi
 # Determine network mode settings
 if [ "${NETWORK_MODE}" = "testnet" ]; then
     export NETWORK_FLAG="testnet=1"
+    export NETWORK_SECTION="[test]"
     export EFFECTIVE_RPC_PORT="14023"
     log "  Network mode: TESTNET"
 else
     export NETWORK_FLAG=""
+    export NETWORK_SECTION="[main]"
     export EFFECTIVE_RPC_PORT="${DGB_RPC_PORT}"
     log "  Network mode: MAINNET"
 fi
@@ -82,7 +84,7 @@ fi
 export DGB_RPC_PASSWORD=$(apg -a 1 -m 64 -M NCL -n 1)
 
 # Export variables for template
-export DIGIBYTE_DIR DGB_RPC_PORT DGB_ZMQ_BLOCK_PORT DGB_ZMQ_TX_PORT NETWORK_FLAG
+export DIGIBYTE_DIR DGB_RPC_PORT DGB_ZMQ_BLOCK_PORT DGB_ZMQ_TX_PORT NETWORK_FLAG NETWORK_SECTION EFFECTIVE_RPC_PORT
 
 # Generate config from template
 envsubst < "${TEMPLATE_DIR}/digibyte.conf.template" > ${DIGIBYTE_DIR}/config/digibyte.conf

@@ -1,22 +1,11 @@
 # DigiByte Core Configuration for Solo Mining Pool
 
-# Network
+# Global settings (apply to all networks)
 server=1
 daemon=0
 txindex=1
 listen=${DGB_LISTEN}
 ${NETWORK_FLAG}
-
-# RPC Configuration
-rpcuser=digibyterpc
-rpcpassword=${DGB_RPC_PASSWORD}
-rpcallowip=127.0.0.1
-rpcbind=127.0.0.1
-rpcport=${DGB_RPC_PORT}
-
-# ZMQ for block notifications
-zmqpubhashblock=tcp://127.0.0.1:${DGB_ZMQ_BLOCK_PORT}
-zmqpubhashtx=tcp://127.0.0.1:${DGB_ZMQ_TX_PORT}
 
 # Performance
 dbcache=1024
@@ -28,3 +17,15 @@ datadir=${DIGIBYTE_DIR}/data
 
 # Wallet (disabled - pool handles payouts)
 disablewallet=1
+
+# Network-specific settings
+${NETWORK_SECTION}
+rpcuser=digibyterpc
+rpcpassword=${DGB_RPC_PASSWORD}
+rpcallowip=127.0.0.1
+rpcbind=127.0.0.1
+rpcport=${EFFECTIVE_RPC_PORT}
+
+# ZMQ for block notifications
+zmqpubhashblock=tcp://127.0.0.1:${DGB_ZMQ_BLOCK_PORT}
+zmqpubhashtx=tcp://127.0.0.1:${DGB_ZMQ_TX_PORT}

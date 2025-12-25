@@ -24,16 +24,38 @@ log() {
 # 1. START NODE
 # =============================================================================
 log "Starting Bitcoin node..."
+
+# Check if bitcoind binary exists
+if [ ! -x "${BITCOIN_DIR}/bin/bitcoind" ]; then
+    log "ERROR: bitcoind not found at ${BITCOIN_DIR}/bin/bitcoind"
+    exit 1
+fi
+
 sudo systemctl start node-btc-bitcoind
+
+# Verify service started
+sleep 2
+if ! systemctl is-active --quiet node-btc-bitcoind; then
+    log "ERROR: Failed to start node-btc-bitcoind service"
+    log "Check: sudo journalctl -u node-btc-bitcoind -n 50"
+    exit 1
+fi
 
 # Wait for node to be responsive
 log "Waiting for node to be responsive..."
+NODE_READY=false
 for i in $(seq 1 60); do
     if ${BITCOIN_DIR}/bin/bitcoin-cli -conf=${BITCOIN_DIR}/config/bitcoin.conf getblockchaininfo &>/dev/null; then
+        NODE_READY=true
         break
     fi
     sleep 5
 done
+
+if [ "${NODE_READY}" != "true" ]; then
+    log "ERROR: Node not responding after 5 minutes"
+    exit 1
+fi
 
 # =============================================================================
 # 2. WAIT FOR SYNC

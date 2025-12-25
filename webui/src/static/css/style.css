@@ -191,6 +191,12 @@ header h1 {
 .pool-icon.merge { background: var(--accent-merge); }
 .pool-icon.aleo { background: var(--accent-aleo); }
 
+.pool-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .pool-status {
     padding: 4px 12px;
     border-radius: 20px;
@@ -198,6 +204,73 @@ header h1 {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+/* Sync Status Indicator */
+.sync-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.sync-status.offline {
+    color: var(--warning);
+}
+
+.sync-status.offline .sync-icon {
+    font-size: 0.9rem;
+}
+
+.sync-status.synced {
+    color: var(--success);
+}
+
+.sync-status.synced .sync-icon {
+    font-size: 0.9rem;
+}
+
+.sync-status.syncing {
+    position: relative;
+}
+
+.sync-progress-ring {
+    transform: rotate(-90deg);
+}
+
+.sync-progress-ring-bg {
+    fill: none;
+    stroke: var(--border-color);
+    stroke-width: 3;
+}
+
+.sync-progress-ring-fill {
+    fill: none;
+    stroke: #667eea;
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s ease;
+}
+
+/* Coin-specific sync ring colors */
+.sync-progress-ring-fill.btc { stroke: var(--accent-btc); }
+.sync-progress-ring-fill.bch { stroke: var(--accent-bch); }
+.sync-progress-ring-fill.dgb { stroke: var(--accent-dgb); }
+.sync-progress-ring-fill.xmr { stroke: var(--accent-xmr); }
+.sync-progress-ring-fill.xtm { stroke: var(--accent-xtm); }
+.sync-progress-ring-fill.merge { stroke: var(--accent-merge); }
+.sync-progress-ring-fill.aleo { stroke: var(--accent-aleo); }
+
+.sync-progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.65rem;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
 }
 
 .pool-status.online {

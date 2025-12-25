@@ -70,10 +70,12 @@ fi
 # Determine network mode settings
 if [ "${NETWORK_MODE}" = "testnet" ]; then
     export NETWORK_FLAG="testnet4=1"
+    export NETWORK_SECTION="[testnet4]"
     export EFFECTIVE_RPC_PORT="48334"
     log "  Network mode: TESTNET4"
 else
     export NETWORK_FLAG=""
+    export NETWORK_SECTION="[main]"
     export EFFECTIVE_RPC_PORT="${BCH_RPC_PORT}"
     log "  Network mode: MAINNET"
 fi
@@ -82,7 +84,7 @@ fi
 export BCH_RPC_PASSWORD=$(apg -a 1 -m 64 -M NCL -n 1)
 
 # Export variables for template
-export BCHN_DIR BCH_RPC_PORT BCH_ZMQ_BLOCK_PORT BCH_ZMQ_TX_PORT NETWORK_FLAG
+export BCHN_DIR BCH_RPC_PORT BCH_ZMQ_BLOCK_PORT BCH_ZMQ_TX_PORT NETWORK_FLAG NETWORK_SECTION EFFECTIVE_RPC_PORT
 
 # Generate config from template
 envsubst < "${TEMPLATE_DIR}/bchn.conf.template" > ${BCHN_DIR}/config/bitcoin.conf

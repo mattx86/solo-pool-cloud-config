@@ -37,12 +37,16 @@ log "Installing ALEO snarkOS v${SNARKOS_VERSION} and ALEO Pool Server..."
 TEMPLATE_DIR="/opt/solo-pool/install/files/config"
 
 # Determine network mode settings
+# snarkOS --network expects a number: 0=mainnet, 1=testnet
+# API paths use the string name
 if [ "${NETWORK_MODE}" = "testnet" ]; then
-    export ALEO_NETWORK="testnet"
-    log "  Network mode: TESTNET"
+    export ALEO_NETWORK="1"
+    export ALEO_NETWORK_NAME="testnet"
+    log "  Network mode: TESTNET (network=1)"
 else
-    export ALEO_NETWORK="mainnet"
-    log "  Network mode: MAINNET"
+    export ALEO_NETWORK="0"
+    export ALEO_NETWORK_NAME="mainnet"
+    log "  Network mode: MAINNET (network=0)"
 fi
 
 # =============================================================================

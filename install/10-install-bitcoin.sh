@@ -87,10 +87,12 @@ fi
 # Determine network mode settings
 if [ "${NETWORK_MODE}" = "testnet" ]; then
     export NETWORK_FLAG="testnet4=1"
+    export NETWORK_SECTION="[testnet4]"
     export EFFECTIVE_RPC_PORT="48332"
     log "  Network mode: TESTNET4"
 else
     export NETWORK_FLAG=""
+    export NETWORK_SECTION="[main]"
     export EFFECTIVE_RPC_PORT="${BITCOIN_RPC_PORT}"
     log "  Network mode: MAINNET"
 fi
@@ -99,7 +101,7 @@ fi
 export BTC_RPC_PASSWORD=$(apg -a 1 -m 64 -M NCL -n 1)
 
 # Export variables for template
-export BITCOIN_DIR BITCOIN_RPC_PORT BITCOIN_ZMQ_BLOCK_PORT BITCOIN_ZMQ_TX_PORT NETWORK_FLAG
+export BITCOIN_DIR BITCOIN_RPC_PORT BITCOIN_ZMQ_BLOCK_PORT BITCOIN_ZMQ_TX_PORT NETWORK_FLAG NETWORK_SECTION EFFECTIVE_RPC_PORT
 
 # Generate config from template
 envsubst < "${TEMPLATE_DIR}/bitcoin.conf.template" > ${BITCOIN_DIR}/config/bitcoin.conf

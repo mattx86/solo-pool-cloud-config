@@ -227,6 +227,19 @@ pub struct CkPoolConfig {
     /// Miner password (typically ignored, use "x")
     #[serde(default = "default_password")]
     pub password: String,
+    /// Node RPC URL for sync status (e.g., http://127.0.0.1:8332)
+    #[serde(default)]
+    pub node_rpc_url: Option<String>,
+    /// Node RPC username
+    #[serde(default = "default_rpc_user")]
+    pub node_rpc_user: String,
+    /// Node RPC password
+    #[serde(default)]
+    pub node_rpc_password: Option<String>,
+}
+
+fn default_rpc_user() -> String {
+    "rpc".to_string()
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -246,6 +259,13 @@ pub struct MoneroPoolConfig {
     /// Miner password
     #[serde(default = "default_xmr_password")]
     pub password: String,
+    /// Node RPC URL for sync status (e.g., http://127.0.0.1:18081)
+    #[serde(default = "default_monero_rpc")]
+    pub node_rpc_url: String,
+}
+
+fn default_monero_rpc() -> String {
+    "http://127.0.0.1:18081".to_string()
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -265,6 +285,13 @@ pub struct TariPoolConfig {
     /// Miner password
     #[serde(default = "default_password")]
     pub password: String,
+    /// Node gRPC port for sync status
+    #[serde(default = "default_tari_grpc_port")]
+    pub node_grpc_port: u16,
+}
+
+fn default_tari_grpc_port() -> u16 {
+    18142
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -288,6 +315,12 @@ pub struct MergePoolConfig {
     /// Miner password
     #[serde(default = "default_xmr_password")]
     pub password: String,
+    /// Monero node RPC URL for sync status
+    #[serde(default = "default_monero_rpc")]
+    pub xmr_node_rpc_url: String,
+    /// Tari node gRPC port for sync status
+    #[serde(default = "default_tari_grpc_port")]
+    pub xtm_node_grpc_port: u16,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -306,6 +339,20 @@ pub struct AleoPoolConfig {
     /// Miner password
     #[serde(default = "default_password")]
     pub password: String,
+    /// Node REST URL for sync status (e.g., http://127.0.0.1:3030)
+    #[serde(default = "default_aleo_rest")]
+    pub node_rest_url: String,
+    /// Network name for API calls (mainnet or testnet)
+    #[serde(default = "default_aleo_network")]
+    pub network: String,
+}
+
+fn default_aleo_rest() -> String {
+    "http://127.0.0.1:3030".to_string()
+}
+
+fn default_aleo_network() -> String {
+    "mainnet".to_string()
 }
 
 impl Config {
@@ -348,6 +395,9 @@ impl Default for Config {
                     stratum_port: 3333,
                     username_format: "YOUR_BTC_ADDRESS.worker_name".to_string(),
                     password: "x".to_string(),
+                    node_rpc_url: Some("http://127.0.0.1:8332".to_string()),
+                    node_rpc_user: default_rpc_user(),
+                    node_rpc_password: None,
                 }),
                 bch: Some(CkPoolConfig {
                     enabled: true,
@@ -357,6 +407,9 @@ impl Default for Config {
                     stratum_port: 3334,
                     username_format: "YOUR_BCH_ADDRESS.worker_name".to_string(),
                     password: "x".to_string(),
+                    node_rpc_url: Some("http://127.0.0.1:8334".to_string()),
+                    node_rpc_user: default_rpc_user(),
+                    node_rpc_password: None,
                 }),
                 dgb: Some(CkPoolConfig {
                     enabled: true,
@@ -366,6 +419,9 @@ impl Default for Config {
                     stratum_port: 3335,
                     username_format: "YOUR_DGB_ADDRESS.worker_name".to_string(),
                     password: "x".to_string(),
+                    node_rpc_url: Some("http://127.0.0.1:14022".to_string()),
+                    node_rpc_user: default_rpc_user(),
+                    node_rpc_password: None,
                 }),
                 xmr: Some(MoneroPoolConfig {
                     enabled: false, // Disabled when using merge mode
@@ -376,6 +432,7 @@ impl Default for Config {
                     pool_wallet_address: None,
                     username_format: "YOUR_XMR_ADDRESS.worker_name".to_string(),
                     password: "x".to_string(),
+                    node_rpc_url: default_monero_rpc(),
                 }),
                 xtm: Some(TariPoolConfig {
                     enabled: false, // Disabled when using merge mode
@@ -386,6 +443,7 @@ impl Default for Config {
                     pool_wallet_address: None,
                     username_format: "YOUR_XTM_ADDRESS.worker_name".to_string(),
                     password: "x".to_string(),
+                    node_grpc_port: default_tari_grpc_port(),
                 }),
                 xmr_xtm_merge: Some(MergePoolConfig {
                     enabled: true, // Default: merge mining mode
@@ -397,6 +455,8 @@ impl Default for Config {
                     xtm_pool_wallet_address: None,
                     username_format: "YOUR_XMR_ADDRESS.worker_name".to_string(),
                     password: "x".to_string(),
+                    xmr_node_rpc_url: default_monero_rpc(),
+                    xtm_node_grpc_port: default_tari_grpc_port(),
                 }),
                 aleo: Some(AleoPoolConfig {
                     enabled: true,
@@ -407,6 +467,8 @@ impl Default for Config {
                     pool_wallet_address: None,
                     username_format: "YOUR_ALEO_ADDRESS.worker_name".to_string(),
                     password: "x".to_string(),
+                    node_rest_url: default_aleo_rest(),
+                    network: default_aleo_network(),
                 }),
             },
         }

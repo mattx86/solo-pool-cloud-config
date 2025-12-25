@@ -2,6 +2,7 @@ mod ckpool;
 mod aleo;
 mod monero_pool;
 mod tari;
+mod nodes;
 
 use std::sync::Arc;
 use chrono::Utc;
@@ -31,6 +32,15 @@ pub async fn stats_updater(state: Arc<AppState>) {
         if let Some(ref btc_config) = state.config.pools.btc {
             if btc_config.enabled {
                 new_stats.btc = fetch_ckpool_stats(btc_config, "BTC", server_ip).await;
+                // Fetch node sync status
+                if let Some(ref rpc_url) = btc_config.node_rpc_url {
+                    let rpc_pass = btc_config.node_rpc_password.as_deref().unwrap_or("");
+                    new_stats.btc.sync_status = nodes::fetch_bitcoin_sync(
+                        rpc_url,
+                        &btc_config.node_rpc_user,
+                        rpc_pass,
+                    ).await;
+                }
             }
         }
 
@@ -38,6 +48,15 @@ pub async fn stats_updater(state: Arc<AppState>) {
         if let Some(ref bch_config) = state.config.pools.bch {
             if bch_config.enabled {
                 new_stats.bch = fetch_ckpool_stats(bch_config, "BCH", server_ip).await;
+                // Fetch node sync status
+                if let Some(ref rpc_url) = bch_config.node_rpc_url {
+                    let rpc_pass = bch_config.node_rpc_password.as_deref().unwrap_or("");
+                    new_stats.bch.sync_status = nodes::fetch_bitcoin_sync(
+                        rpc_url,
+                        &bch_config.node_rpc_user,
+                        rpc_pass,
+                    ).await;
+                }
             }
         }
 
@@ -45,6 +64,15 @@ pub async fn stats_updater(state: Arc<AppState>) {
         if let Some(ref dgb_config) = state.config.pools.dgb {
             if dgb_config.enabled {
                 new_stats.dgb = fetch_ckpool_stats(dgb_config, "DGB", server_ip).await;
+                // Fetch node sync status
+                if let Some(ref rpc_url) = dgb_config.node_rpc_url {
+                    let rpc_pass = dgb_config.node_rpc_password.as_deref().unwrap_or("");
+                    new_stats.dgb.sync_status = nodes::fetch_bitcoin_sync(
+                        rpc_url,
+                        &dgb_config.node_rpc_user,
+                        rpc_pass,
+                    ).await;
+                }
             }
         }
 
@@ -61,6 +89,8 @@ pub async fn stats_updater(state: Arc<AppState>) {
                         stats.username_format = xmr_config.username_format.clone();
                         stats.password = xmr_config.password.clone();
                         stats.pool_wallet_address = xmr_config.pool_wallet_address.clone();
+                        // Fetch node sync status
+                        stats.sync_status = nodes::fetch_monero_sync(&xmr_config.node_rpc_url).await;
                         new_stats.xmr = stats;
                     }
                     Err(e) => {
@@ -75,6 +105,7 @@ pub async fn stats_updater(state: Arc<AppState>) {
                             username_format: xmr_config.username_format.clone(),
                             password: xmr_config.password.clone(),
                             pool_wallet_address: xmr_config.pool_wallet_address.clone(),
+                            sync_status: nodes::fetch_monero_sync(&xmr_config.node_rpc_url).await,
                             ..Default::default()
                         };
                     }
@@ -95,6 +126,8 @@ pub async fn stats_updater(state: Arc<AppState>) {
                         stats.username_format = xtm_config.username_format.clone();
                         stats.password = xtm_config.password.clone();
                         stats.pool_wallet_address = xtm_config.pool_wallet_address.clone();
+                        // Fetch node sync status
+                        stats.sync_status = nodes::fetch_tari_sync(xtm_config.node_grpc_port).await;
                         new_stats.xtm = stats;
                     }
                     Err(e) => {
@@ -109,6 +142,7 @@ pub async fn stats_updater(state: Arc<AppState>) {
                             username_format: xtm_config.username_format.clone(),
                             password: xtm_config.password.clone(),
                             pool_wallet_address: xtm_config.pool_wallet_address.clone(),
+                            sync_status: nodes::fetch_tari_sync(xtm_config.node_grpc_port).await,
                             ..Default::default()
                         };
                     }
@@ -122,6 +156,43 @@ pub async fn stats_updater(state: Arc<AppState>) {
                 // Merge mining proxy uses Tari merge client
                 let api_url = merge_config.api_url.clone()
                     .unwrap_or_else(|| format!("http://127.0.0.1:{}", merge_config.stratum_port));
+
+                // Fetch sync status for both chains (use Monero as primary indicator)
+                let xmr_sync = nodes::fetch_monero_sync(&merge_config.xmr_node_rpc_url).await;
+                let xtm_sync = nodes::fetch_tari_sync(merge_config.xtm_node_grpc_port).await;
+
+                // Combined sync status: show XMR sync progress (primary chain for merge mining)
+                let combined_sync = if xmr_sync.is_synced && xtm_sync.is_synced {
+                    crate::models::SyncStatus {
+                        node_online: true,
+                        is_synced: true,
+                        current_height: xmr_sync.current_height,
+                        target_height: xmr_sync.target_height,
+                        sync_percent: 100.0,
+                        status_message: format!("XMR: {} | XTM: online", xmr_sync.status_message),
+                    }
+                } else if !xmr_sync.node_online || !xtm_sync.node_online {
+                    crate::models::SyncStatus {
+                        node_online: false,
+                        is_synced: false,
+                        status_message: format!(
+                            "XMR: {} | XTM: {}",
+                            if xmr_sync.node_online { "online" } else { "offline" },
+                            if xtm_sync.node_online { "online" } else { "offline" }
+                        ),
+                        ..Default::default()
+                    }
+                } else {
+                    crate::models::SyncStatus {
+                        node_online: true,
+                        is_synced: false,
+                        current_height: xmr_sync.current_height,
+                        target_height: xmr_sync.target_height,
+                        sync_percent: xmr_sync.sync_percent,
+                        status_message: format!("XMR: {:.1}% | XTM: {}", xmr_sync.sync_percent, xtm_sync.status_message),
+                    }
+                };
+
                 match TariMergeClient::fetch_stats(&api_url).await {
                     Ok(mut stats) => {
                         stats.name = merge_config.name.clone();
@@ -133,6 +204,7 @@ pub async fn stats_updater(state: Arc<AppState>) {
                         stats.password = merge_config.password.clone();
                         stats.pool_wallet_address = merge_config.xmr_pool_wallet_address.clone();
                         stats.pool_wallet_address_secondary = merge_config.xtm_pool_wallet_address.clone();
+                        stats.sync_status = combined_sync;
                         new_stats.xmr_xtm_merge = stats;
                     }
                     Err(e) => {
@@ -148,6 +220,7 @@ pub async fn stats_updater(state: Arc<AppState>) {
                             password: merge_config.password.clone(),
                             pool_wallet_address: merge_config.xmr_pool_wallet_address.clone(),
                             pool_wallet_address_secondary: merge_config.xtm_pool_wallet_address.clone(),
+                            sync_status: combined_sync,
                             ..Default::default()
                         };
                     }
@@ -158,6 +231,9 @@ pub async fn stats_updater(state: Arc<AppState>) {
         // Fetch ALEO stats
         if let Some(ref aleo_config) = state.config.pools.aleo {
             if aleo_config.enabled {
+                // Fetch node sync status
+                let aleo_sync = nodes::fetch_aleo_sync(&aleo_config.node_rest_url, &aleo_config.network).await;
+
                 match AleoPoolClient::fetch_stats(&aleo_config.api_url).await {
                     Ok(mut stats) => {
                         stats.name = aleo_config.name.clone();
@@ -168,6 +244,7 @@ pub async fn stats_updater(state: Arc<AppState>) {
                         stats.username_format = aleo_config.username_format.clone();
                         stats.password = aleo_config.password.clone();
                         stats.pool_wallet_address = aleo_config.pool_wallet_address.clone();
+                        stats.sync_status = aleo_sync;
                         new_stats.aleo = stats;
                     }
                     Err(e) => {
@@ -182,6 +259,7 @@ pub async fn stats_updater(state: Arc<AppState>) {
                             username_format: aleo_config.username_format.clone(),
                             password: aleo_config.password.clone(),
                             pool_wallet_address: aleo_config.pool_wallet_address.clone(),
+                            sync_status: aleo_sync,
                             ..Default::default()
                         };
                     }

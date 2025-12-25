@@ -272,8 +272,20 @@ chown -R ${POOL_USER}:${POOL_USER} ${BASE_DIR}/logs
 log "  Maintenance configured"
 
 # =============================================================================
-# 6. SUMMARY
+# 6. START SERVICES
 # =============================================================================
+log ""
+log "6. Starting services..."
+log "  Enabling solo-pool service..."
+systemctl enable solo-pool >/dev/null 2>&1 || true
+
+log "  Starting solo-pool service (background)..."
+systemctl start solo-pool &
+
+# Give services a moment to start
+sleep 2
+log "  Services started - nodes will sync in background"
+
 log ""
 log "=============================================="
 log "           INSTALLATION SUMMARY"
@@ -301,10 +313,10 @@ log ""
 log "Installation Errors: ${ERRORS}"
 log ""
 log "NEXT STEPS:"
-log "1. Start nodes: ${BIN_DIR}/start-nodes.sh"
-log "2. Wait for sync: ${BIN_DIR}/sync-status.sh"
-log "3. Open firewall ports when ready"
-log "4. Start pools: ${BIN_DIR}/start-pools.sh"
+log "1. Services started automatically - nodes are syncing in background"
+log "2. Check sync status: ${BIN_DIR}/sync-status.sh"
+log "3. View service status: systemctl status solo-pool"
+log "4. Pools start automatically once nodes are synced"
 log ""
 log "IMPORTANT: Backup all pool wallet keys immediately!"
 log "  XMR: ${MONERO_DIR}/wallet/keys/SEED_BACKUP.txt"

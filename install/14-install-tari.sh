@@ -143,16 +143,16 @@ mkdir -p ${TARI_DIR}/config
 
 # Determine P2P listen address based on inbound config
 if [ "${ENABLE_INBOUND_P2P}" = "true" ]; then
-    export TARI_P2P_LISTEN="/ip4/0.0.0.0/tcp/18189"
+    export TARI_P2P_ADDRESS="0.0.0.0:18189"
 else
-    export TARI_P2P_LISTEN="/ip4/127.0.0.1/tcp/18189"
+    export TARI_P2P_ADDRESS="127.0.0.1:18189"
 fi
 
 # Generate password for node's internal wallet
 export XTM_NODE_WALLET_PASSWORD=$(apg -a 1 -m 32 -M NCL -n 1)
 
 # Export variables for template
-export TARI_DIR TARI_NODE_GRPC_PORT TARI_WALLET_GRPC_PORT TARI_NETWORK
+export TARI_DIR TARI_NODE_GRPC_PORT TARI_WALLET_GRPC_PORT TARI_NETWORK TARI_P2P_ADDRESS
 
 # Generate config from template
 log "  Creating minotari node configuration from template..."

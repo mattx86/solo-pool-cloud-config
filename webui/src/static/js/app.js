@@ -138,14 +138,59 @@ function updateDashboard(stats) {
     const grid = document.getElementById('poolsGrid');
     grid.innerHTML = '';
 
-    // Create cards for each pool
+    // Create cards for each enabled pool (skip disabled pools)
     POOLS.forEach(pool => {
         const poolStats = stats[pool.id];
-        if (poolStats) {
+        if (poolStats && poolStats.enabled) {
             const card = createPoolCard(pool, poolStats);
             grid.appendChild(card);
         }
     });
+
+    // Show message if no pools are enabled
+    if (grid.children.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <div class="empty-state-icon">⛏️</div>
+                <p>No pools are currently enabled.</p>
+            </div>
+        `;
+    }
+}
+
+function createSyncStatusHtml(syncStatus, iconClass) {
+    if (!syncStatus || !syncStatus.node_online) {
+        // Node offline - show offline indicator
+        if (syncStatus && syncStatus.status_message) {
+            return `<div class="sync-status offline" title="${escapeHtml(syncStatus.status_message)}">
+                <span class="sync-icon">⚠</span>
+                <span class="sync-text">Node Offline</span>
+            </div>`;
+        }
+        return '';
+    }
+
+    if (syncStatus.is_synced) {
+        // Fully synced - show green checkmark
+        return `<div class="sync-status synced" title="${escapeHtml(syncStatus.status_message || 'Synced')}">
+            <span class="sync-icon">✓</span>
+            <span class="sync-text">Synced</span>
+        </div>`;
+    }
+
+    // Syncing - show progress circle
+    const percent = syncStatus.sync_percent || 0;
+    const circumference = 2 * Math.PI * 18; // radius = 18
+    const strokeDashoffset = circumference - (percent / 100) * circumference;
+
+    return `<div class="sync-status syncing" title="${escapeHtml(syncStatus.status_message || 'Syncing...')}">
+        <svg class="sync-progress-ring" width="44" height="44">
+            <circle class="sync-progress-ring-bg" cx="22" cy="22" r="18" />
+            <circle class="sync-progress-ring-fill ${iconClass}" cx="22" cy="22" r="18"
+                style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${strokeDashoffset}" />
+        </svg>
+        <span class="sync-progress-text">${percent.toFixed(1)}%</span>
+    </div>`;
 }
 
 function createPoolCard(pool, stats) {
@@ -157,13 +202,20 @@ function createPoolCard(pool, stats) {
     const statusText = !stats.enabled ? 'Disabled' : (stats.online ? 'Online' : 'Offline');
     const workerCount = stats.worker_count || 0;
 
+    // Build sync status display
+    const syncStatus = stats.sync_status || {};
+    const syncHtml = createSyncStatusHtml(syncStatus, iconClass);
+
     card.innerHTML = `
         <div class="pool-card-header">
             <h2>
                 <span class="pool-icon ${iconClass}">${pool.symbol.substring(0, 3)}</span>
                 ${pool.name}
             </h2>
-            <span class="pool-status ${statusClass}">${statusText}</span>
+            <div class="pool-header-right">
+                ${syncHtml}
+                <span class="pool-status ${statusClass}">${statusText}</span>
+            </div>
         </div>
 
         <div class="pool-stats">

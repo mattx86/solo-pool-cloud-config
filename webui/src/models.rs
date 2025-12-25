@@ -62,6 +62,24 @@ pub struct PoolStats {
     pub last_updated: Option<DateTime<Utc>>,
 }
 
+/// Node sync status
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SyncStatus {
+    /// Whether the node is reachable
+    pub node_online: bool,
+    /// Whether the blockchain is fully synced
+    pub is_synced: bool,
+    /// Current block height
+    pub current_height: u64,
+    /// Target block height (if known)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_height: Option<u64>,
+    /// Sync progress as percentage (0.0 - 100.0)
+    pub sync_percent: f64,
+    /// Human-readable status message
+    pub status_message: String,
+}
+
 /// Statistics for a specific algorithm/pool
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AlgorithmStats {
@@ -70,6 +88,10 @@ pub struct AlgorithmStats {
     pub enabled: bool,
     pub online: bool,
     pub stratum_port: u16,
+
+    // Node sync status
+    #[serde(default)]
+    pub sync_status: SyncStatus,
 
     // Aggregate stats
     pub total_hashrate: f64,

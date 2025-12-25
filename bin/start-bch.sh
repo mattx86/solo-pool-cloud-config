@@ -24,16 +24,38 @@ log() {
 # 1. START NODE
 # =============================================================================
 log "Starting Bitcoin Cash node..."
+
+# Check if bchn binary exists
+if [ ! -x "${BCHN_DIR}/bin/bitcoind" ]; then
+    log "ERROR: BCHN not found at ${BCHN_DIR}/bin/bitcoind"
+    exit 1
+fi
+
 sudo systemctl start node-bch-bchn
+
+# Verify service started
+sleep 2
+if ! systemctl is-active --quiet node-bch-bchn; then
+    log "ERROR: Failed to start node-bch-bchn service"
+    log "Check: sudo journalctl -u node-bch-bchn -n 50"
+    exit 1
+fi
 
 # Wait for node to be responsive
 log "Waiting for node to be responsive..."
+NODE_READY=false
 for i in $(seq 1 60); do
     if ${BCHN_DIR}/bin/bitcoin-cli -conf=${BCHN_DIR}/config/bitcoin.conf getblockchaininfo &>/dev/null; then
+        NODE_READY=true
         break
     fi
     sleep 5
 done
+
+if [ "${NODE_READY}" != "true" ]; then
+    log "ERROR: Node not responding after 5 minutes"
+    exit 1
+fi
 
 # =============================================================================
 # 2. WAIT FOR SYNC

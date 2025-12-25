@@ -32,17 +32,39 @@ log() {
 # 1. START NODE
 # =============================================================================
 log "Starting ALEO node (snarkOS)..."
+
+# Check if snarkos binary exists
+if [ ! -x "${ALEO_DIR}/bin/snarkos" ]; then
+    log "ERROR: snarkos not found at ${ALEO_DIR}/bin/snarkos"
+    exit 1
+fi
+
 sudo systemctl start node-aleo-snarkos
+
+# Verify service started
+sleep 2
+if ! systemctl is-active --quiet node-aleo-snarkos; then
+    log "ERROR: Failed to start node-aleo-snarkos service"
+    log "Check: sudo journalctl -u node-aleo-snarkos -n 50"
+    exit 1
+fi
 
 # Wait for node to be responsive
 log "Waiting for node to be responsive..."
+NODE_READY=false
 for i in $(seq 1 60); do
     # Check if REST API is responding
     if curl -s http://127.0.0.1:${ALEO_REST_PORT:-3030}/${ALEO_NETWORK}/latest/height &>/dev/null; then
+        NODE_READY=true
         break
     fi
     sleep 5
 done
+
+if [ "${NODE_READY}" != "true" ]; then
+    log "ERROR: Node not responding after 5 minutes"
+    exit 1
+fi
 
 # =============================================================================
 # 2. WAIT FOR SYNC

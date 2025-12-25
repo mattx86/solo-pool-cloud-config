@@ -24,16 +24,38 @@ log() {
 # 1. START NODE
 # =============================================================================
 log "Starting DigiByte node..."
+
+# Check if digibyted binary exists
+if [ ! -x "${DIGIBYTE_DIR}/bin/digibyted" ]; then
+    log "ERROR: digibyted not found at ${DIGIBYTE_DIR}/bin/digibyted"
+    exit 1
+fi
+
 sudo systemctl start node-dgb-digibyted
+
+# Verify service started
+sleep 2
+if ! systemctl is-active --quiet node-dgb-digibyted; then
+    log "ERROR: Failed to start node-dgb-digibyted service"
+    log "Check: sudo journalctl -u node-dgb-digibyted -n 50"
+    exit 1
+fi
 
 # Wait for node to be responsive
 log "Waiting for node to be responsive..."
+NODE_READY=false
 for i in $(seq 1 60); do
     if ${DIGIBYTE_DIR}/bin/digibyte-cli -conf=${DIGIBYTE_DIR}/config/digibyte.conf getblockchaininfo &>/dev/null; then
+        NODE_READY=true
         break
     fi
     sleep 5
 done
+
+if [ "${NODE_READY}" != "true" ]; then
+    log "ERROR: Node not responding after 5 minutes"
+    exit 1
+fi
 
 # =============================================================================
 # 2. WAIT FOR SYNC

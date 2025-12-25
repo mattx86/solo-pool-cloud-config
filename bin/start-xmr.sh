@@ -38,16 +38,38 @@ log() {
 # 1. START NODE
 # =============================================================================
 log "Starting Monero node..."
+
+# Check if monerod binary exists
+if [ ! -x "${MONERO_DIR}/bin/monerod" ]; then
+    log "ERROR: monerod not found at ${MONERO_DIR}/bin/monerod"
+    exit 1
+fi
+
 sudo systemctl start node-xmr-monerod
+
+# Verify service started
+sleep 2
+if ! systemctl is-active --quiet node-xmr-monerod; then
+    log "ERROR: Failed to start node-xmr-monerod service"
+    log "Check: sudo journalctl -u node-xmr-monerod -n 50"
+    exit 1
+fi
 
 # Wait for node to be responsive
 log "Waiting for node to be responsive..."
+NODE_READY=false
 for i in $(seq 1 60); do
-    if ${MONERO_DIR}/bin/monerod --rpc-bind-port=${MONERO_RPC_PORT:-18081} status &>/dev/null; then
+    if curl -s http://127.0.0.1:${MONERO_RPC_PORT:-18081}/get_info &>/dev/null; then
+        NODE_READY=true
         break
     fi
     sleep 5
 done
+
+if [ "${NODE_READY}" != "true" ]; then
+    log "ERROR: Node not responding after 5 minutes"
+    exit 1
+fi
 
 # =============================================================================
 # 2. WAIT FOR SYNC

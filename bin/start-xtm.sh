@@ -37,17 +37,39 @@ log() {
 # 1. START NODE
 # =============================================================================
 log "Starting Tari node..."
+
+# Check if minotari_node binary exists
+if [ ! -x "${TARI_DIR}/bin/minotari_node" ]; then
+    log "ERROR: minotari_node not found at ${TARI_DIR}/bin/minotari_node"
+    exit 1
+fi
+
 sudo systemctl start node-xtm-minotari
+
+# Verify service started
+sleep 2
+if ! systemctl is-active --quiet node-xtm-minotari; then
+    log "ERROR: Failed to start node-xtm-minotari service"
+    log "Check: sudo journalctl -u node-xtm-minotari -n 50"
+    exit 1
+fi
 
 # Wait for node to be responsive
 log "Waiting for node to be responsive..."
+NODE_READY=false
 for i in $(seq 1 60); do
     # Check if gRPC port is listening
     if nc -z 127.0.0.1 ${TARI_NODE_GRPC_PORT:-18142} 2>/dev/null; then
+        NODE_READY=true
         break
     fi
     sleep 5
 done
+
+if [ "${NODE_READY}" != "true" ]; then
+    log "ERROR: Node not responding after 5 minutes"
+    exit 1
+fi
 
 # =============================================================================
 # 2. WAIT FOR SYNC
