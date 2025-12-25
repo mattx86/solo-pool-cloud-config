@@ -70,17 +70,34 @@ cd /tmp
 TARI_RELEASE_URL="https://github.com/tari-project/tari/releases/download/v${TARI_VERSION}/minotari_suite-linux-x86_64.tar.gz"
 
 log "  Downloading from: ${TARI_RELEASE_URL}"
-run_cmd wget -q "${TARI_RELEASE_URL}" -O tari.tar.gz
-
-if [ $? -ne 0 ]; then
+# Don't use run_cmd for wget - it breaks exit status checking due to pipe
+rm -f tari.tar.gz
+if ! wget -q "${TARI_RELEASE_URL}" -O tari.tar.gz; then
     log_error "Failed to download Tari v${TARI_VERSION}"
+    exit 1
+fi
+
+# Verify download succeeded (file exists and is not empty/corrupt)
+if [ ! -f tari.tar.gz ] || [ ! -s tari.tar.gz ]; then
+    log_error "Tari download failed - file is empty or missing"
+    exit 1
+fi
+
+# Verify it's a valid gzip file
+if ! gzip -t tari.tar.gz 2>/dev/null; then
+    log_error "Tari download is corrupt (invalid gzip file)"
+    rm -f tari.tar.gz
     exit 1
 fi
 
 # Extract
 log "  Extracting..."
 mkdir -p tari-extract
-tar -xzf tari.tar.gz -C tari-extract
+if ! tar -xzf tari.tar.gz -C tari-extract; then
+    log_error "Failed to extract Tari archive"
+    rm -rf tari.tar.gz tari-extract
+    exit 1
+fi
 
 # Find and copy binaries (node, wallet, miner, and merge proxy)
 log "  Installing binaries..."

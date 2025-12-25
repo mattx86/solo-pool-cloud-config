@@ -46,6 +46,9 @@ PAYMENTS_DIR="${PAYMENTS_DIR:-${BASE_DIR}/payments}"
 # =============================================================================
 log "1. Installing build dependencies..."
 
+# Explicitly add cargo to PATH (don't rely on $HOME which may not be /root in cloud-init)
+export PATH="/root/.cargo/bin:$PATH"
+
 # Check if Rust is installed
 if [ -f "/root/.cargo/env" ]; then
     source /root/.cargo/env
@@ -55,6 +58,12 @@ else
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
     source /root/.cargo/env
     log "  Rust installed"
+fi
+
+# Verify cargo is actually available
+if ! command -v cargo &> /dev/null; then
+    log_error "cargo command not found. Check Rust installation."
+    exit 1
 fi
 
 # Install additional build dependencies if needed

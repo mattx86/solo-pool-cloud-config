@@ -60,6 +60,9 @@ log "1. Installing build dependencies..."
 # Track what we install so we can remove it later
 WEBUI_BUILD_DEPS=""
 
+# Explicitly add cargo to PATH (don't rely on $HOME which may not be /root in cloud-init)
+export PATH="/root/.cargo/bin:$PATH"
+
 # Check if Rust is installed (should be from 05-install-dependencies.sh)
 if [ -f "/root/.cargo/env" ]; then
     source /root/.cargo/env
@@ -71,6 +74,12 @@ else
     source /root/.cargo/env
     WEBUI_BUILD_DEPS="${WEBUI_BUILD_DEPS} rust"
     log "  Rust installed"
+fi
+
+# Verify cargo is actually available
+if ! command -v cargo &> /dev/null; then
+    log_error "cargo command not found. Check Rust installation."
+    exit 1
 fi
 
 # Install additional build dependencies if needed

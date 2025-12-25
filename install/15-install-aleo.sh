@@ -51,11 +51,19 @@ fi
 log "1. Verifying ALEO prerequisites..."
 
 # Rust should already be installed by 05-install-dependencies.sh
+# Explicitly add cargo to PATH (don't rely on $HOME which may not be /root in cloud-init)
+export PATH="/root/.cargo/bin:$PATH"
 if [ -f "/root/.cargo/env" ]; then
     source /root/.cargo/env
     log "  Rust toolchain ready"
 else
     log_error "Rust not found. Ensure 05-install-dependencies.sh ran successfully."
+    exit 1
+fi
+
+# Verify cargo is actually available
+if ! command -v cargo &> /dev/null; then
+    log_error "cargo command not found even after sourcing env. Check Rust installation."
     exit 1
 fi
 

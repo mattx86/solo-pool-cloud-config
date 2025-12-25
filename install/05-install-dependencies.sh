@@ -121,6 +121,9 @@ fi
 if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
     log "4. Installing Rust toolchain..."
 
+    # Explicitly set PATH (don't rely on $HOME which may not be /root in cloud-init)
+    export PATH="/root/.cargo/bin:$PATH"
+
     # Install Rust for root (for building snarkOS)
     if [ ! -d "/root/.cargo" ]; then
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y >/dev/tty1 2>&1
@@ -129,6 +132,12 @@ if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
     else
         source /root/.cargo/env
         log "  Rust already installed"
+    fi
+
+    # Verify cargo is available
+    if ! command -v cargo &> /dev/null; then
+        log_error "cargo command not found after installation"
+        exit 1
     fi
 
     # Update to stable

@@ -146,11 +146,13 @@ else
     WALLET_NETWORK_FLAG=""
 fi
 
+# Generate wallet - the --command flag runs the specified command then exits
+# Using "address" to generate wallet and display address, then exits automatically
 ${MONERO_DIR}/bin/monero-wallet-cli ${WALLET_NETWORK_FLAG} \
     --generate-new-wallet=${MONERO_DIR}/wallet/keys/pool-wallet \
     --password="${XMR_WALLET_PASSWORD}" \
     --mnemonic-language=English \
-    --command exit 2>/dev/null
+    --command "address" 2>/dev/null
 
 # Extract the wallet address from the wallet file
 log "  Extracting wallet address..."
