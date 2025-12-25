@@ -53,60 +53,25 @@ WEBUI_USER="${WEBUI_USER:-admin}"
 CREDENTIALS_FILE="${BASE_DIR}/.credentials"
 
 # =============================================================================
-# 1. INSTALL BUILD DEPENDENCIES
+# 1. VERIFY BUILD DEPENDENCIES
 # =============================================================================
-log "1. Installing build dependencies..."
+log "1. Verifying build dependencies..."
 
-# Track what we install so we can remove it later
-WEBUI_BUILD_DEPS=""
+# Build dependencies (Rust, pkg-config, libssl-dev, apg) are installed
+# by 05-install-dependencies.sh
 
 # Explicitly add cargo to PATH (don't rely on $HOME which may not be /root in cloud-init)
 export PATH="/root/.cargo/bin:$PATH"
 
-# Check if Rust is installed (should be from 05-install-dependencies.sh)
+# Source Rust environment
 if [ -f "/root/.cargo/env" ]; then
     source /root/.cargo/env
-    log "  Rust toolchain already installed"
-else
-    # Install Rust if not present
-    log "  Installing Rust toolchain..."
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-    source /root/.cargo/env
-    WEBUI_BUILD_DEPS="${WEBUI_BUILD_DEPS} rust"
-    log "  Rust installed"
 fi
 
 # Verify cargo is actually available
 if ! command -v cargo &> /dev/null; then
-    log_error "cargo command not found. Check Rust installation."
+    log_error "cargo command not found. Rust should have been installed by 05-install-dependencies.sh"
     exit 1
-fi
-
-# Install additional build dependencies if needed
-# These are typically already installed, but ensure they're present
-REQUIRED_PKGS=""
-
-# Check for pkg-config (needed for some Rust crates)
-if ! command -v pkg-config &> /dev/null; then
-    REQUIRED_PKGS="${REQUIRED_PKGS} pkg-config"
-fi
-
-# Check for OpenSSL development headers (needed for reqwest/TLS)
-if [ ! -f "/usr/include/openssl/ssl.h" ]; then
-    REQUIRED_PKGS="${REQUIRED_PKGS} libssl-dev"
-fi
-
-# Check for apg (needed for password generation)
-if ! command -v apg &> /dev/null; then
-    REQUIRED_PKGS="${REQUIRED_PKGS} apg"
-fi
-
-# Install any missing packages
-if [ -n "${REQUIRED_PKGS}" ]; then
-    log "  Installing additional build packages: ${REQUIRED_PKGS}"
-    apt-get update -qq
-    apt-get install -y ${REQUIRED_PKGS}
-    WEBUI_BUILD_DEPS="${WEBUI_BUILD_DEPS} ${REQUIRED_PKGS}"
 fi
 
 log "  Build dependencies ready"

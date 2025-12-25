@@ -66,36 +66,58 @@ mkdir -p ${TARI_DIR}/logs
 
 cd /tmp
 
-# Download specific version
-TARI_RELEASE_URL="https://github.com/tari-project/tari/releases/download/v${TARI_VERSION}/minotari_suite-linux-x86_64.tar.gz"
+# Determine network name for download URL
+# Tari uses "esme" for esmeralda testnet, "mainnet" for mainnet
+if [ "${TARI_NETWORK}" = "esmeralda" ]; then
+    TARI_NETWORK_SHORT="esme"
+else
+    TARI_NETWORK_SHORT="mainnet"
+fi
+
+# Get the actual download URL from GitHub API (release assets have a commit hash in the name)
+log "  Finding download URL for Tari v${TARI_VERSION} (${TARI_NETWORK_SHORT})..."
+RELEASE_INFO=$(wget -q -O - "https://api.github.com/repos/tari-project/tari/releases/tags/v${TARI_VERSION}" 2>/dev/null)
+
+if [ -z "${RELEASE_INFO}" ]; then
+    log_error "Failed to get Tari release info for v${TARI_VERSION}"
+    exit 1
+fi
+
+# Find the asset URL matching tari_suite-{version}-{network}-*-linux-x86_64.zip
+TARI_RELEASE_URL=$(echo "${RELEASE_INFO}" | grep -oP '"browser_download_url":\s*"\K[^"]+tari_suite-[^"]*'"${TARI_NETWORK_SHORT}"'[^"]*linux-x86_64\.zip(?=")' | head -1)
+
+if [ -z "${TARI_RELEASE_URL}" ]; then
+    log_error "Could not find Tari ${TARI_NETWORK_SHORT} asset for linux-x86_64 in release v${TARI_VERSION}"
+    exit 1
+fi
 
 log "  Downloading from: ${TARI_RELEASE_URL}"
 # Don't use run_cmd for wget - it breaks exit status checking due to pipe
-rm -f tari.tar.gz
-if ! wget -q "${TARI_RELEASE_URL}" -O tari.tar.gz; then
+rm -f tari.zip
+if ! wget -q "${TARI_RELEASE_URL}" -O tari.zip; then
     log_error "Failed to download Tari v${TARI_VERSION}"
     exit 1
 fi
 
-# Verify download succeeded (file exists and is not empty/corrupt)
-if [ ! -f tari.tar.gz ] || [ ! -s tari.tar.gz ]; then
+# Verify download succeeded (file exists and is not empty)
+if [ ! -f tari.zip ] || [ ! -s tari.zip ]; then
     log_error "Tari download failed - file is empty or missing"
     exit 1
 fi
 
-# Verify it's a valid gzip file
-if ! gzip -t tari.tar.gz 2>/dev/null; then
-    log_error "Tari download is corrupt (invalid gzip file)"
-    rm -f tari.tar.gz
+# Verify it's a valid zip file
+if ! unzip -t tari.zip >/dev/null 2>&1; then
+    log_error "Tari download is corrupt (invalid zip file)"
+    rm -f tari.zip
     exit 1
 fi
 
 # Extract
 log "  Extracting..."
 mkdir -p tari-extract
-if ! tar -xzf tari.tar.gz -C tari-extract; then
+if ! unzip -q tari.zip -d tari-extract; then
     log_error "Failed to extract Tari archive"
-    rm -rf tari.tar.gz tari-extract
+    rm -rf tari.zip tari-extract
     exit 1
 fi
 
@@ -107,7 +129,7 @@ find tari-extract -type f -executable -name "minotari_*" -exec cp {} ${TARI_DIR}
 chmod +x ${TARI_DIR}/bin/*
 
 # Cleanup
-rm -rf tari.tar.gz tari-extract
+rm -rf tari.zip tari-extract
 
 log "  Tari binaries installed"
 

@@ -42,45 +42,25 @@ log "Installing Solo Pool Payment Processor..."
 PAYMENTS_DIR="${PAYMENTS_DIR:-${BASE_DIR}/payments}"
 
 # =============================================================================
-# 1. INSTALL BUILD DEPENDENCIES
+# 1. VERIFY BUILD DEPENDENCIES
 # =============================================================================
-log "1. Installing build dependencies..."
+log "1. Verifying build dependencies..."
+
+# Build dependencies (Rust, pkg-config, libssl-dev) are installed
+# by 05-install-dependencies.sh
 
 # Explicitly add cargo to PATH (don't rely on $HOME which may not be /root in cloud-init)
 export PATH="/root/.cargo/bin:$PATH"
 
-# Check if Rust is installed
+# Source Rust environment
 if [ -f "/root/.cargo/env" ]; then
     source /root/.cargo/env
-    log "  Rust toolchain already installed"
-else
-    log "  Installing Rust toolchain..."
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-    source /root/.cargo/env
-    log "  Rust installed"
 fi
 
 # Verify cargo is actually available
 if ! command -v cargo &> /dev/null; then
-    log_error "cargo command not found. Check Rust installation."
+    log_error "cargo command not found. Rust should have been installed by 05-install-dependencies.sh"
     exit 1
-fi
-
-# Install additional build dependencies if needed
-REQUIRED_PKGS=""
-
-if ! command -v pkg-config &> /dev/null; then
-    REQUIRED_PKGS="${REQUIRED_PKGS} pkg-config"
-fi
-
-if [ ! -f "/usr/include/openssl/ssl.h" ]; then
-    REQUIRED_PKGS="${REQUIRED_PKGS} libssl-dev"
-fi
-
-if [ -n "${REQUIRED_PKGS}" ]; then
-    log "  Installing additional build packages: ${REQUIRED_PKGS}"
-    apt-get update -qq
-    apt-get install -y ${REQUIRED_PKGS}
 fi
 
 log "  Build dependencies ready"
@@ -133,6 +113,7 @@ download_file "${PAYMENTS_BASE_URL}/src/wallets/aleo.rs" "${PAYMENTS_DIR}/src/wa
 # Pool API modules
 download_file "${PAYMENTS_BASE_URL}/src/pools/mod.rs" "${PAYMENTS_DIR}/src/pools/mod.rs"
 download_file "${PAYMENTS_BASE_URL}/src/pools/monero_pool.rs" "${PAYMENTS_DIR}/src/pools/monero_pool.rs"
+download_file "${PAYMENTS_BASE_URL}/src/pools/minotari.rs" "${PAYMENTS_DIR}/src/pools/minotari.rs"
 download_file "${PAYMENTS_BASE_URL}/src/pools/tari.rs" "${PAYMENTS_DIR}/src/pools/tari.rs"
 download_file "${PAYMENTS_BASE_URL}/src/pools/aleo.rs" "${PAYMENTS_DIR}/src/pools/aleo.rs"
 

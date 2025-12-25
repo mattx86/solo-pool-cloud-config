@@ -85,6 +85,10 @@ BUILD_PACKAGES=(
     liblzma-dev
     libbz2-dev
     libjansson-dev
+    # monero-pool build dependencies
+    liblmdb-dev
+    libjson-c-dev
+    uuid-dev
 )
 
 # Save build package list for removal later
@@ -105,6 +109,7 @@ if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
         libclang-dev
         llvm
         llvm-dev
+        lld        # LLVM's linker - snarkOS uses -fuse-ld=lld
     )
 
     # Append to build packages list
@@ -116,15 +121,26 @@ if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
 fi
 
 # =============================================================================
-# 4. RUST TOOLCHAIN (needed for snarkOS build)
+# 4. RUST TOOLCHAIN (needed for snarkOS, webui, payments processor)
 # =============================================================================
-if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
+# Determine if Rust is needed:
+# - ALEO pool requires Rust (snarkOS, aleo-pool-server)
+# - WebUI requires Rust
+# - Payment processor requires Rust (if XMR/XTM/ALEO enabled)
+NEED_RUST="false"
+[ "${ENABLE_ALEO_POOL}" = "true" ] && NEED_RUST="true"
+[ "${ENABLE_WEBUI}" = "true" ] && NEED_RUST="true"
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|monero_only|tari_only) NEED_RUST="true" ;;
+esac
+
+if [ "${NEED_RUST}" = "true" ]; then
     log "4. Installing Rust toolchain..."
 
     # Explicitly set PATH (don't rely on $HOME which may not be /root in cloud-init)
     export PATH="/root/.cargo/bin:$PATH"
 
-    # Install Rust for root (for building snarkOS)
+    # Install Rust for root (for building Rust-based components)
     if [ ! -d "/root/.cargo" ]; then
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y >/dev/tty1 2>&1
         source /root/.cargo/env
@@ -145,7 +161,7 @@ if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
     rustup update stable >/dev/tty1 2>&1
     log "  Rust stable toolchain ready"
 else
-    log "4. Skipping Rust (ALEO not enabled)"
+    log "4. Skipping Rust (no Rust-based components enabled)"
 fi
 
 log_success "Build dependencies installed"

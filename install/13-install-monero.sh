@@ -92,13 +92,15 @@ if [ "${NETWORK_MODE}" = "testnet" ]; then
     export NETWORK_FLAG="stagenet=1"
     export EFFECTIVE_RPC_PORT="38081"
     export XMR_P2P_PORT="38080"
-    export XMR_WALLET_ADDR_REGEX='^5[0-9A-Za-z]{94}'
+    # Regex without ^ anchor - address may appear mid-line in wallet-cli output
+    export XMR_WALLET_ADDR_REGEX='5[0-9A-Za-z]{94}'
     log "  Network mode: STAGENET"
 else
     export NETWORK_FLAG=""
     export EFFECTIVE_RPC_PORT="${MONERO_RPC_PORT}"
     export XMR_P2P_PORT="18080"
-    export XMR_WALLET_ADDR_REGEX='^4[0-9A-Za-z]{94}'
+    # Regex without ^ anchor - address may appear mid-line in wallet-cli output
+    export XMR_WALLET_ADDR_REGEX='4[0-9A-Za-z]{94}'
     log "  Network mode: MAINNET"
 fi
 
@@ -216,10 +218,8 @@ if [ "${ENABLE_MONERO_TARI_POOL}" = "monero_only" ]; then
     log "3. Installing monero-pool (jtgrassie/monero-pool)..."
 
     # monero-pool requires building from source with Monero libraries
-    # Dependencies: liblmdb-dev libevent-dev libjson-c-dev uuid-dev
-
-    log "  Installing build dependencies..."
-    run_cmd apt-get install -y liblmdb-dev libevent-dev libjson-c-dev uuid-dev
+    # Build dependencies (liblmdb-dev, libevent-dev, libjson-c-dev, uuid-dev)
+    # are installed by 05-install-dependencies.sh
 
     cd /tmp
 
