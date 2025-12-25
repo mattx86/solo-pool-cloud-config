@@ -342,7 +342,6 @@ runcmd:
 
   # Ensure /dev/tty1 is available for output (create symlink if needed for cloud environments)
   - |
-    #!/bin/bash
     if [ ! -e /dev/tty1 ]; then
       # Some cloud environments don't have tty1, use console instead
       ln -sf /dev/console /dev/tty1 2>/dev/null || true
@@ -358,39 +357,34 @@ runcmd:
 
   # Source config to get SCRIPTS_BASE_URL
   - |
-    #!/bin/bash
-    source /opt/solo-pool/install/config.sh
+    . /opt/solo-pool/install/config.sh
     log "Scripts will be downloaded from: ${SCRIPTS_BASE_URL}"
 
   # Download all scripts
   - |
-    #!/bin/bash
-    source /opt/solo-pool/install/config.sh
+    . /opt/solo-pool/install/config.sh
     cd /opt/solo-pool/install
 
-    SCRIPTS=(
-      "01-system-update.sh"
-      "02-cis-hardening.sh"
-      "03-ufw-setup.sh"
-      "04-user-setup.sh"
-      "05-install-dependencies.sh"
-      "10-install-bitcoin.sh"
-      "11-install-bch.sh"
-      "12-install-digibyte.sh"
-      "13-install-monero.sh"
-      "14-install-tari.sh"
-      "15-install-aleo.sh"
-      "16-install-webui.sh"
-      "17-install-payments.sh"
-      "20-configure-services.sh"
-      "99-finalize.sh"
-    )
-
     log "Downloading setup scripts..."
-    for script in "${SCRIPTS[@]}"; do
+    for script in \
+      01-system-update.sh \
+      02-cis-hardening.sh \
+      03-ufw-setup.sh \
+      04-user-setup.sh \
+      05-install-dependencies.sh \
+      10-install-bitcoin.sh \
+      11-install-bch.sh \
+      12-install-digibyte.sh \
+      13-install-monero.sh \
+      14-install-tari.sh \
+      15-install-aleo.sh \
+      16-install-webui.sh \
+      17-install-payments.sh \
+      20-configure-services.sh \
+      99-finalize.sh
+    do
       log "  Downloading ${script}..."
-      wget -q "${SCRIPTS_BASE_URL}/${script}" -O "${script}" 2>&1 | tee -a "${LOG_FILE}" >/dev/tty1
-      if [ $? -eq 0 ]; then
+      if wget -q "${SCRIPTS_BASE_URL}/${script}" -O "${script}" 2>&1 | tee -a "${LOG_FILE}" >/dev/tty1; then
         chmod +x "${script}"
         log "    OK"
       else
@@ -400,8 +394,7 @@ runcmd:
 
   # Execute scripts in order
   - |
-    #!/bin/bash
-    source /opt/solo-pool/install/config.sh
+    . /opt/solo-pool/install/config.sh
     cd /opt/solo-pool/install
 
     log ""
