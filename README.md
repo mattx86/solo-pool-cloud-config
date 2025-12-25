@@ -563,7 +563,7 @@ Edit the following variables in the cloud-config/cloud-init before deployment:
 SCRIPTS_BASE_URL: "https://raw.githubusercontent.com/mattx86/solo-pool-cloud-config/refs/heads/main/install"
 
 # Network Mode: "mainnet" (production) or "testnet" (testing)
-NETWORK_MODE: "mainnet"
+NETWORK_MODE: "testnet"
 
 # Pool Selection
 ENABLE_BITCOIN_POOL: "true"

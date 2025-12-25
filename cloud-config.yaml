@@ -38,7 +38,7 @@ write_files:
       # - testnet: Public test networks for testing without real funds
       #            Bitcoin/BCH/DGB use testnet, Monero uses stagenet,
       #            Tari uses esmeralda, ALEO uses testnet
-      NETWORK_MODE="mainnet"
+      NETWORK_MODE="testnet"
 
       # ---------------------------------------------------------------------
       # POOL SELECTION - Enable/disable each pool
