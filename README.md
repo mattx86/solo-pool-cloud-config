@@ -1,4 +1,4 @@
-# Solo Mining Pool Cloud Configuration
+# Solo Pool Cloud Config
 
 > **ALPHA SOFTWARE WARNING**
 >
