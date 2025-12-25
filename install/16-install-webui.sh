@@ -120,6 +120,7 @@ download_file "${WEBUI_BASE_URL}/src/api/ckpool.rs" "${WEBUI_DIR}/src/api/ckpool
 download_file "${WEBUI_BASE_URL}/src/api/aleo.rs" "${WEBUI_DIR}/src/api/aleo.rs"
 download_file "${WEBUI_BASE_URL}/src/api/monero_pool.rs" "${WEBUI_DIR}/src/api/monero_pool.rs"
 download_file "${WEBUI_BASE_URL}/src/api/tari.rs" "${WEBUI_DIR}/src/api/tari.rs"
+download_file "${WEBUI_BASE_URL}/src/api/nodes.rs" "${WEBUI_DIR}/src/api/nodes.rs"
 
 # Static files (embedded into binary at compile time)
 download_file "${WEBUI_BASE_URL}/src/static/index.html" "${WEBUI_DIR}/src/static/index.html"
@@ -358,6 +359,9 @@ socket_dir = "${BTC_CKPOOL_SOCKET_DIR:-/tmp/ckpool-btc}"
 stratum_port = ${BTC_STRATUM_PORT:-3333}
 username_format = "YOUR_BTC_ADDRESS.worker_name"
 password = "x"
+node_rpc_url = "http://127.0.0.1:${BITCOIN_RPC_PORT:-8332}"
+node_rpc_user = "${BITCOIN_RPC_USER:-rpc}"
+node_rpc_password = "${BITCOIN_RPC_PASSWORD:-}"
 EOF
     log "  Bitcoin pool enabled"
 fi
@@ -374,6 +378,9 @@ socket_dir = "${BCH_CKPOOL_SOCKET_DIR:-/tmp/ckpool-bch}"
 stratum_port = ${BCH_STRATUM_PORT:-3334}
 username_format = "YOUR_BCH_ADDRESS.worker_name"
 password = "x"
+node_rpc_url = "http://127.0.0.1:${BCH_RPC_PORT:-8334}"
+node_rpc_user = "${BCH_RPC_USER:-rpc}"
+node_rpc_password = "${BCH_RPC_PASSWORD:-}"
 EOF
     log "  Bitcoin Cash pool enabled"
 fi
@@ -390,6 +397,9 @@ socket_dir = "${DGB_CKPOOL_SOCKET_DIR:-/tmp/ckpool-dgb}"
 stratum_port = ${DGB_STRATUM_PORT:-3335}
 username_format = "YOUR_DGB_ADDRESS.worker_name"
 password = "x"
+node_rpc_url = "http://127.0.0.1:${DGB_RPC_PORT:-14022}"
+node_rpc_user = "${DGB_RPC_USER:-rpc}"
+node_rpc_password = "${DGB_RPC_PASSWORD:-}"
 EOF
     log "  DigiByte pool enabled"
 fi
@@ -418,6 +428,7 @@ EOF
         cat >> ${WEBUI_DIR}/config/config.toml << EOF
 username_format = "YOUR_XMR_ADDRESS.worker_name"
 password = "x"
+node_rpc_url = "http://127.0.0.1:${MONERO_RPC_PORT:-18081}"
 EOF
         log "  Monero monero-pool enabled"
         [ -n "${XMR_POOL_ADDR}" ] && log "  XMR pool wallet: ${XMR_POOL_ADDR:0:20}..."
@@ -445,6 +456,7 @@ EOF
         cat >> ${WEBUI_DIR}/config/config.toml << EOF
 username_format = "YOUR_XTM_ADDRESS.worker_name"
 password = "x"
+node_grpc_port = ${TARI_NODE_GRPC_PORT:-18142}
 EOF
         log "  Tari solo mining enabled"
         [ -n "${XTM_POOL_ADDR}" ] && log "  XTM pool wallet: ${XTM_POOL_ADDR:0:20}..."
@@ -479,6 +491,8 @@ EOF
         cat >> ${WEBUI_DIR}/config/config.toml << EOF
 username_format = "YOUR_XMR_ADDRESS.worker_name"
 password = "x"
+xmr_node_rpc_url = "http://127.0.0.1:${MONERO_RPC_PORT:-18081}"
+xtm_node_grpc_port = ${TARI_NODE_GRPC_PORT:-18142}
 EOF
         log "  XMR+XTM merge mining enabled"
         [ -n "${XMR_POOL_ADDR}" ] && log "  XMR pool wallet: ${XMR_POOL_ADDR:0:20}..."
@@ -509,6 +523,8 @@ EOF
     cat >> ${WEBUI_DIR}/config/config.toml << EOF
 username_format = "YOUR_ALEO_ADDRESS.worker_name"
 password = "x"
+node_rest_url = "http://127.0.0.1:${ALEO_REST_PORT:-3030}"
+network = "${ALEO_NETWORK:-mainnet}"
 EOF
     log "  ALEO pool enabled"
     [ -n "${ALEO_POOL_ADDR}" ] && log "  ALEO pool wallet: ${ALEO_POOL_ADDR:0:20}..."

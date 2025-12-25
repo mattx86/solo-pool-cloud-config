@@ -2,8 +2,7 @@
 Description=Solo Pool Payment Processor
 After=network-online.target
 Wants=network-online.target
-# Start after pool services
-After=pool-xmr-monero-pool.service pool-xmr-xtm-merge-proxy.service pool-aleo.service
+# Payments can start early - it will gracefully handle unavailable wallets
 
 [Service]
 Type=simple

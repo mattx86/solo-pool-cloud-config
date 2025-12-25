@@ -1,12 +1,11 @@
 # Tari Pool Wallet Configuration
+# Note: gRPC is enabled via command-line flag --enable-grpc
+# Network is set via command-line flag --network
 
 [wallet]
-network = "${TARI_NETWORK}"
-grpc_enabled = true
-grpc_address = "127.0.0.1:${TARI_WALLET_GRPC_PORT}"
-data_dir = "${TARI_DIR}/wallet/data"
-password = "${XTM_WALLET_PASSWORD}"
+# Valid wallet settings for current Tari version
+base_node_rpc_pool_size = 5
 
-[wallet.base_node]
-# Connect to local base node gRPC
-grpc_address = "127.0.0.1:${TARI_NODE_GRPC_PORT}"
+[wallet.p2p]
+# Transport for P2P communication
+transport = "tcp"

@@ -165,8 +165,17 @@ if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
     if [ -d "/root/.cargo" ]; then
         rm -rf /root/.cargo
         rm -rf /root/.rustup
-        log "  Rust removed"
+        log "  Rust directories removed"
     fi
+
+    # Clean up cargo env sourcing from shell configs (rustup adds these)
+    for config_file in /root/.bashrc /root/.profile; do
+        if [ -f "${config_file}" ] && grep -q '\.cargo/env' "${config_file}"; then
+            sed -i '/\.cargo\/env/d' "${config_file}"
+            log "  Cleaned cargo env from ${config_file}"
+        fi
+    done
+    log "  Rust cleanup complete"
 fi
 
 # Clean up /tmp
@@ -210,6 +219,18 @@ chown -R ${POOL_USER}:${POOL_USER} ${BIN_DIR}
 # 4. INSTALL MOTD
 # =============================================================================
 log "4. Installing login message..."
+
+# Disable default Ubuntu MOTD scripts (ads, system info, etc.)
+log "  Disabling default Ubuntu MOTD..."
+for motd_script in /etc/update-motd.d/*; do
+    if [ -f "${motd_script}" ] && [ "$(basename ${motd_script})" != "99-solo-pool" ]; then
+        chmod -x "${motd_script}" 2>/dev/null || true
+    fi
+done
+
+# Also disable Ubuntu news fetcher service
+systemctl disable motd-news.timer 2>/dev/null || true
+systemctl stop motd-news.timer 2>/dev/null || true
 
 log "  Downloading MOTD..."
 if wget -q "${FILES_URL}/motd/99-solo-pool" -O "/etc/update-motd.d/99-solo-pool" 2>/dev/null; then
