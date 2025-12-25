@@ -41,22 +41,22 @@ write_files:
       NETWORK_MODE="mainnet"
 
       # ---------------------------------------------------------------------
-      # POOL SELECTION - Enable/disable each pool (true/false)
+      # POOL SELECTION - Enable/disable each pool
       # ---------------------------------------------------------------------
       ENABLE_BITCOIN_POOL="true"
       ENABLE_BCH_POOL="true"
       ENABLE_DGB_POOL="true"
-      ENABLE_MONERO_POOL="true"
-      ENABLE_TARI_POOL="true"
       ENABLE_ALEO_POOL="true"
 
       # ---------------------------------------------------------------------
-      # MONERO/TARI MINING MODE
-      # Options: "merge" (both via merge mining proxy)
-      #          "monero_only" (XMR solo via monero-pool)
-      #          "tari_only" (XTM solo via minotari_miner)
+      # MONERO/TARI POOL MODE
+      # Options: "merge" (both coins via merge mining proxy - recommended)
+      #          "monero_only" (XMR only via monero-pool)
+      #          "tari_only" (XTM only via minotari_miner)
+      #          "false" or "" to disable both Monero and Tari pools
+      # Note: "merged" is accepted as an alias for "merge"
       # ---------------------------------------------------------------------
-      MONERO_TARI_MODE="merge"
+      ENABLE_MONERO_TARI_POOL="merge"
 
       # ---------------------------------------------------------------------
       # SSH CONFIGURATION
@@ -212,7 +212,7 @@ write_files:
       # Number of days to keep log files before deletion
       LOG_RETENTION_DAYS="30"
       # Number of days before compressing rotated logs (keeps recent logs uncompressed for easy access)
-      LOG_COMPRESS_AFTER_DAYS="7"
+      LOG_COMPRESS_AFTER_DAYS="14"
 
       # ---------------------------------------------------------------------
       # BACKUP CONFIGURATION

@@ -13,8 +13,9 @@ echo "Stopping pool services..."
 # Stop Payment Processor first (depends on pools)
 PAYMENTS_DIR="${BASE_DIR}/payments"
 NEED_PAYMENTS="false"
-[ "${ENABLE_MONERO_POOL}" = "true" ] && NEED_PAYMENTS="true"
-[ "${ENABLE_TARI_POOL}" = "true" ] && NEED_PAYMENTS="true"
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|monero_only|tari_only) NEED_PAYMENTS="true" ;;
+esac
 [ "${ENABLE_ALEO_POOL}" = "true" ] && NEED_PAYMENTS="true"
 
 if [ "${NEED_PAYMENTS}" = "true" ]; then
@@ -26,13 +27,17 @@ fi
 
 [ "${ENABLE_ALEO_POOL}" = "true" ] && sudo systemctl stop pool-aleo && echo "  Stopped pool-aleo"
 
-if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
-    sudo systemctl stop pool-xmr-monero-pool && echo "  Stopped pool-xmr-monero-pool"
-elif [ "${MONERO_TARI_MODE}" = "merge" ]; then
-    sudo systemctl stop pool-xmr-xtm-merge-proxy && echo "  Stopped pool-xmr-xtm-merge-proxy"
-elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
-    sudo systemctl stop pool-xtm-minotari-miner && echo "  Stopped pool-xtm-minotari-miner"
-fi
+case "${ENABLE_MONERO_TARI_POOL}" in
+    monero_only)
+        sudo systemctl stop pool-xmr-monero-pool && echo "  Stopped pool-xmr-monero-pool"
+        ;;
+    merge|merged)
+        sudo systemctl stop pool-xmr-xtm-merge-proxy && echo "  Stopped pool-xmr-xtm-merge-proxy"
+        ;;
+    tari_only)
+        sudo systemctl stop pool-xtm-minotari-miner && echo "  Stopped pool-xtm-minotari-miner"
+        ;;
+esac
 
 [ "${ENABLE_DGB_POOL}" = "true" ] && sudo systemctl stop pool-dgb-ckpool && echo "  Stopped pool-dgb-ckpool"
 [ "${ENABLE_BCH_POOL}" = "true" ] && sudo systemctl stop pool-bch-ckpool && echo "  Stopped pool-bch-ckpool"

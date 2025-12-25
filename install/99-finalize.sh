@@ -51,21 +51,27 @@ if [ "${ENABLE_DGB_POOL}" = "true" ]; then
     verify_binary "ckpool-dgb" "${DGB_CKPOOL_DIR}/bin/ckpool" || ((ERRORS++))
 fi
 
-if [ "${ENABLE_MONERO_POOL}" = "true" ]; then
-    verify_binary "monerod" "${MONERO_DIR}/bin/monerod" || ((ERRORS++))
-    if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
-        verify_binary "monero-pool" "${XMR_MONERO_POOL_DIR}/bin/monero-pool" || ((ERRORS++))
-    fi
-fi
+# Monero binaries (for merge, merged, or monero_only modes)
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|monero_only)
+        verify_binary "monerod" "${MONERO_DIR}/bin/monerod" || ((ERRORS++))
+        if [ "${ENABLE_MONERO_TARI_POOL}" = "monero_only" ]; then
+            verify_binary "monero-pool" "${XMR_MONERO_POOL_DIR}/bin/monero-pool" || ((ERRORS++))
+        fi
+        ;;
+esac
 
-if [ "${ENABLE_TARI_POOL}" = "true" ] && [ "${MONERO_TARI_MODE}" != "monero_only" ]; then
-    verify_binary "minotari_node" "${TARI_DIR}/bin/minotari_node" || ((ERRORS++))
-    if [ "${MONERO_TARI_MODE}" = "merge" ]; then
-        verify_binary "minotari_merge_mining_proxy" "${TARI_DIR}/bin/minotari_merge_mining_proxy" || ((ERRORS++))
-    else
-        verify_binary "minotari_miner" "${TARI_DIR}/bin/minotari_miner" || ((ERRORS++))
-    fi
-fi
+# Tari binaries (for merge, merged, or tari_only modes)
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|tari_only)
+        verify_binary "minotari_node" "${TARI_DIR}/bin/minotari_node" || ((ERRORS++))
+        if [ "${ENABLE_MONERO_TARI_POOL}" = "merge" ] || [ "${ENABLE_MONERO_TARI_POOL}" = "merged" ]; then
+            verify_binary "minotari_merge_mining_proxy" "${TARI_DIR}/bin/minotari_merge_mining_proxy" || ((ERRORS++))
+        else
+            verify_binary "minotari_miner" "${TARI_DIR}/bin/minotari_miner" || ((ERRORS++))
+        fi
+        ;;
+esac
 
 if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
     verify_binary "snarkos" "${ALEO_DIR}/bin/snarkos" || ((ERRORS++))
@@ -101,13 +107,17 @@ check_pool_wallet() {
 log "  [INFO] BTC/BCH/DGB: Miners use their own wallet (BTCSOLO mode)"
 
 # Check pool wallets for XMR/XTM/ALEO (auto-generated during install)
-if [ "${ENABLE_MONERO_POOL}" = "true" ] && [ "${MONERO_TARI_MODE}" != "tari_only" ]; then
-    check_pool_wallet "XMR" "${MONERO_DIR}/wallet/keys/pool-wallet.address" "true"
-fi
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|monero_only)
+        check_pool_wallet "XMR" "${MONERO_DIR}/wallet/keys/pool-wallet.address" "true"
+        ;;
+esac
 
-if [ "${ENABLE_TARI_POOL}" = "true" ] && [ "${MONERO_TARI_MODE}" != "monero_only" ]; then
-    check_pool_wallet "XTM" "${TARI_DIR}/wallet/keys/pool-wallet.address" "true"
-fi
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|tari_only)
+        check_pool_wallet "XTM" "${TARI_DIR}/wallet/keys/pool-wallet.address" "true"
+        ;;
+esac
 
 if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
     check_pool_wallet "ALEO" "${ALEO_DIR}/wallet/keys/pool-wallet.address" "true"
@@ -275,15 +285,17 @@ log "Enabled Pools:"
 [ "${ENABLE_BITCOIN_POOL}" = "true" ] && log "  - Bitcoin (BTC) on port ${BTC_STRATUM_PORT}"
 [ "${ENABLE_BCH_POOL}" = "true" ] && log "  - Bitcoin Cash (BCH) on port ${BCH_STRATUM_PORT}"
 [ "${ENABLE_DGB_POOL}" = "true" ] && log "  - DigiByte (DGB) on port ${DGB_STRATUM_PORT}"
-if [ "${ENABLE_MONERO_POOL}" = "true" ] || [ "${ENABLE_TARI_POOL}" = "true" ]; then
-    if [ "${MONERO_TARI_MODE}" = "merge" ]; then
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged)
         log "  - Monero + Tari (merge mining) on port ${XMR_XTM_MERGE_STRATUM_PORT}"
-    elif [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
+        ;;
+    monero_only)
         log "  - Monero (XMR) via monero-pool on port ${XMR_STRATUM_PORT}"
-    elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
+        ;;
+    tari_only)
         log "  - Tari (XTM) on port ${XTM_STRATUM_PORT}"
-    fi
-fi
+        ;;
+esac
 [ "${ENABLE_ALEO_POOL}" = "true" ] && log "  - ALEO on port ${ALEO_STRATUM_PORT}"
 log ""
 log "Installation Errors: ${ERRORS}"

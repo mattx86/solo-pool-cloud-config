@@ -12,15 +12,15 @@ if [ "${CONFIG_LOADED:-}" != "true" ]; then
     exit 1
 fi
 
-if [ "${ENABLE_TARI_POOL}" != "true" ]; then
-    echo "[XTM] Tari pool not enabled, skipping"
-    exit 0
-fi
-
-if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
-    echo "[XTM] Monero-only mode, skipping Tari"
-    exit 0
-fi
+# Check if Tari pool is enabled (merge, merged, or tari_only modes)
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|tari_only)
+        ;;
+    *)
+        echo "[XTM] Tari pool not enabled, skipping"
+        exit 0
+        ;;
+esac
 
 # Determine network mode
 if [ "${NETWORK_MODE}" = "testnet" ]; then
@@ -189,7 +189,7 @@ fi
 # =============================================================================
 # 5. START STRATUM
 # =============================================================================
-if [ "${MONERO_TARI_MODE}" = "merge" ]; then
+if [ "${ENABLE_MONERO_TARI_POOL}" = "merge" ] || [ "${ENABLE_MONERO_TARI_POOL}" = "merged" ]; then
     # For merge mode, wait for XMR to be ready first
     log "Merge mode: waiting for Monero node to be synced..."
 
@@ -214,7 +214,7 @@ if [ "${MONERO_TARI_MODE}" = "merge" ]; then
         exit 1
     fi
 
-elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
+elif [ "${ENABLE_MONERO_TARI_POOL}" = "tari_only" ]; then
     log "Starting Tari miner stratum..."
     sudo systemctl start pool-xtm-minotari-miner
 

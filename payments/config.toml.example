@@ -1,12 +1,12 @@
 # Solo Pool Payment Processor Configuration
 # Copy this file to config.toml and adjust settings as needed
 #
-# MINING MODES:
+# MINING MODES (set via ENABLE_MONERO_TARI_POOL):
+# - merge/merged: XMR + XTM via merge mining proxy (port 18081)
 # - monero_only: XMR only via monero-pool (port 3336 stratum, 4243 API)
-# - merge: XMR + XTM via merge mining proxy (port 18081)
 # - tari_only: XTM solo mining (no payment processor needed - direct coinbase rewards)
 #
-# The install script automatically configures based on MONERO_TARI_MODE
+# The install script automatically configures based on ENABLE_MONERO_TARI_POOL
 
 [service]
 # How often to sync shares from pool APIs (seconds)

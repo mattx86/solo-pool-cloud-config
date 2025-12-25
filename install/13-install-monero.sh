@@ -24,11 +24,15 @@ if [ "${CONFIG_LOADED:-}" != "true" ]; then
     exit 1
 fi
 
-# Check if Monero pool is enabled
-if [ "${ENABLE_MONERO_POOL}" != "true" ]; then
-    log "Monero pool is disabled, skipping..."
-    exit 0
-fi
+# Check if Monero pool is enabled (merge, merged, or monero_only modes)
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|monero_only)
+        ;;
+    *)
+        log "Monero pool is disabled, skipping..."
+        exit 0
+        ;;
+esac
 
 log "Installing Monero node v${MONERO_VERSION} and monero-pool..."
 
@@ -206,7 +210,7 @@ log "  *** BACKUP ${MONERO_DIR}/wallet/keys/SEED_BACKUP.txt IMMEDIATELY! ***"
 # Only install monero-pool if mode is "monero_only"
 # For merge mining, the Tari proxy handles stratum
 
-if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
+if [ "${ENABLE_MONERO_TARI_POOL}" = "monero_only" ]; then
     log "3. Installing monero-pool (jtgrassie/monero-pool)..."
 
     # monero-pool requires building from source with Monero libraries

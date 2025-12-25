@@ -93,51 +93,55 @@ if [ "${ENABLE_DGB_POOL}" = "true" ]; then
 fi
 
 # =============================================================================
-# MONERO SERVICES
+# MONERO SERVICES (for merge, merged, or monero_only modes)
 # =============================================================================
-if [ "${ENABLE_MONERO_POOL}" = "true" ]; then
-    log "Creating Monero services..."
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|monero_only)
+        log "Creating Monero services..."
 
-    # Export variables needed for templates
-    export POOL_USER MONERO_DIR XMR_MONERO_POOL_DIR
+        # Export variables needed for templates
+        export POOL_USER MONERO_DIR XMR_MONERO_POOL_DIR
 
-    install_service "node-xmr-monerod" "node-xmr-monerod"
-    install_service "wallet-xmr-rpc" "wallet-xmr-rpc"
-    log "  Monero wallet-rpc service created"
+        install_service "node-xmr-monerod" "node-xmr-monerod"
+        install_service "wallet-xmr-rpc" "wallet-xmr-rpc"
+        log "  Monero wallet-rpc service created"
 
-    # pool-xmr-monero-pool service (only for monero_only mode)
-    if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
-        install_service "pool-xmr-monero-pool" "pool-xmr-monero-pool"
-        log "  monero-pool service created"
-    fi
+        # pool-xmr-monero-pool service (only for monero_only mode)
+        if [ "${ENABLE_MONERO_TARI_POOL}" = "monero_only" ]; then
+            install_service "pool-xmr-monero-pool" "pool-xmr-monero-pool"
+            log "  monero-pool service created"
+        fi
 
-    log "  Monero services created"
-fi
+        log "  Monero services created"
+        ;;
+esac
 
 # =============================================================================
-# TARI SERVICES
+# TARI SERVICES (for merge, merged, or tari_only modes)
 # =============================================================================
-if [ "${ENABLE_TARI_POOL}" = "true" ] && [ "${MONERO_TARI_MODE}" != "monero_only" ]; then
-    log "Creating Tari services..."
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|tari_only)
+        log "Creating Tari services..."
 
-    # Export variables needed for templates
-    export POOL_USER TARI_DIR XMR_XTM_MERGE_DIR XTM_MINER_DIR
+        # Export variables needed for templates
+        export POOL_USER TARI_DIR XMR_XTM_MERGE_DIR XTM_MINER_DIR
 
-    install_service "node-xtm-minotari" "node-xtm-minotari"
-    install_service "wallet-xtm" "wallet-xtm"
-    log "  Tari wallet service created"
+        install_service "node-xtm-minotari" "node-xtm-minotari"
+        install_service "wallet-xtm" "wallet-xtm"
+        log "  Tari wallet service created"
 
-    if [ "${MONERO_TARI_MODE}" = "merge" ]; then
-        install_service "pool-xmr-xtm-merge-proxy" "pool-xmr-xtm-merge-proxy"
-        log "  Merge mining proxy service created"
+        if [ "${ENABLE_MONERO_TARI_POOL}" = "merge" ] || [ "${ENABLE_MONERO_TARI_POOL}" = "merged" ]; then
+            install_service "pool-xmr-xtm-merge-proxy" "pool-xmr-xtm-merge-proxy"
+            log "  Merge mining proxy service created"
 
-    elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
-        install_service "pool-xtm-minotari-miner" "pool-xtm-minotari-miner"
-        log "  Tari miner service created"
-    fi
+        elif [ "${ENABLE_MONERO_TARI_POOL}" = "tari_only" ]; then
+            install_service "pool-xtm-minotari-miner" "pool-xtm-minotari-miner"
+            log "  Tari miner service created"
+        fi
 
-    log "  Tari services created"
-fi
+        log "  Tari services created"
+        ;;
+esac
 
 # =============================================================================
 # ALEO SERVICES
@@ -172,8 +176,9 @@ fi
 # PAYMENT PROCESSOR SERVICE
 # =============================================================================
 NEED_PAYMENTS="false"
-[ "${ENABLE_MONERO_POOL}" = "true" ] && NEED_PAYMENTS="true"
-[ "${ENABLE_TARI_POOL}" = "true" ] && NEED_PAYMENTS="true"
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|monero_only|tari_only) NEED_PAYMENTS="true" ;;
+esac
 [ "${ENABLE_ALEO_POOL}" = "true" ] && NEED_PAYMENTS="true"
 
 if [ "${NEED_PAYMENTS}" = "true" ]; then

@@ -421,8 +421,7 @@ EOF
 fi
 
 # Add Monero/Tari pools based on mode
-if [ "${ENABLE_MONERO_POOL}" = "true" ] || [ "${ENABLE_TARI_POOL}" = "true" ]; then
-    if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
+if [ "${ENABLE_MONERO_TARI_POOL}" = "monero_only" ]; then
         # Read XMR pool wallet address if available
         XMR_POOL_ADDR=""
         if [ -f "${MONERO_DIR}/wallet/keys/pool-wallet.address" ]; then
@@ -449,7 +448,7 @@ EOF
         log "  Monero monero-pool enabled"
         [ -n "${XMR_POOL_ADDR}" ] && log "  XMR pool wallet: ${XMR_POOL_ADDR:0:20}..."
 
-    elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
+elif [ "${ENABLE_MONERO_TARI_POOL}" = "tari_only" ]; then
         # Read XTM pool wallet address if available
         XTM_POOL_ADDR=""
         if [ -f "${TARI_DIR}/wallet/keys/pool-wallet.address" ]; then
@@ -476,7 +475,7 @@ EOF
         log "  Tari solo mining enabled"
         [ -n "${XTM_POOL_ADDR}" ] && log "  XTM pool wallet: ${XTM_POOL_ADDR:0:20}..."
 
-    elif [ "${MONERO_TARI_MODE}" = "merge" ]; then
+elif [ "${ENABLE_MONERO_TARI_POOL}" = "merge" ] || [ "${ENABLE_MONERO_TARI_POOL}" = "merged" ]; then
         # Read both XMR and XTM pool wallet addresses for merge mining
         XMR_POOL_ADDR=""
         XTM_POOL_ADDR=""
@@ -510,7 +509,6 @@ EOF
         log "  XMR+XTM merge mining enabled"
         [ -n "${XMR_POOL_ADDR}" ] && log "  XMR pool wallet: ${XMR_POOL_ADDR:0:20}..."
         [ -n "${XTM_POOL_ADDR}" ] && log "  XTM pool wallet: ${XTM_POOL_ADDR:0:20}..."
-    fi
 fi
 
 # Add ALEO pool if enabled

@@ -11,10 +11,15 @@ if [ "${CONFIG_LOADED:-}" != "true" ]; then
     exit 1
 fi
 
-if [ "${ENABLE_MONERO_POOL}" != "true" ]; then
-    echo "[XMR] Monero pool not enabled, skipping"
-    exit 0
-fi
+# Check if Monero pool is enabled (merge, merged, or monero_only modes)
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|monero_only)
+        ;;
+    *)
+        echo "[XMR] Monero pool not enabled, skipping"
+        exit 0
+        ;;
+esac
 
 # Determine network mode
 if [ "${NETWORK_MODE}" = "testnet" ]; then
@@ -176,7 +181,7 @@ fi
 # =============================================================================
 # 5. START STRATUM (only for monero_only mode)
 # =============================================================================
-if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
+if [ "${ENABLE_MONERO_TARI_POOL}" = "monero_only" ]; then
     log "Starting monero-pool stratum..."
     sudo systemctl start pool-xmr-monero-pool
 

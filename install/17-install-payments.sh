@@ -26,8 +26,9 @@ fi
 
 # Check if payment processor is needed (only for XMR, XTM, ALEO)
 NEED_PAYMENTS="false"
-[ "${ENABLE_MONERO_POOL}" = "true" ] && NEED_PAYMENTS="true"
-[ "${ENABLE_TARI_POOL}" = "true" ] && NEED_PAYMENTS="true"
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|monero_only|tari_only) NEED_PAYMENTS="true" ;;
+esac
 [ "${ENABLE_ALEO_POOL}" = "true" ] && NEED_PAYMENTS="true"
 
 if [ "${NEED_PAYMENTS}" != "true" ]; then
@@ -256,10 +257,10 @@ EOF
 
 # Add XMR configuration based on mode
 # - monero_only: XMR via monero-pool API (MONERO_POOL_API_PORT)
-# - merge: XMR via merge mining proxy API (MERGE_PROXY_API_PORT)
+# - merge/merged: XMR via merge mining proxy API (MERGE_PROXY_API_PORT)
 # - tari_only: No XMR
-if [ "${ENABLE_MONERO_POOL}" = "true" ] && [ "${MONERO_TARI_MODE}" != "tari_only" ]; then
-    if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
+if [ "${ENABLE_MONERO_TARI_POOL}" = "monero_only" ] || [ "${ENABLE_MONERO_TARI_POOL}" = "merge" ] || [ "${ENABLE_MONERO_TARI_POOL}" = "merged" ]; then
+    if [ "${ENABLE_MONERO_TARI_POOL}" = "monero_only" ]; then
         # monero-pool mode - use monero-pool API
         XMR_POOL_API_URL="http://127.0.0.1:${MONERO_POOL_API_PORT}"
         XMR_POOL_DATA="${XMR_MONERO_POOL_DIR:-${POOL_DIR}/xmr-monero-pool}/data"
@@ -295,14 +296,14 @@ pool_type = "${XMR_POOL_TYPE}"
 min_payout = "1"
 mixin = 16
 EOF
-    log "  XMR payment config added (mode: ${MONERO_TARI_MODE}, pool_type: ${XMR_POOL_TYPE})"
+    log "  XMR payment config added (mode: ${ENABLE_MONERO_TARI_POOL}, pool_type: ${XMR_POOL_TYPE})"
 fi
 
 # Add XTM configuration based on mode
-# - merge: XTM via merge mining proxy API (MERGE_PROXY_API_PORT)
+# - merge/merged: XTM via merge mining proxy API (MERGE_PROXY_API_PORT)
 # - tari_only: XTM via minotari_miner API (TARI_MINER_API_PORT)
 # - monero_only: No XTM
-if [ "${ENABLE_TARI_POOL}" = "true" ] && [ "${MONERO_TARI_MODE}" != "monero_only" ]; then
+if [ "${ENABLE_MONERO_TARI_POOL}" = "merge" ] || [ "${ENABLE_MONERO_TARI_POOL}" = "merged" ] || [ "${ENABLE_MONERO_TARI_POOL}" = "tari_only" ]; then
     # Read pool wallet address from generated wallet file
     XTM_POOL_WALLET_ADDRESS_FILE="${TARI_DIR}/wallet/keys/pool-wallet.address"
     if [ -f "${XTM_POOL_WALLET_ADDRESS_FILE}" ] && [ -s "${XTM_POOL_WALLET_ADDRESS_FILE}" ]; then
@@ -314,7 +315,7 @@ if [ "${ENABLE_TARI_POOL}" = "true" ] && [ "${MONERO_TARI_MODE}" != "monero_only
         exit 1
     fi
 
-    if [ "${MONERO_TARI_MODE}" = "merge" ]; then
+    if [ "${ENABLE_MONERO_TARI_POOL}" = "merge" ] || [ "${ENABLE_MONERO_TARI_POOL}" = "merged" ]; then
         cat >> ${PAYMENTS_DIR}/config/config.toml << EOF
 
 [xtm]
@@ -328,7 +329,7 @@ pool_type = "merge_proxy"
 min_payout = "1"
 EOF
         log "  XTM payment config added (merge mining mode)"
-    elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
+    elif [ "${ENABLE_MONERO_TARI_POOL}" = "tari_only" ]; then
         cat >> ${PAYMENTS_DIR}/config/config.toml << EOF
 
 [xtm]

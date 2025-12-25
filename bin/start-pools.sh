@@ -14,13 +14,17 @@ echo "Starting pool services..."
 [ "${ENABLE_BCH_POOL}" = "true" ] && sudo systemctl start pool-bch-ckpool && echo "  Started pool-bch-ckpool"
 [ "${ENABLE_DGB_POOL}" = "true" ] && sudo systemctl start pool-dgb-ckpool && echo "  Started pool-dgb-ckpool"
 
-if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
-    sudo systemctl start pool-xmr-monero-pool && echo "  Started pool-xmr-monero-pool"
-elif [ "${MONERO_TARI_MODE}" = "merge" ]; then
-    sudo systemctl start pool-xmr-xtm-merge-proxy && echo "  Started pool-xmr-xtm-merge-proxy"
-elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
-    sudo systemctl start pool-xtm-minotari-miner && echo "  Started pool-xtm-minotari-miner"
-fi
+case "${ENABLE_MONERO_TARI_POOL}" in
+    monero_only)
+        sudo systemctl start pool-xmr-monero-pool && echo "  Started pool-xmr-monero-pool"
+        ;;
+    merge|merged)
+        sudo systemctl start pool-xmr-xtm-merge-proxy && echo "  Started pool-xmr-xtm-merge-proxy"
+        ;;
+    tari_only)
+        sudo systemctl start pool-xtm-minotari-miner && echo "  Started pool-xtm-minotari-miner"
+        ;;
+esac
 
 [ "${ENABLE_ALEO_POOL}" = "true" ] && sudo systemctl start pool-aleo && echo "  Started pool-aleo"
 
@@ -36,8 +40,9 @@ fi
 # Start Payment Processor (if binary exists and needed)
 PAYMENTS_DIR="${BASE_DIR}/payments"
 NEED_PAYMENTS="false"
-[ "${ENABLE_MONERO_POOL}" = "true" ] && NEED_PAYMENTS="true"
-[ "${ENABLE_TARI_POOL}" = "true" ] && NEED_PAYMENTS="true"
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|monero_only|tari_only) NEED_PAYMENTS="true" ;;
+esac
 [ "${ENABLE_ALEO_POOL}" = "true" ] && NEED_PAYMENTS="true"
 
 if [ "${NEED_PAYMENTS}" = "true" ]; then

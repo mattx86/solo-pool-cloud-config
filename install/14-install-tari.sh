@@ -28,17 +28,15 @@ if [ "${CONFIG_LOADED:-}" != "true" ]; then
     exit 1
 fi
 
-# Check if Tari pool is enabled
-if [ "${ENABLE_TARI_POOL}" != "true" ]; then
-    log "Tari pool is disabled, skipping..."
-    exit 0
-fi
-
-# Check mode - skip if monero_only
-if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
-    log "Monero-only mode, skipping Tari installation..."
-    exit 0
-fi
+# Check if Tari pool is enabled (merge, merged, or tari_only modes)
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|tari_only)
+        ;;
+    *)
+        log "Tari pool is disabled, skipping..."
+        exit 0
+        ;;
+esac
 
 log "Installing Tari node and mining software v${TARI_VERSION}..."
 
@@ -229,18 +227,10 @@ log "  *** BACKUP ${TARI_DIR}/wallet/keys/ IMMEDIATELY! ***"
 # 4. CONFIGURE BASED ON MODE
 # =============================================================================
 
-if [ "${MONERO_TARI_MODE}" = "merge" ]; then
+if [ "${ENABLE_MONERO_TARI_POOL}" = "merge" ] || [ "${ENABLE_MONERO_TARI_POOL}" = "merged" ]; then
     # =============================================================================
     # MERGE MINING MODE
     # =============================================================================
-
-    # Merge mining requires Monero pool to be enabled
-    if [ "${ENABLE_MONERO_POOL}" != "true" ]; then
-        log_error "Merge mining mode requires ENABLE_MONERO_POOL=true"
-        log_error "Either enable Monero pool or use MONERO_TARI_MODE=tari_only"
-        exit 1
-    fi
-
     log "4. Configuring Merge Mining Proxy..."
 
     # Create standardized directory structure
@@ -267,7 +257,7 @@ if [ "${MONERO_TARI_MODE}" = "merge" ]; then
     log "  Stratum port: ${XMR_XTM_MERGE_STRATUM_PORT}"
     log "  Miners connect to port ${XMR_XTM_MERGE_STRATUM_PORT} for XMR+XTM"
 
-elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
+elif [ "${ENABLE_MONERO_TARI_POOL}" = "tari_only" ]; then
     # =============================================================================
     # TARI-ONLY MINING MODE
     # =============================================================================

@@ -52,7 +52,12 @@ if [ "${ENABLE_WEBUI}" = "true" ]; then
 fi
 
 # Start payment processor (doesn't need sync, will wait for wallets)
-if [ "${ENABLE_MONERO_POOL}" = "true" ] || [ "${ENABLE_TARI_POOL}" = "true" ] || [ "${ENABLE_ALEO_POOL}" = "true" ]; then
+NEED_PAYMENTS="false"
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|monero_only|tari_only) NEED_PAYMENTS="true" ;;
+esac
+[ "${ENABLE_ALEO_POOL}" = "true" ] && NEED_PAYMENTS="true"
+if [ "${NEED_PAYMENTS}" = "true" ]; then
     echo "[PAYMENTS] Starting payment processor..."
     sudo systemctl start solo-pool-payments 2>/dev/null || true
 fi
@@ -92,25 +97,31 @@ if [ "${ENABLE_DGB_POOL}" = "true" ]; then
     echo "[DGB] Started (PID: ${PIDS[dgb]})"
 fi
 
-if [ "${ENABLE_MONERO_POOL}" = "true" ]; then
-    if [ "${DAEMON_MODE}" = "true" ]; then
-        nohup ${BIN_DIR}/start-xmr.sh >> "${LOG_DIR}/xmr.log" 2>&1 &
-    else
-        ${BIN_DIR}/start-xmr.sh &
-    fi
-    PIDS[xmr]=$!
-    echo "[XMR] Started (PID: ${PIDS[xmr]})"
-fi
+# Start XMR if merge, merged, or monero_only mode
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|monero_only)
+        if [ "${DAEMON_MODE}" = "true" ]; then
+            nohup ${BIN_DIR}/start-xmr.sh >> "${LOG_DIR}/xmr.log" 2>&1 &
+        else
+            ${BIN_DIR}/start-xmr.sh &
+        fi
+        PIDS[xmr]=$!
+        echo "[XMR] Started (PID: ${PIDS[xmr]})"
+        ;;
+esac
 
-if [ "${ENABLE_TARI_POOL}" = "true" ] && [ "${MONERO_TARI_MODE}" != "monero_only" ]; then
-    if [ "${DAEMON_MODE}" = "true" ]; then
-        nohup ${BIN_DIR}/start-xtm.sh >> "${LOG_DIR}/xtm.log" 2>&1 &
-    else
-        ${BIN_DIR}/start-xtm.sh &
-    fi
-    PIDS[xtm]=$!
-    echo "[XTM] Started (PID: ${PIDS[xtm]})"
-fi
+# Start XTM if merge, merged, or tari_only mode
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|tari_only)
+        if [ "${DAEMON_MODE}" = "true" ]; then
+            nohup ${BIN_DIR}/start-xtm.sh >> "${LOG_DIR}/xtm.log" 2>&1 &
+        else
+            ${BIN_DIR}/start-xtm.sh &
+        fi
+        PIDS[xtm]=$!
+        echo "[XTM] Started (PID: ${PIDS[xtm]})"
+        ;;
+esac
 
 if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
     if [ "${DAEMON_MODE}" = "true" ]; then

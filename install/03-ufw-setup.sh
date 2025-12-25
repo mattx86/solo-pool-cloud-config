@@ -52,18 +52,20 @@ if [ "${ENABLE_DGB_POOL}" = "true" ]; then
 fi
 
 # Monero/Tari stratum ports based on mode
-if [ "${ENABLE_MONERO_POOL}" = "true" ] || [ "${ENABLE_TARI_POOL}" = "true" ]; then
-    if [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
+case "${ENABLE_MONERO_TARI_POOL}" in
+    monero_only)
         log "  Allowing XMR stratum port ${XMR_STRATUM_PORT}..."
         run_cmd ufw allow ${XMR_STRATUM_PORT}/tcp comment 'XMR Stratum (monero-pool)'
-    elif [ "${MONERO_TARI_MODE}" = "tari_only" ]; then
+        ;;
+    tari_only)
         log "  Allowing XTM stratum port ${XTM_STRATUM_PORT}..."
         run_cmd ufw allow ${XTM_STRATUM_PORT}/tcp comment 'XTM Stratum'
-    elif [ "${MONERO_TARI_MODE}" = "merge" ]; then
+        ;;
+    merge|merged)
         log "  Allowing XMR+XTM merge stratum port ${XMR_XTM_MERGE_STRATUM_PORT}..."
         run_cmd ufw allow ${XMR_XTM_MERGE_STRATUM_PORT}/tcp comment 'XMR+XTM Merge Stratum'
-    fi
-fi
+        ;;
+esac
 
 if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
     log "  Allowing ALEO stratum port ${ALEO_STRATUM_PORT}..."

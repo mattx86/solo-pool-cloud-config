@@ -569,12 +569,15 @@ NETWORK_MODE: "mainnet"
 ENABLE_BITCOIN_POOL: "true"
 ENABLE_BCH_POOL: "true"
 ENABLE_DGB_POOL: "true"
-ENABLE_MONERO_POOL: "true"
-ENABLE_TARI_POOL: "true"
 ENABLE_ALEO_POOL: "true"
 
-# Monero/Tari Mining Mode: "merge", "monero_only", "tari_only"
-MONERO_TARI_MODE: "merge"
+# Monero/Tari Mining Mode
+# Options: "merge" (both via merge mining proxy - recommended)
+#          "monero_only" (XMR only via monero-pool)
+#          "tari_only" (XTM only via minotari_miner)
+#          "false" or "" to disable both
+# Note: "merged" is accepted as an alias for "merge"
+ENABLE_MONERO_TARI_POOL: "merge"
 
 # Optional: Custom SSH port (default: 22)
 SSH_PORT: "22"
@@ -843,7 +846,7 @@ A cron job runs daily at the scheduled time (default: 2:15 AM) to perform:
 MAINTENANCE_HOUR: "2"           # Hour (0-23)
 MAINTENANCE_MINUTE: "15"        # Minute (0-59)
 LOG_RETENTION_DAYS: "30"        # Delete logs older than this
-LOG_COMPRESS_AFTER_DAYS: "7"    # Compress logs older than this
+LOG_COMPRESS_AFTER_DAYS: "14"   # Compress logs older than this
 BACKUP_DIR: "/opt/solo-pool/backups"  # Backup location
 BACKUP_RETENTION_DAYS: "30"     # Delete backups older than this
 ```

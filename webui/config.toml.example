@@ -74,7 +74,7 @@ stratum_port = 3335
 
 # =============================================================================
 # Monero/Tari Pools
-# Only ONE of these three should be enabled based on MONERO_TARI_MODE
+# Only ONE of these three should be enabled based on ENABLE_MONERO_TARI_POOL
 # =============================================================================
 
 # Monero Pool (monero-pool) - Only for monero_only mode

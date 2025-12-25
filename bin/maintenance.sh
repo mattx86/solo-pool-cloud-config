@@ -76,8 +76,9 @@ fi
 
 # Payments processor database
 NEED_PAYMENTS="false"
-[ "${ENABLE_MONERO_POOL}" = "true" ] && NEED_PAYMENTS="true"
-[ "${ENABLE_TARI_POOL}" = "true" ] && NEED_PAYMENTS="true"
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|monero_only|tari_only) NEED_PAYMENTS="true" ;;
+esac
 [ "${ENABLE_ALEO_POOL}" = "true" ] && NEED_PAYMENTS="true"
 
 if [ "${NEED_PAYMENTS}" = "true" ]; then
@@ -85,7 +86,7 @@ if [ "${NEED_PAYMENTS}" = "true" ]; then
 fi
 
 # Pool-specific databases
-if [ "${ENABLE_MONERO_POOL}" = "true" ] && [ "${MONERO_TARI_MODE}" = "monero_only" ]; then
+if [ "${ENABLE_MONERO_TARI_POOL}" = "monero_only" ]; then
     # monero-pool uses LMDB, not SQLite - skip
     log "  [INFO] monero-pool uses LMDB (no SQLite maintenance needed)"
 fi
