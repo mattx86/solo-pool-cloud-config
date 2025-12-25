@@ -61,4 +61,11 @@ run_cmd apt-get -y install \
     gnupg \
     lsb-release
 
+# Set system timezone
+if [ -n "${TIMEZONE:-}" ]; then
+    log "Setting timezone to ${TIMEZONE}..."
+    run_cmd timedatectl set-timezone "${TIMEZONE}"
+    log "  Timezone set to $(timedatectl show --property=Timezone --value)"
+fi
+
 log_success "System update complete"

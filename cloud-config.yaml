@@ -64,6 +64,14 @@ write_files:
       SSH_PORT="22"
 
       # ---------------------------------------------------------------------
+      # SYSTEM TIMEZONE
+      # ---------------------------------------------------------------------
+      # Timezone for the server (used for logs, maintenance schedules, etc.)
+      # See: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+      # Examples: "UTC", "America/New_York", "Europe/London", "Asia/Tokyo"
+      TIMEZONE="UTC"
+
+      # ---------------------------------------------------------------------
       # STRATUM PORTS - Ports miners connect to
       # ---------------------------------------------------------------------
       BTC_STRATUM_PORT="3333"
@@ -202,7 +210,7 @@ write_files:
       # MAINTENANCE SCHEDULING
       # ---------------------------------------------------------------------
       # Daily maintenance time (SQLite optimization, log rotation, backup)
-      # Uses system timezone. Default: 2:15 AM
+      # Uses TIMEZONE setting above. Default: 2:15 AM
       MAINTENANCE_HOUR="2"
       MAINTENANCE_MINUTE="15"
 
