@@ -155,7 +155,7 @@ fi
 log "  Compiling release binary..."
 CARGO_BUILD_START=$(date +%s)
 
-run_cmd cargo build --release
+run_cmd cargo build --release -j $(nproc)
 
 CARGO_BUILD_END=$(date +%s)
 CARGO_BUILD_TIME=$((CARGO_BUILD_END - CARGO_BUILD_START))

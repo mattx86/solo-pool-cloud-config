@@ -249,7 +249,7 @@ if [ "${ENABLE_MONERO_TARI_POOL}" = "monero_only" ]; then
     # Build monero-pool
     log "  Building monero-pool..."
     export MONERO_ROOT
-    run_cmd make release
+    run_cmd make release -j$(nproc)
 
     # Install binary
     log "  Installing monero-pool..."

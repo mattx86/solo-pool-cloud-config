@@ -97,7 +97,7 @@ cd snarkOS
 
 # Build snarkOS
 log "  Building snarkOS (this takes a while)..."
-run_cmd cargo build --release
+run_cmd cargo build --release -j $(nproc)
 
 # Create standardized directory structure
 log "  Creating directory structure..."
@@ -147,7 +147,7 @@ fi
 
 # Build aleo-pool-server
 log "  Building aleo-pool-server..."
-run_cmd cargo build --release
+run_cmd cargo build --release -j $(nproc)
 
 # Install binary
 log "  Installing aleo-pool-server binary..."
