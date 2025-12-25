@@ -3,9 +3,9 @@
 # Run via cron: /etc/cron.d/solo-pool
 #
 # Retention policy:
-#   - Retain 30 days of logs
-#   - Compress logs older than 7 days (via lastaction script)
-#   - Delete logs older than 30 days
+#   - Retain ${LOG_RETENTION_DAYS} days of logs
+#   - Compress logs older than ${LOG_COMPRESS_AFTER_DAYS} days (via lastaction script)
+#   - Delete logs older than ${LOG_RETENTION_DAYS} days
 
 # Global settings
 nocompress
@@ -13,8 +13,8 @@ missingok
 notifempty
 dateext
 dateformat -%Y%m%d
-rotate 30
-maxage 30
+rotate ${LOG_RETENTION_DAYS}
+maxage ${LOG_RETENTION_DAYS}
 sharedscripts
 
 # =============================================================================
@@ -160,7 +160,7 @@ ${BASE_DIR}/logs/startup/*.log {
 }
 
 # =============================================================================
-# POST-ROTATION: Compress logs older than 7 days
+# POST-ROTATION: Compress logs older than ${LOG_COMPRESS_AFTER_DAYS} days
 # =============================================================================
 # This runs once after all rotations complete
 ${BASE_DIR}/logs/maintenance.log {
@@ -168,7 +168,7 @@ ${BASE_DIR}/logs/maintenance.log {
     size 10M
     copytruncate
     lastaction
-        # Compress rotated logs older than 7 days across all log directories
+        # Compress rotated logs older than ${LOG_COMPRESS_AFTER_DAYS} days across all log directories
         for dir in \
             "${BITCOIN_DIR}/logs" "${BCHN_DIR}/logs" "${DIGIBYTE_DIR}/logs" \
             "${MONERO_DIR}/logs" "${TARI_DIR}/logs" "${ALEO_DIR}/logs" \
@@ -178,7 +178,7 @@ ${BASE_DIR}/logs/maintenance.log {
             "${MONERO_DIR}/wallet/logs" "${TARI_DIR}/wallet/logs" "${BASE_DIR}/logs/startup" \
             "${BASE_DIR}/logs"; do
             if [ -d "$dir" ]; then
-                find "$dir" -maxdepth 1 -name "*.log-*" -mtime +7 ! -name "*.gz" \
+                find "$dir" -maxdepth 1 -name "*.log-*" -mtime +${LOG_COMPRESS_AFTER_DAYS} ! -name "*.gz" \
                     -exec gzip -9 {} \; 2>/dev/null || true
             fi
         done

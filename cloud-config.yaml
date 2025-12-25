@@ -207,6 +207,14 @@ write_files:
       MAINTENANCE_MINUTE="15"
 
       # ---------------------------------------------------------------------
+      # LOG RETENTION AND ROTATION
+      # ---------------------------------------------------------------------
+      # Number of days to keep log files before deletion
+      LOG_RETENTION_DAYS="30"
+      # Number of days before compressing rotated logs (keeps recent logs uncompressed for easy access)
+      LOG_COMPRESS_AFTER_DAYS="7"
+
+      # ---------------------------------------------------------------------
       # BACKUP CONFIGURATION
       # ---------------------------------------------------------------------
       # Directory to store backups (excluded from backup itself)

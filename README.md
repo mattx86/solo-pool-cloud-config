@@ -827,23 +827,25 @@ P2P ports are intentionally not opened to reduce attack surface. Nodes work fine
 A cron job runs daily at the scheduled time (default: 2:15 AM) to perform:
 
 1. **SQLite Optimization**: VACUUM and ANALYZE on WebUI and Payments databases
-2. **Log Rotation**: Rotate logs and compress rotated logs older than 7 days
-3. **Cleanup**: Remove old log archives (30+ days)
+2. **Log Rotation**: Rotate logs and compress rotated logs older than `LOG_COMPRESS_AFTER_DAYS`
+3. **Cleanup**: Remove old log archives (older than `LOG_RETENTION_DAYS`)
 4. **Backup**: Create compressed backup of `/opt/solo-pool` (excluding blockchain data)
 5. **Disk Usage Report**: Log disk usage for monitoring
 
-**Log Retention Policy**:
+**Log Retention Policy** (configurable):
 - Logs are rotated daily
-- Uncompressed for first 7 days (easy grep access)
-- Compressed after 7 days (gzip)
-- Deleted after 30 days
+- Uncompressed for first `LOG_COMPRESS_AFTER_DAYS` days (easy grep access)
+- Compressed after `LOG_COMPRESS_AFTER_DAYS` days (gzip)
+- Deleted after `LOG_RETENTION_DAYS` days
 
 **Configuration Variables** (in `cloud-config.yaml`):
 ```yaml
-MAINTENANCE_HOUR: "2"       # Hour (0-23)
-MAINTENANCE_MINUTE: "15"    # Minute (0-59)
+MAINTENANCE_HOUR: "2"           # Hour (0-23)
+MAINTENANCE_MINUTE: "15"        # Minute (0-59)
+LOG_RETENTION_DAYS: "30"        # Delete logs older than this
+LOG_COMPRESS_AFTER_DAYS: "7"    # Compress logs older than this
 BACKUP_DIR: "/opt/solo-pool/backups"  # Backup location
-BACKUP_RETENTION_DAYS: "30" # Delete backups older than this
+BACKUP_RETENTION_DAYS: "30"     # Delete backups older than this
 ```
 
 **Configuration Files**:

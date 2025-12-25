@@ -4,8 +4,8 @@
 #
 # This script performs:
 # 1. SQLite database optimization (VACUUM, ANALYZE)
-# 2. Log rotation via logrotate (includes compression of logs 7+ days old)
-# 3. Cleanup of old log archives (30+ days)
+# 2. Log rotation via logrotate (includes compression of logs older than LOG_COMPRESS_AFTER_DAYS)
+# 3. Cleanup of old log archives (older than LOG_RETENTION_DAYS)
 # 4. Backup of configuration and data
 # 5. Disk usage report
 #
@@ -106,7 +106,7 @@ if [ -f "${LOGROTATE_CONF}" ]; then
     done
 
     if [ $? -eq 0 ]; then
-        log "  [OK] Log rotation complete (includes compression of 7+ day old logs)"
+        log "  [OK] Log rotation complete (includes compression of ${LOG_COMPRESS_AFTER_DAYS}+ day old logs)"
     else
         log "  [WARNING] Log rotation had issues"
     fi
@@ -120,7 +120,7 @@ fi
 log ""
 log "3. Cleanup..."
 
-# Remove old log archives (older than 30 days)
+# Remove old log archives (older than LOG_RETENTION_DAYS)
 DELETED_COUNT=0
 for dir in "${BITCOIN_DIR}/logs" "${BCHN_DIR}/logs" "${DIGIBYTE_DIR}/logs" \
            "${MONERO_DIR}/logs" "${TARI_DIR}/logs" "${ALEO_DIR}/logs" \
@@ -129,7 +129,7 @@ for dir in "${BITCOIN_DIR}/logs" "${BCHN_DIR}/logs" "${DIGIBYTE_DIR}/logs" \
            "${ALEO_POOL_DIR}/logs" "${WEBUI_DIR}/logs" "${PAYMENTS_DIR}/logs" \
            "${MONERO_DIR}/wallet/logs" "${TARI_DIR}/wallet/logs" "${BASE_DIR}/logs/startup"; do
     if [ -d "${dir}" ]; then
-        COUNT=$(find "${dir}" -name "*.gz" -mtime +30 -delete -print 2>/dev/null | wc -l)
+        COUNT=$(find "${dir}" -name "*.gz" -mtime +${LOG_RETENTION_DAYS} -delete -print 2>/dev/null | wc -l)
         DELETED_COUNT=$((DELETED_COUNT + COUNT))
     fi
 done
