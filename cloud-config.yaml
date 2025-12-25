@@ -9,7 +9,7 @@
 # 2. Paste into your cloud provider's cloud-config/user-data field
 # 3. Launch your server
 #
-# All output is directed to /dev/tty1 for monitoring
+# Output is logged to /opt/solo-pool/install/install.log and /dev/tty1
 
 # =============================================================================
 # CONFIGURATION VARIABLES - EDIT THESE BEFORE DEPLOYMENT
@@ -293,19 +293,19 @@ write_files:
       # HELPER FUNCTIONS
       # ---------------------------------------------------------------------
       log() {
-          echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
+          echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "${LOG_FILE}" | tee -a /dev/tty1
       }
 
       log_error() {
-          echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $*" | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
+          echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $*" | tee -a "${LOG_FILE}" | tee -a /dev/tty1
       }
 
       log_success() {
-          echo "[$(date '+%Y-%m-%d %H:%M:%S')] SUCCESS: $*" | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
+          echo "[$(date '+%Y-%m-%d %H:%M:%S')] SUCCESS: $*" | tee -a "${LOG_FILE}" | tee -a /dev/tty1
       }
 
       run_cmd() {
-          "$@" 2>&1 | tee -a "${LOG_FILE}" >/dev/tty1
+          "$@" 2>&1 | tee -a "${LOG_FILE}" | tee -a /dev/tty1
       }
 
       # Validation function - call this after sourcing to verify config loaded
@@ -347,10 +347,10 @@ runcmd:
       ln -sf /dev/console /dev/tty1 2>/dev/null || true
     fi
     LOG_FILE="/opt/solo-pool/install/install.log"
-    echo "=============================================="  | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
-    echo "Solo Mining Pool Setup - Starting"             | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
-    echo "$(date)"                                       | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
-    echo "=============================================="  | tee -a "${LOG_FILE}" >/dev/tty1 2>&1
+    echo "=============================================="  | tee -a "${LOG_FILE}" | tee -a /dev/tty1
+    echo "Solo Mining Pool Setup - Starting"             | tee -a "${LOG_FILE}" | tee -a /dev/tty1
+    echo "$(date)"                                       | tee -a "${LOG_FILE}" | tee -a /dev/tty1
+    echo "=============================================="  | tee -a "${LOG_FILE}" | tee -a /dev/tty1
 
   # Make config readable
   - chmod 600 /opt/solo-pool/install/config.sh
@@ -384,13 +384,84 @@ runcmd:
       99-finalize.sh
     do
       log "  Downloading ${script}..."
-      if wget -q "${SCRIPTS_BASE_URL}/${script}" -O "${script}" 2>&1 | tee -a "${LOG_FILE}" >/dev/tty1; then
+      if wget -q "${SCRIPTS_BASE_URL}/${script}" -O "${script}"; then
         chmod +x "${script}"
         log "    OK"
       else
         log_error "    FAILED - Check SCRIPTS_BASE_URL in config"
       fi
     done
+
+  # Download template files
+  - |
+    . /opt/solo-pool/install/config.sh
+    cd /opt/solo-pool/install
+
+    # Create directory structure
+    mkdir -p files/config files/systemd files/motd
+
+    log "Downloading config templates..."
+    for template in \
+      files/config/bitcoin.conf.template \
+      files/config/bchn.conf.template \
+      files/config/digibyte.conf.template \
+      files/config/monerod.conf.template \
+      files/config/ckpool.conf.template \
+      files/config/monero-pool.conf.template \
+      files/config/aleo-pool.toml.template \
+      files/config/tari-node.toml.template \
+      files/config/tari-wallet.toml.template \
+      files/config/tari-miner.toml.template \
+      files/config/tari-merge-proxy.toml.template \
+      files/config/start-wallet-rpc.sh.template \
+      files/config/start-monero-pool.sh.template \
+      files/config/start-tari-wallet.sh.template \
+      files/config/start-aleo-pool.sh.template \
+      files/config/start-aleo-node.sh.template \
+      files/config/solo-pool.cron.template \
+      files/config/logrotate.conf.template
+    do
+      if wget -q "${SCRIPTS_BASE_URL}/${template}" -O "${template}"; then
+        log "  ${template} OK"
+      else
+        log_error "  ${template} FAILED"
+      fi
+    done
+
+    log "Downloading systemd templates..."
+    for template in \
+      files/systemd/node-btc-bitcoind.service.template \
+      files/systemd/node-bch-bchn.service.template \
+      files/systemd/node-dgb-digibyted.service.template \
+      files/systemd/node-xmr-monerod.service.template \
+      files/systemd/node-xtm-minotari.service.template \
+      files/systemd/node-aleo-snarkos.service.template \
+      files/systemd/pool-btc-ckpool.service.template \
+      files/systemd/pool-bch-ckpool.service.template \
+      files/systemd/pool-dgb-ckpool.service.template \
+      files/systemd/pool-xmr-monero-pool.service.template \
+      files/systemd/pool-xmr-xtm-merge-proxy.service.template \
+      files/systemd/pool-xtm-minotari-miner.service.template \
+      files/systemd/pool-aleo.service.template \
+      files/systemd/wallet-xmr-rpc.service.template \
+      files/systemd/wallet-xtm.service.template \
+      files/systemd/solo-pool.service.template \
+      files/systemd/solo-pool-webui.service.template \
+      files/systemd/solo-pool-payments.service.template
+    do
+      if wget -q "${SCRIPTS_BASE_URL}/${template}" -O "${template}"; then
+        log "  ${template} OK"
+      else
+        log_error "  ${template} FAILED"
+      fi
+    done
+
+    log "Downloading motd file..."
+    if wget -q "${SCRIPTS_BASE_URL}/files/motd/99-solo-pool" -O "files/motd/99-solo-pool"; then
+      log "  files/motd/99-solo-pool OK"
+    else
+      log_error "  files/motd/99-solo-pool FAILED"
+    fi
 
   # Execute scripts in order
   - |
