@@ -89,11 +89,18 @@ else
     log "  Sync mode: PRODUCTION (mempool enabled for mining)"
 fi
 
-# Generate RPC password
+# Generate RPC credentials (random username for additional security)
+export BCH_RPC_USER=$(apg -a 1 -m 16 -M NCL -n 1)
 export BCH_RPC_PASSWORD=$(apg -a 1 -m 64 -M NCL -n 1)
 
+# Save RPC credentials for other services (CKPool, WebUI, etc.)
+echo "${BCH_RPC_USER}" > ${BCHN_DIR}/config/rpc.user
+echo "${BCH_RPC_PASSWORD}" > ${BCHN_DIR}/config/rpc.password
+chmod 600 ${BCHN_DIR}/config/rpc.user ${BCHN_DIR}/config/rpc.password
+log "  Generated RPC credentials (user: ${BCH_RPC_USER})"
+
 # Export variables for template
-export BCHN_DIR BCH_RPC_PORT BCH_ZMQ_BLOCK_PORT BCH_ZMQ_TX_PORT NETWORK_FLAG NETWORK_SECTION EFFECTIVE_RPC_PORT BLOCKSONLY_SETTING
+export BCHN_DIR BCH_RPC_PORT BCH_ZMQ_BLOCK_PORT BCH_ZMQ_TX_PORT NETWORK_FLAG NETWORK_SECTION EFFECTIVE_RPC_PORT BLOCKSONLY_SETTING BCH_RPC_USER
 
 # Generate config from template
 envsubst < "${TEMPLATE_DIR}/bchn.conf.template" > ${BCHN_DIR}/config/bitcoin.conf
@@ -156,7 +163,7 @@ log "  Creating CKPool configuration from template..."
 # Export variables for CKPool template
 # Use EFFECTIVE_RPC_PORT which is set based on network mode
 export NODE_RPC_PORT="${EFFECTIVE_RPC_PORT}"
-export NODE_RPC_USER="bchrpc"
+export NODE_RPC_USER="${BCH_RPC_USER}"
 export NODE_RPC_PASSWORD="${BCH_RPC_PASSWORD}"
 export POOL_SIG="Solo Pool BCH"
 export STRATUM_PORT="${BCH_STRATUM_PORT}"

@@ -19,6 +19,7 @@ data_dir = "${TARI_DIR}/data"
 # gRPC for wallet and mining
 grpc_enabled = true
 grpc_address = "127.0.0.1:${TARI_NODE_GRPC_PORT}"
+grpc_authentication = { username = "${XTM_RPC_USER}", password = "${XTM_RPC_PASSWORD}" }
 
 [base_node.p2p]
 # P2P configuration - use proper transport format

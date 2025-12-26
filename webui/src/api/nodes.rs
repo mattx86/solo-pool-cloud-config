@@ -89,7 +89,9 @@ pub async fn fetch_bitcoin_sync(rpc_url: &str, rpc_user: &str, rpc_pass: &str) -
 
 /// Fetch sync status for Monero node
 /// Uses JSON-RPC /json_rpc endpoint with sync_info method
-pub async fn fetch_monero_sync(rpc_url: &str) -> SyncStatus {
+/// Note: Monero uses HTTP digest authentication. If credentials are provided,
+/// we attempt digest auth via URL-embedded credentials as a simple approach.
+pub async fn fetch_monero_sync(rpc_url: &str, rpc_user: Option<&str>, rpc_pass: Option<&str>) -> SyncStatus {
     #[derive(Deserialize)]
     struct SyncInfo {
         height: u64,
@@ -110,7 +112,21 @@ pub async fn fetch_monero_sync(rpc_url: &str) -> SyncStatus {
     }
 
     let client = http_client();
-    let url = format!("{}/json_rpc", rpc_url.trim_end_matches('/'));
+
+    // Build URL with embedded credentials if provided (works for digest auth)
+    let base_url = rpc_url.trim_end_matches('/');
+    let url = if let (Some(user), Some(pass)) = (rpc_user, rpc_pass) {
+        if !user.is_empty() && !pass.is_empty() {
+            // Embed credentials in URL for HTTP digest auth compatibility
+            base_url.replace("http://", &format!("http://{}:{}@", user, pass))
+        } else {
+            base_url.to_string()
+        }
+    } else {
+        base_url.to_string()
+    };
+    let url = format!("{}/json_rpc", url);
+
     let body = serde_json::json!({
         "jsonrpc": "2.0",
         "id": "0",
@@ -192,12 +208,21 @@ pub async fn fetch_tari_sync(grpc_port: u16) -> SyncStatus {
 
 /// Fetch sync status for ALEO node
 /// Uses REST API to get latest height
-pub async fn fetch_aleo_sync(rest_url: &str, network: &str) -> SyncStatus {
+/// Supports HTTP Basic authentication if credentials are provided
+pub async fn fetch_aleo_sync(rest_url: &str, network: &str, rpc_user: Option<&str>, rpc_pass: Option<&str>) -> SyncStatus {
     let client = http_client();
     // snarkOS REST API: /{network}/latest/height
     let url = format!("{}/{}/latest/height", rest_url.trim_end_matches('/'), network);
 
-    match client.get(&url).send().await {
+    // Build request with optional basic auth
+    let mut request = client.get(&url);
+    if let (Some(user), Some(pass)) = (rpc_user, rpc_pass) {
+        if !user.is_empty() && !pass.is_empty() {
+            request = request.basic_auth(user, Some(pass));
+        }
+    }
+
+    match request.send().await {
         Ok(response) => {
             if let Ok(height_str) = response.text().await {
                 if let Ok(height) = height_str.trim().parse::<u64>() {

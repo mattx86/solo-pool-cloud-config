@@ -30,6 +30,15 @@ else
     XMR_WALLET_REGEX='^4[0-9A-Za-z]{94}'
 fi
 
+# Read Monero RPC credentials (for merge/merged modes with RPC auth)
+XMR_RPC_USER=$(cat ${MONERO_DIR}/config/rpc.user 2>/dev/null || echo "")
+XMR_RPC_PASSWORD=$(cat ${MONERO_DIR}/config/rpc.password 2>/dev/null || echo "")
+if [ -n "${XMR_RPC_PASSWORD}" ]; then
+    XMR_CURL_AUTH="--digest -u ${XMR_RPC_USER}:${XMR_RPC_PASSWORD}"
+else
+    XMR_CURL_AUTH=""
+fi
+
 log() {
     echo "[XMR] $(date '+%H:%M:%S') $1"
 }
@@ -59,7 +68,7 @@ fi
 log "Waiting for node to be responsive..."
 NODE_READY=false
 for i in $(seq 1 60); do
-    if curl -s http://127.0.0.1:${MONERO_RPC_PORT:-18081}/get_info &>/dev/null; then
+    if curl -s ${XMR_CURL_AUTH} http://127.0.0.1:${MONERO_RPC_PORT:-18081}/get_info &>/dev/null; then
         NODE_READY=true
         break
     fi
@@ -86,7 +95,7 @@ while true; do
         TARGET=$(echo "${STATUS}" | grep -oP 'target: \K[0-9]+' | head -1)
 
         # Alternative: check sync_info via RPC
-        SYNC_INFO=$(curl -s -X POST http://127.0.0.1:${MONERO_RPC_PORT:-18081}/json_rpc \
+        SYNC_INFO=$(curl -s ${XMR_CURL_AUTH} -X POST http://127.0.0.1:${MONERO_RPC_PORT:-18081}/json_rpc \
             -d '{"jsonrpc":"2.0","id":"0","method":"sync_info"}' \
             -H 'Content-Type: application/json' 2>/dev/null)
 

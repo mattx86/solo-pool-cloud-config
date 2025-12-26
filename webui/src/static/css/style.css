@@ -291,17 +291,18 @@ header h1 {
 /* Pool Stats */
 .pool-stats {
     padding: 20px;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
     gap: 15px;
 }
 
 .stat-item {
-    text-align: center;
+    text-align: left;
 }
 
-.stat-item.stat-primary {
-    grid-column: span 2;
+.stat-item:last-child {
+    text-align: right;
 }
 
 .stat-label {
@@ -320,11 +321,6 @@ header h1 {
 
 .stat-value.hashrate {
     color: #667eea;
-}
-
-.stat-value.fee-free {
-    color: var(--success);
-    font-weight: 700;
 }
 
 .stat-unit {
@@ -1272,7 +1268,12 @@ footer {
     }
 
     .pool-stats {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+    }
+
+    .pool-stats .stat-item,
+    .pool-stats .stat-item:last-child {
+        text-align: center;
     }
 
     .worker-item {

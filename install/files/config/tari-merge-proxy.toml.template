@@ -9,13 +9,14 @@ listener_address = "0.0.0.0:${XMR_XTM_MERGE_STRATUM_PORT}"
 
 # Monero node connection
 monerod_url = "http://127.0.0.1:${MONERO_RPC_PORT}"
-monerod_username = ""
-monerod_password = ""
-monerod_use_auth = false
+monerod_username = "${XMR_RPC_USER}"
+monerod_password = "${XMR_RPC_PASSWORD}"
+monerod_use_auth = true
 
 # Tari node connection (gRPC)
 grpc_base_node_address = "127.0.0.1:${TARI_NODE_GRPC_PORT}"
 grpc_console_wallet_address = "127.0.0.1:${TARI_WALLET_GRPC_PORT}"
+base_node_grpc_authentication = { username = "${XTM_RPC_USER}", password = "${XTM_RPC_PASSWORD}" }
 
 # Wallet for Tari coinbase
 wallet_payment_address = "${XTM_WALLET_ADDRESS}"

@@ -24,7 +24,7 @@ disablewallet=1
 
 # Network-specific settings
 ${NETWORK_SECTION}
-rpcuser=bchrpc
+rpcuser=${BCH_RPC_USER}
 rpcpassword=${BCH_RPC_PASSWORD}
 rpcallowip=127.0.0.1
 rpcbind=127.0.0.1

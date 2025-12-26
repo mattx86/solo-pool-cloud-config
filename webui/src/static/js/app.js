@@ -219,7 +219,7 @@ function createPoolCard(pool, stats) {
         </div>
 
         <div class="pool-stats">
-            <div class="stat-item stat-primary">
+            <div class="stat-item">
                 <div class="stat-label">Hashrate (${workerCount} miner${workerCount !== 1 ? 's' : ''})</div>
                 <div class="stat-value hashrate">
                     ${formatNumber(stats.total_hashrate)}
@@ -229,10 +229,6 @@ function createPoolCard(pool, stats) {
             <div class="stat-item">
                 <div class="stat-label">Blocks Found</div>
                 <div class="stat-value">${formatNumber(stats.blocks_found)}</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">Pool Fee</div>
-                <div class="stat-value fee-free">${stats.pool_fee_percent === 0 ? 'Fee Free (0%)' : stats.pool_fee_percent + '%'}</div>
             </div>
         </div>
 

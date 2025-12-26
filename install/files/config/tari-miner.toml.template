@@ -6,6 +6,7 @@ network = "${TARI_NETWORK}"
 
 # Base node connection
 base_node_grpc_address = "127.0.0.1:${TARI_NODE_GRPC_PORT}"
+base_node_grpc_authentication = { username = "${XTM_RPC_USER}", password = "${XTM_RPC_PASSWORD}" }
 
 # Wallet for receiving rewards
 wallet_grpc_address = "127.0.0.1:${TARI_WALLET_GRPC_PORT}"

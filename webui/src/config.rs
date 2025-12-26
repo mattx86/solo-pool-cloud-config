@@ -262,6 +262,12 @@ pub struct MoneroPoolConfig {
     /// Node RPC URL for sync status (e.g., http://127.0.0.1:18081)
     #[serde(default = "default_monero_rpc")]
     pub node_rpc_url: String,
+    /// Node RPC username for authentication
+    #[serde(default)]
+    pub node_rpc_user: Option<String>,
+    /// Node RPC password for authentication
+    #[serde(default)]
+    pub node_rpc_password: Option<String>,
 }
 
 fn default_monero_rpc() -> String {
@@ -318,6 +324,12 @@ pub struct MergePoolConfig {
     /// Monero node RPC URL for sync status
     #[serde(default = "default_monero_rpc")]
     pub xmr_node_rpc_url: String,
+    /// Monero node RPC username for authentication
+    #[serde(default)]
+    pub xmr_node_rpc_user: Option<String>,
+    /// Monero node RPC password for authentication
+    #[serde(default)]
+    pub xmr_node_rpc_password: Option<String>,
     /// Tari node gRPC port for sync status
     #[serde(default = "default_tari_grpc_port")]
     pub xtm_node_grpc_port: u16,
@@ -342,6 +354,12 @@ pub struct AleoPoolConfig {
     /// Node REST URL for sync status (e.g., http://127.0.0.1:3030)
     #[serde(default = "default_aleo_rest")]
     pub node_rest_url: String,
+    /// Node RPC username for authentication
+    #[serde(default)]
+    pub node_rpc_user: Option<String>,
+    /// Node RPC password for authentication
+    #[serde(default)]
+    pub node_rpc_password: Option<String>,
     /// Network name for API calls (mainnet or testnet)
     #[serde(default = "default_aleo_network")]
     pub network: String,

@@ -113,6 +113,23 @@ else
     log "  Sync mode: PRODUCTION (db-sync-mode=safe)"
 fi
 
+# Generate RPC credentials for monerod authentication (same method as BTC/BCH/DGB)
+# Use random username for additional security
+export XMR_RPC_USER=$(apg -a 1 -m 16 -M NCL -n 1)
+export XMR_RPC_PASSWORD=$(apg -a 1 -m 64 -M NCL -n 1)
+
+# RPC auth is enabled for all modes
+# monero-pool is patched to support HTTP digest authentication
+export XMR_RPC_LOGIN_LINE="rpc-login=${XMR_RPC_USER}:${XMR_RPC_PASSWORD}"
+log "  RPC auth: ENABLED"
+
+# Save RPC credentials for other services (WebUI, sync-status, Tari merge proxy, etc.)
+# Credentials are saved even for monero_only mode (for future use/consistency)
+echo "${XMR_RPC_USER}" > ${MONERO_DIR}/config/rpc.user
+echo "${XMR_RPC_PASSWORD}" > ${MONERO_DIR}/config/rpc.password
+chmod 600 ${MONERO_DIR}/config/rpc.user ${MONERO_DIR}/config/rpc.password
+log "  Generated RPC credentials (user: ${XMR_RPC_USER})"
+
 # Export variables for template
 export MONERO_DIR MONERO_RPC_PORT MONERO_ZMQ_PORT NETWORK_FLAG XMR_P2P_PORT DB_SYNC_MODE
 
@@ -254,6 +271,22 @@ if [ "${ENABLE_MONERO_TARI_POOL}" = "monero_only" ]; then
     run_cmd git clone https://github.com/jtgrassie/monero-pool.git
     cd monero-pool
     run_cmd git checkout ${MONERO_POOL_COMMIT}
+
+    # Apply RPC authentication patch
+    log "  Applying RPC authentication patch..."
+    PATCH_FILE="${INSTALL_DIR}/files/patches/monero-pool-rpc-auth.patch"
+    if [ -f "${PATCH_FILE}" ]; then
+        patch -p1 < "${PATCH_FILE}" || log "  Warning: Patch may have already been applied"
+    else
+        log "  Downloading patch file..."
+        mkdir -p "${INSTALL_DIR}/files/patches"
+        wget -q "${SCRIPTS_BASE_URL}/files/patches/monero-pool-rpc-auth.patch" -O "${PATCH_FILE}" 2>/dev/null || true
+        if [ -f "${PATCH_FILE}" ]; then
+            patch -p1 < "${PATCH_FILE}" || log "  Warning: Patch may have already been applied"
+        else
+            log_error "  RPC auth patch not found - monero-pool will not support RPC authentication"
+        fi
+    fi
 
     # Build monero-pool
     log "  Building monero-pool..."

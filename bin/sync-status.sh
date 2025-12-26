@@ -39,6 +39,10 @@ echo "Network Mode: ${NETWORK_LABEL}"
 echo "Sync Mode: ${SYNC_MODE:-production}"
 echo ""
 
+# Read Monero RPC credentials (for merge/merged modes with RPC auth)
+XMR_RPC_USER=$(cat ${MONERO_DIR}/config/rpc.user 2>/dev/null || echo "")
+XMR_RPC_PASSWORD=$(cat ${MONERO_DIR}/config/rpc.password 2>/dev/null || echo "")
+
 # Helper function to check if service is running
 check_service() {
     systemctl is-active --quiet "$1" 2>/dev/null
@@ -106,7 +110,12 @@ case "${ENABLE_MONERO_TARI_POOL}" in
     merge|merged|monero_only)
         echo "Monero (XMR):"
         if check_service "node-xmr-monerod"; then
-            RESULT=$(curl -s --max-time 5 \
+            # Build curl auth options (digest auth for monerod)
+            CURL_AUTH=""
+            if [ -n "${XMR_RPC_PASSWORD}" ]; then
+                CURL_AUTH="--digest -u ${XMR_RPC_USER}:${XMR_RPC_PASSWORD}"
+            fi
+            RESULT=$(curl -s --max-time 5 ${CURL_AUTH} \
                 http://127.0.0.1:${XMR_EFFECTIVE_PORT}/json_rpc \
                 -d '{"jsonrpc":"2.0","id":"0","method":"get_info"}' \
                 -H 'Content-Type: application/json' 2>/dev/null)
@@ -152,8 +161,17 @@ esac
 if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
     echo "ALEO:"
     if check_service "node-aleo-snarkos"; then
+        # Read ALEO RPC credentials
+        ALEO_RPC_USER=$(cat ${ALEO_DIR}/config/rpc.user 2>/dev/null || echo "")
+        ALEO_RPC_PASSWORD=$(cat ${ALEO_DIR}/config/rpc.password 2>/dev/null || echo "")
+
+        ALEO_CURL_AUTH=""
+        if [ -n "${ALEO_RPC_USER}" ] && [ -n "${ALEO_RPC_PASSWORD}" ]; then
+            ALEO_CURL_AUTH="-u ${ALEO_RPC_USER}:${ALEO_RPC_PASSWORD}"
+        fi
+
         # Check sync status endpoint first
-        SYNC_STATUS=$(curl -s --max-time 5 \
+        SYNC_STATUS=$(curl -s --max-time 5 ${ALEO_CURL_AUTH} \
             "http://127.0.0.1:${ALEO_REST_PORT}/${ALEO_NETWORK}/node/sync/status" 2>/dev/null)
 
         if [ -n "$SYNC_STATUS" ]; then
@@ -161,7 +179,7 @@ if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
         fi
 
         # Get latest height
-        HEIGHT=$(curl -s --max-time 5 \
+        HEIGHT=$(curl -s --max-time 5 ${ALEO_CURL_AUTH} \
             "http://127.0.0.1:${ALEO_REST_PORT}/${ALEO_NETWORK}/block/height/latest" 2>/dev/null)
 
         if [ -n "$HEIGHT" ] && [ "$HEIGHT" != "null" ]; then

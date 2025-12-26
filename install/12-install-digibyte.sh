@@ -72,11 +72,16 @@ if [ "${NETWORK_MODE}" = "testnet" ]; then
     export NETWORK_FLAG="testnet=1"
     export NETWORK_SECTION="[test]"
     export EFFECTIVE_RPC_PORT="14023"
-    log "  Network mode: TESTNET"
+    # DGB testnet has few peers - add known seed nodes
+    export DGB_SEED_NODES="# Testnet seed nodes (testnet has limited peers)
+addnode=seed.testnet-1.us.digibyteservers.io
+addnode=seed.testnetexplorer.digibyteservers.io"
+    log "  Network mode: TESTNET (with seed nodes)"
 else
     export NETWORK_FLAG=""
     export NETWORK_SECTION="[main]"
     export EFFECTIVE_RPC_PORT="${DGB_RPC_PORT}"
+    export DGB_SEED_NODES=""
     log "  Network mode: MAINNET"
 fi
 
@@ -89,11 +94,18 @@ else
     log "  Sync mode: PRODUCTION (mempool enabled for mining)"
 fi
 
-# Generate RPC password
+# Generate RPC credentials (random username for additional security)
+export DGB_RPC_USER=$(apg -a 1 -m 16 -M NCL -n 1)
 export DGB_RPC_PASSWORD=$(apg -a 1 -m 64 -M NCL -n 1)
 
+# Save RPC credentials for other services (CKPool, WebUI, etc.)
+echo "${DGB_RPC_USER}" > ${DIGIBYTE_DIR}/config/rpc.user
+echo "${DGB_RPC_PASSWORD}" > ${DIGIBYTE_DIR}/config/rpc.password
+chmod 600 ${DIGIBYTE_DIR}/config/rpc.user ${DIGIBYTE_DIR}/config/rpc.password
+log "  Generated RPC credentials (user: ${DGB_RPC_USER})"
+
 # Export variables for template
-export DIGIBYTE_DIR DGB_RPC_PORT DGB_ZMQ_BLOCK_PORT DGB_ZMQ_TX_PORT NETWORK_FLAG NETWORK_SECTION EFFECTIVE_RPC_PORT BLOCKSONLY_SETTING
+export DIGIBYTE_DIR DGB_RPC_PORT DGB_ZMQ_BLOCK_PORT DGB_ZMQ_TX_PORT NETWORK_FLAG NETWORK_SECTION EFFECTIVE_RPC_PORT BLOCKSONLY_SETTING DGB_RPC_USER DGB_SEED_NODES
 
 # Generate config from template
 envsubst < "${TEMPLATE_DIR}/digibyte.conf.template" > ${DIGIBYTE_DIR}/config/digibyte.conf
@@ -156,7 +168,7 @@ log "  Creating CKPool configuration from template..."
 # Export variables for CKPool template
 # Use EFFECTIVE_RPC_PORT which is set based on network mode
 export NODE_RPC_PORT="${EFFECTIVE_RPC_PORT}"
-export NODE_RPC_USER="digibyterpc"
+export NODE_RPC_USER="${DGB_RPC_USER}"
 export NODE_RPC_PASSWORD="${DGB_RPC_PASSWORD}"
 export POOL_SIG="Solo Pool DGB"
 export STRATUM_PORT="${DGB_STRATUM_PORT}"

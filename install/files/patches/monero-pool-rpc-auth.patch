@@ -1,0 +1,169 @@
+--- a/src/pool.c
++++ b/src/pool.c
+@@ -42,6 +42,9 @@ typedef struct config_t
+ {
+     char rpc_host[MAX_HOST];
+     uint16_t rpc_port;
++    char rpc_user[256];
++    char rpc_password[256];
++    int rpc_use_auth;
+     uint32_t rpc_timeout;
+     uint32_t idle_timeout;
+     char wallet_rpc_host[MAX_HOST];
+@@ -60,6 +63,11 @@ typedef struct config_t
+     uint64_t payment_threshold;
+ } config_t;
+
++/* HTTP Digest Auth state */
++static char rpc_auth_realm[256] = {0};
++static char rpc_auth_nonce[256] = {0};
++static int rpc_auth_got_challenge = 0;
++
+ static config_t config;
+ static pool_stats_t pool_stats;
+ static pthread_mutex_t mutex_clients = PTHREAD_MUTEX_INITIALIZER;
+@@ -180,6 +188,78 @@ cleanup:
+     free(body);
+ }
+
++/* Calculate MD5 hash and return hex string */
++static void
++md5_hex(const char *input, char *output)
++{
++    unsigned char digest[16];
++    char *p = output;
++    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
++    EVP_DigestInit_ex(ctx, EVP_md5(), NULL);
++    EVP_DigestUpdate(ctx, input, strlen(input));
++    EVP_DigestFinal_ex(ctx, digest, NULL);
++    EVP_MD_CTX_free(ctx);
++    for (int i = 0; i < 16; i++)
++        p += sprintf(p, "%02x", digest[i]);
++}
++
++/* Generate HTTP Digest Authorization header value */
++static char *
++make_digest_auth_header(const char *method, const char *uri)
++{
++    static char auth_header[1024];
++    char ha1[33], ha2[33], response[33];
++    char ha1_input[512], ha2_input[256], response_input[512];
++    static unsigned int nc = 0;
++    char nc_str[9];
++    char cnonce[17];
++
++    if (!rpc_auth_got_challenge || !config.rpc_use_auth)
++        return NULL;
++
++    nc++;
++    snprintf(nc_str, sizeof(nc_str), "%08x", nc);
++
++    /* Generate client nonce */
++    snprintf(cnonce, sizeof(cnonce), "%08x%08x",
++             (unsigned int)time(NULL), (unsigned int)rand());
++
++    /* HA1 = MD5(username:realm:password) */
++    snprintf(ha1_input, sizeof(ha1_input), "%s:%s:%s",
++             config.rpc_user, rpc_auth_realm, config.rpc_password);
++    md5_hex(ha1_input, ha1);
++
++    /* HA2 = MD5(method:uri) */
++    snprintf(ha2_input, sizeof(ha2_input), "%s:%s", method, uri);
++    md5_hex(ha2_input, ha2);
++
++    /* response = MD5(HA1:nonce:nc:cnonce:qop:HA2) */
++    snprintf(response_input, sizeof(response_input), "%s:%s:%s:%s:auth:%s",
++             ha1, rpc_auth_nonce, nc_str, cnonce, ha2);
++    md5_hex(response_input, response);
++
++    snprintf(auth_header, sizeof(auth_header),
++             "Digest username=\"%s\", realm=\"%s\", nonce=\"%s\", "
++             "uri=\"%s\", qop=auth, nc=%s, cnonce=\"%s\", response=\"%s\"",
++             config.rpc_user, rpc_auth_realm, rpc_auth_nonce,
++             uri, nc_str, cnonce, response);
++
++    return auth_header;
++}
++
++/* Parse WWW-Authenticate header to extract realm and nonce */
++static void
++parse_www_authenticate(const char *header)
++{
++    const char *realm_start, *nonce_start;
++
++    if ((realm_start = strstr(header, "realm=\"")) != NULL) {
++        sscanf(realm_start + 7, "%255[^\"]", rpc_auth_realm);
++    }
++    if ((nonce_start = strstr(header, "nonce=\"")) != NULL) {
++        sscanf(nonce_start + 7, "%255[^\"]", rpc_auth_nonce);
++    }
++    rpc_auth_got_challenge = 1;
++}
++
+ static void
+ rpc_on_response(struct evhttp_request *req, void *arg)
+ {
+@@ -190,6 +270,22 @@ rpc_on_response(struct evhttp_request *req, void *arg)
+         log_error("No response from daemon");
+         return;
+     }
++
++    int code = evhttp_request_get_response_code(req);
++
++    /* Handle 401 - need to get auth challenge and retry */
++    if (code == 401 && config.rpc_use_auth && !rpc_auth_got_challenge)
++    {
++        struct evkeyvalq *headers = evhttp_request_get_input_headers(req);
++        const char *www_auth = evhttp_find_header(headers, "WWW-Authenticate");
++        if (www_auth)
++        {
++            parse_www_authenticate(www_auth);
++            log_info("Got digest auth challenge, will retry with credentials");
++        }
++        return;
++    }
++
+     struct evbuffer *input = evhttp_request_get_input_buffer(req);
+     size_t len = evbuffer_get_length(input);
+     char *body = (char*) alloca(len+1);
+@@ -222,6 +318,13 @@ rpc_request(struct event_base *base, const char *body,
+     headers = evhttp_request_get_output_headers(req);
+     evhttp_add_header(headers, "Content-Type", "application/json");
+     evhttp_add_header(headers, "Connection", "close");
++
++    /* Add digest auth header if we have credentials and challenge */
++    char *auth_header = make_digest_auth_header("POST", RPC_PATH);
++    if (auth_header)
++    {
++        evhttp_add_header(headers, "Authorization", auth_header);
++    }
+     evhttp_make_request(con, req, EVHTTP_REQ_POST, RPC_PATH);
+ }
+
+@@ -390,6 +493,9 @@ read_config(const char *config_file)
+     strcpy(config.rpc_host, "127.0.0.1");
+     config.rpc_port = 18081;
+     config.rpc_timeout = 15;
++    config.rpc_user[0] = '\0';
++    config.rpc_password[0] = '\0';
++    config.rpc_use_auth = 0;
+     strcpy(config.wallet_rpc_host, "127.0.0.1");
+     config.wallet_rpc_port = 18082;
+     config.idle_timeout = 150;
+@@ -446,6 +552,16 @@ read_config(const char *config_file)
+         {
+             config.rpc_timeout = atoi(val);
+         }
++        else if (strcmp(key, "rpc-user") == 0)
++        {
++            strncpy(config.rpc_user, val, sizeof(config.rpc_user)-1);
++            config.rpc_use_auth = 1;
++        }
++        else if (strcmp(key, "rpc-password") == 0)
++        {
++            strncpy(config.rpc_password, val, sizeof(config.rpc_password)-1);
++            config.rpc_use_auth = 1;
++        }
+         else if (strcmp(key, "wallet-rpc-host") == 0)
+         {
+             strncpy(config.wallet_rpc_host, val, sizeof(config.wallet_rpc_host)-1);

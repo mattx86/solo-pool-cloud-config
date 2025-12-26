@@ -49,6 +49,10 @@ else
     log "  Network mode: MAINNET (network=0)"
 fi
 
+# Generate RPC credentials for snarkOS REST API authentication (same pattern as other coins)
+export ALEO_RPC_USER=$(apg -a 1 -m 16 -M NCL -n 1)
+export ALEO_RPC_PASSWORD=$(apg -a 1 -m 64 -M NCL -n 1)
+
 # =============================================================================
 # 1. PREREQUISITES
 # =============================================================================
@@ -109,6 +113,12 @@ mkdir -p ${ALEO_DIR}/bin
 mkdir -p ${ALEO_DIR}/config
 mkdir -p ${ALEO_DIR}/data
 mkdir -p ${ALEO_DIR}/logs
+
+# Save RPC credentials for other services (WebUI, sync-status, etc.)
+echo "${ALEO_RPC_USER}" > ${ALEO_DIR}/config/rpc.user
+echo "${ALEO_RPC_PASSWORD}" > ${ALEO_DIR}/config/rpc.password
+chmod 600 ${ALEO_DIR}/config/rpc.user ${ALEO_DIR}/config/rpc.password
+log "  Generated RPC credentials (user: ${ALEO_RPC_USER})"
 
 # Install binaries
 log "  Installing snarkOS binary..."
@@ -227,7 +237,7 @@ else
 fi
 
 # Export variables for template
-export ALEO_DIR ALEO_REST_PORT ALEO_NETWORK
+export ALEO_DIR ALEO_REST_PORT ALEO_NETWORK ALEO_RPC_USER ALEO_RPC_PASSWORD
 
 # Create snarkOS node start script from template
 log "  Creating snarkOS start script from template..."

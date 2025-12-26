@@ -90,7 +90,11 @@ pub async fn stats_updater(state: Arc<AppState>) {
                         stats.password = xmr_config.password.clone();
                         stats.pool_wallet_address = xmr_config.pool_wallet_address.clone();
                         // Fetch node sync status
-                        stats.sync_status = nodes::fetch_monero_sync(&xmr_config.node_rpc_url).await;
+                        stats.sync_status = nodes::fetch_monero_sync(
+                            &xmr_config.node_rpc_url,
+                            xmr_config.node_rpc_user.as_deref(),
+                            xmr_config.node_rpc_password.as_deref(),
+                        ).await;
                         new_stats.xmr = stats;
                     }
                     Err(e) => {
@@ -105,7 +109,11 @@ pub async fn stats_updater(state: Arc<AppState>) {
                             username_format: xmr_config.username_format.clone(),
                             password: xmr_config.password.clone(),
                             pool_wallet_address: xmr_config.pool_wallet_address.clone(),
-                            sync_status: nodes::fetch_monero_sync(&xmr_config.node_rpc_url).await,
+                            sync_status: nodes::fetch_monero_sync(
+                                &xmr_config.node_rpc_url,
+                                xmr_config.node_rpc_user.as_deref(),
+                                xmr_config.node_rpc_password.as_deref(),
+                            ).await,
                             ..Default::default()
                         };
                     }
@@ -158,7 +166,11 @@ pub async fn stats_updater(state: Arc<AppState>) {
                     .unwrap_or_else(|| format!("http://127.0.0.1:{}", merge_config.stratum_port));
 
                 // Fetch sync status for both chains (use Monero as primary indicator)
-                let xmr_sync = nodes::fetch_monero_sync(&merge_config.xmr_node_rpc_url).await;
+                let xmr_sync = nodes::fetch_monero_sync(
+                    &merge_config.xmr_node_rpc_url,
+                    merge_config.xmr_node_rpc_user.as_deref(),
+                    merge_config.xmr_node_rpc_password.as_deref(),
+                ).await;
                 let xtm_sync = nodes::fetch_tari_sync(merge_config.xtm_node_grpc_port).await;
 
                 // Combined sync status: show XMR sync progress (primary chain for merge mining)
@@ -232,7 +244,12 @@ pub async fn stats_updater(state: Arc<AppState>) {
         if let Some(ref aleo_config) = state.config.pools.aleo {
             if aleo_config.enabled {
                 // Fetch node sync status
-                let aleo_sync = nodes::fetch_aleo_sync(&aleo_config.node_rest_url, &aleo_config.network).await;
+                let aleo_sync = nodes::fetch_aleo_sync(
+                    &aleo_config.node_rest_url,
+                    &aleo_config.network,
+                    aleo_config.node_rpc_user.as_deref(),
+                    aleo_config.node_rpc_password.as_deref(),
+                ).await;
 
                 match AleoPoolClient::fetch_stats(&aleo_config.api_url).await {
                     Ok(mut stats) => {

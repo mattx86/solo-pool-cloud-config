@@ -19,6 +19,8 @@ webui-listen =
 rpc-host = 127.0.0.1
 rpc-port = ${MONERO_RPC_PORT}
 rpc-timeout = 15
+rpc-user = ${XMR_RPC_USER}
+rpc-password = ${XMR_RPC_PASSWORD}
 
 # Wallet RPC (for payouts)
 wallet-rpc-host = 127.0.0.1

@@ -15,6 +15,7 @@ rpc-bind-ip=127.0.0.1
 rpc-bind-port=${MONERO_RPC_PORT}
 confirm-external-bind=1
 restricted-rpc=0
+${XMR_RPC_LOGIN_LINE}
 
 # Mining
 # Enable stratum server mode (for merge mining proxy)

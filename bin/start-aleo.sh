@@ -24,6 +24,15 @@ else
     ALEO_NETWORK="mainnet"
 fi
 
+# Read ALEO RPC credentials
+ALEO_RPC_USER=$(cat ${ALEO_DIR}/config/rpc.user 2>/dev/null || echo "")
+ALEO_RPC_PASSWORD=$(cat ${ALEO_DIR}/config/rpc.password 2>/dev/null || echo "")
+
+ALEO_CURL_AUTH=""
+if [ -n "${ALEO_RPC_USER}" ] && [ -n "${ALEO_RPC_PASSWORD}" ]; then
+    ALEO_CURL_AUTH="-u ${ALEO_RPC_USER}:${ALEO_RPC_PASSWORD}"
+fi
+
 log() {
     echo "[ALEO] $(date '+%H:%M:%S') $1"
 }
@@ -54,7 +63,7 @@ log "Waiting for node to be responsive..."
 NODE_READY=false
 for i in $(seq 1 60); do
     # Check if REST API is responding
-    if curl -s http://127.0.0.1:${ALEO_REST_PORT:-3030}/${ALEO_NETWORK}/latest/height &>/dev/null; then
+    if curl -s ${ALEO_CURL_AUTH} http://127.0.0.1:${ALEO_REST_PORT:-3030}/${ALEO_NETWORK}/latest/height &>/dev/null; then
         NODE_READY=true
         break
     fi
@@ -76,7 +85,7 @@ log "Waiting for blockchain sync..."
 
 while true; do
     # Get current height
-    CURRENT_HEIGHT=$(curl -s http://127.0.0.1:${ALEO_REST_PORT:-3030}/${ALEO_NETWORK}/latest/height 2>/dev/null)
+    CURRENT_HEIGHT=$(curl -s ${ALEO_CURL_AUTH} http://127.0.0.1:${ALEO_REST_PORT:-3030}/${ALEO_NETWORK}/latest/height 2>/dev/null)
 
     if [ -n "${CURRENT_HEIGHT}" ] && [ "${CURRENT_HEIGHT}" -gt 0 ] 2>/dev/null; then
         # Check sync status from logs
