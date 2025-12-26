@@ -72,10 +72,9 @@ if [ "${NETWORK_MODE}" = "testnet" ]; then
     export NETWORK_FLAG="testnet=1"
     export NETWORK_SECTION="[test]"
     export EFFECTIVE_RPC_PORT="14023"
-    # DGB testnet has few peers - add known seed nodes
-    export DGB_SEED_NODES="# Testnet seed nodes (testnet has limited peers)
-addnode=seed.testnet-1.us.digibyteservers.io
-addnode=seed.testnetexplorer.digibyteservers.io"
+    # DGB testnet seed node (port 12026)
+    export DGB_SEED_NODES="# Testnet seed node
+addnode=8.214.25.169:12026"
     log "  Network mode: TESTNET (with seed nodes)"
 else
     export NETWORK_FLAG=""

@@ -451,6 +451,8 @@ impl Default for Config {
                     username_format: "YOUR_XMR_ADDRESS.worker_name".to_string(),
                     password: "x".to_string(),
                     node_rpc_url: default_monero_rpc(),
+                    node_rpc_user: None,
+                    node_rpc_password: None,
                 }),
                 xtm: Some(TariPoolConfig {
                     enabled: false, // Disabled when using merge mode
@@ -474,6 +476,8 @@ impl Default for Config {
                     username_format: "YOUR_XMR_ADDRESS.worker_name".to_string(),
                     password: "x".to_string(),
                     xmr_node_rpc_url: default_monero_rpc(),
+                    xmr_node_rpc_user: None,
+                    xmr_node_rpc_password: None,
                     xtm_node_grpc_port: default_tari_grpc_port(),
                 }),
                 aleo: Some(AleoPoolConfig {
@@ -486,6 +490,8 @@ impl Default for Config {
                     username_format: "YOUR_ALEO_ADDRESS.worker_name".to_string(),
                     password: "x".to_string(),
                     node_rest_url: default_aleo_rest(),
+                    node_rpc_user: None,
+                    node_rpc_password: None,
                     network: default_aleo_network(),
                 }),
             },
