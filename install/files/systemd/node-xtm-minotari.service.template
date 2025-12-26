@@ -8,6 +8,9 @@ Type=simple
 User=${POOL_USER}
 Group=${POOL_USER}
 
+# Ensure log and data directories exist before starting
+ExecStartPre=/bin/mkdir -p ${TARI_DIR}/logs
+ExecStartPre=/bin/mkdir -p ${TARI_DIR}/data
 ExecStart=${TARI_DIR}/bin/minotari_node --config=${TARI_DIR}/config/config.toml --base-path=${TARI_DIR}/data
 ExecStop=/bin/kill -SIGTERM $MAINPID
 

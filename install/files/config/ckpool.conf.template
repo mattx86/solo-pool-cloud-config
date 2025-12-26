@@ -17,6 +17,5 @@
     ],
     "mindiff" : 1,
     "startdiff" : ${START_DIFF},
-    "maxdiff" : 0,
-    "logdir" : "${CKPOOL_DIR}/logs"
+    "maxdiff" : 0
 }

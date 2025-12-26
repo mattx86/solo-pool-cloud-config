@@ -202,7 +202,7 @@ mkdir -p ${BIN_DIR}
 for script in start-nodes.sh stop-nodes.sh start-pools.sh stop-pools.sh \
               start-all.sh stop-all.sh restart-all.sh status.sh sync-status.sh \
               start-btc.sh start-bch.sh start-dgb.sh start-xmr.sh start-xtm.sh start-aleo.sh \
-              maintenance.sh backup.sh; do
+              maintenance.sh backup.sh switch-mode.sh; do
     log "  Downloading ${script}..."
     if wget -q "${BIN_SCRIPTS_URL}/${script}" -O "${BIN_DIR}/${script}" 2>/dev/null; then
         chmod +x "${BIN_DIR}/${script}"
@@ -333,11 +333,21 @@ esac
 log ""
 log "Installation Errors: ${ERRORS}"
 log ""
+log "Sync Mode: ${SYNC_MODE:-production}"
+log ""
 log "NEXT STEPS:"
+if [ "${SYNC_MODE}" = "initial" ]; then
+log "1. Nodes are syncing with FAST mode (blocksonly/fast-db-sync)"
+log "2. Check sync status: ${BIN_DIR}/sync-status.sh"
+log "3. When sync is complete, switch to production mode:"
+log "   ${BIN_DIR}/switch-mode.sh production"
+log "4. Then pools will be ready for mining"
+else
 log "1. Services started automatically - nodes are syncing in background"
 log "2. Check sync status: ${BIN_DIR}/sync-status.sh"
 log "3. View service status: systemctl status solo-pool"
 log "4. Pools start automatically once nodes are synced"
+fi
 log ""
 log "IMPORTANT: Backup all pool wallet keys immediately!"
 log "  XMR: ${MONERO_DIR}/wallet/keys/SEED_BACKUP.txt"

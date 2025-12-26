@@ -41,6 +41,21 @@ write_files:
       NETWORK_MODE="testnet"
 
       # ---------------------------------------------------------------------
+      # SYNC MODE - Initial Sync vs Production
+      # ---------------------------------------------------------------------
+      # Options: "initial" (fast sync) or "production" (mining-ready)
+      # - initial: Aggressive settings for fast blockchain sync
+      #            Bitcoin/BCH/DGB: blocksonly=1 (no mempool, faster)
+      #            Monero: db-sync-mode=fast (faster, risk on crash)
+      # - production: Safe settings required for mining operations
+      #            Bitcoin/BCH/DGB: full mempool for block templates
+      #            Monero: db-sync-mode=safe (data integrity)
+      #
+      # WORKFLOW: Deploy with "initial", wait for sync, then run:
+      #   /opt/solo-pool/bin/switch-mode.sh production
+      SYNC_MODE="initial"
+
+      # ---------------------------------------------------------------------
       # POOL SELECTION - Enable/disable each pool
       # ---------------------------------------------------------------------
       ENABLE_BITCOIN_POOL="true"

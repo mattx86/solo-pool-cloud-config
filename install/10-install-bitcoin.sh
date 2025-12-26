@@ -97,11 +97,20 @@ else
     log "  Network mode: MAINNET"
 fi
 
+# Determine sync mode settings
+if [ "${SYNC_MODE}" = "initial" ]; then
+    export BLOCKSONLY_SETTING="blocksonly=1"
+    log "  Sync mode: INITIAL (blocksonly for faster sync)"
+else
+    export BLOCKSONLY_SETTING="# blocksonly disabled - mining requires mempool"
+    log "  Sync mode: PRODUCTION (mempool enabled for mining)"
+fi
+
 # Generate RPC password
 export BTC_RPC_PASSWORD=$(apg -a 1 -m 64 -M NCL -n 1)
 
 # Export variables for template
-export BITCOIN_DIR BITCOIN_RPC_PORT BITCOIN_ZMQ_BLOCK_PORT BITCOIN_ZMQ_TX_PORT NETWORK_FLAG NETWORK_SECTION EFFECTIVE_RPC_PORT
+export BITCOIN_DIR BITCOIN_RPC_PORT BITCOIN_ZMQ_BLOCK_PORT BITCOIN_ZMQ_TX_PORT NETWORK_FLAG NETWORK_SECTION EFFECTIVE_RPC_PORT BLOCKSONLY_SETTING
 
 # Generate config from template
 envsubst < "${TEMPLATE_DIR}/bitcoin.conf.template" > ${BITCOIN_DIR}/config/bitcoin.conf

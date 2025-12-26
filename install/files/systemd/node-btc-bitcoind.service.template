@@ -8,6 +8,8 @@ Type=simple
 User=${POOL_USER}
 Group=${POOL_USER}
 
+# Ensure data directory exists before starting
+ExecStartPre=/bin/mkdir -p ${BITCOIN_DIR}/data
 ExecStart=${BITCOIN_DIR}/bin/bitcoind -conf=${BITCOIN_DIR}/config/bitcoin.conf -datadir=${BITCOIN_DIR}/data
 ExecStop=${BITCOIN_DIR}/bin/bitcoin-cli -conf=${BITCOIN_DIR}/config/bitcoin.conf stop
 

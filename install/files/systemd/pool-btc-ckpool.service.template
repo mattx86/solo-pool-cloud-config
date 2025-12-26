@@ -10,9 +10,11 @@ Group=${POOL_USER}
 
 WorkingDirectory=${BTC_CKPOOL_DIR}
 # -B enables BTCSOLO mode: miners use their wallet address as username, pool pays directly to that address
-# -s sets socket directory for API access (used by webui for live stats)
+# -n sets pool name (used for log file naming: logs/btc.log)
+# -l sets log directory, -s sets socket directory for API access
 ExecStartPre=/bin/mkdir -p ${BTC_CKPOOL_SOCKET_DIR}
-ExecStart=${BTC_CKPOOL_DIR}/bin/ckpool -B -c ${BTC_CKPOOL_DIR}/config/ckpool.conf -l ${BTC_CKPOOL_DIR}/logs -s ${BTC_CKPOOL_SOCKET_DIR}
+ExecStartPre=/bin/mkdir -p ${BTC_CKPOOL_DIR}/logs
+ExecStart=${BTC_CKPOOL_DIR}/bin/ckpool -B -n btc -c ${BTC_CKPOOL_DIR}/config/ckpool.conf -l ${BTC_CKPOOL_DIR}/logs -s ${BTC_CKPOOL_SOCKET_DIR}
 
 Restart=on-failure
 RestartSec=10

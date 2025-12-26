@@ -8,6 +8,8 @@ Type=simple
 User=${POOL_USER}
 Group=${POOL_USER}
 
+# Ensure data directory exists before starting
+ExecStartPre=/bin/mkdir -p ${DIGIBYTE_DIR}/data
 ExecStart=${DIGIBYTE_DIR}/bin/digibyted -conf=${DIGIBYTE_DIR}/config/digibyte.conf -datadir=${DIGIBYTE_DIR}/data
 ExecStop=${DIGIBYTE_DIR}/bin/digibyte-cli -conf=${DIGIBYTE_DIR}/config/digibyte.conf stop
 

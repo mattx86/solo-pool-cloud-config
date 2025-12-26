@@ -8,6 +8,8 @@ Type=simple
 User=${POOL_USER}
 Group=${POOL_USER}
 
+# Ensure log directory exists before starting
+ExecStartPre=/bin/mkdir -p ${MONERO_DIR}/logs
 ExecStart=${MONERO_DIR}/bin/monerod --config-file=${MONERO_DIR}/config/monerod.conf --non-interactive
 ExecStop=/bin/kill -SIGTERM $MAINPID
 

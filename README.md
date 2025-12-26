@@ -363,6 +363,7 @@ All components follow a standardized directory layout:
 │   ├── start-aleo.sh                # ALEO: node → sync → stratum
 │   ├── status.sh                    # Check service status
 │   ├── sync-status.sh               # Check blockchain sync progress
+│   ├── switch-mode.sh               # Switch between initial/production modes
 │   ├── maintenance.sh               # Daily maintenance (SQLite + logs + backup)
 │   └── backup.sh                    # Create compressed backup
 ├── backups/                         # Daily backups (auto-generated)
@@ -534,6 +535,7 @@ solo-pool-cloud-config/
 │   ├── start-aleo.sh
 │   ├── status.sh
 │   ├── sync-status.sh
+│   ├── switch-mode.sh
 │   ├── maintenance.sh
 │   └── backup.sh
 ├── install/                      # Installation scripts and deployment files
@@ -564,6 +566,9 @@ SCRIPTS_BASE_URL: "https://raw.githubusercontent.com/mattx86/solo-pool-cloud-con
 
 # Network Mode: "mainnet" (production) or "testnet" (testing)
 NETWORK_MODE: "testnet"
+
+# Sync Mode: "initial" (fast sync) or "production" (mining-ready)
+SYNC_MODE: "initial"
 
 # Pool Selection
 ENABLE_BITCOIN_POOL: "true"
@@ -625,9 +630,10 @@ Stratum ports (3333-3339) remain the same regardless of network mode.
 ### Testing Workflow
 
 1. Deploy with `NETWORK_MODE="testnet"` in cloud-config.yaml
-2. Wait for testnet nodes to sync (typically faster than mainnet)
-3. Check sync status: `/opt/solo-pool/bin/sync-status.sh`
-4. Get testnet coins from faucets:
+2. Deploy with `SYNC_MODE="initial"` for faster sync (see Sync Mode section below)
+3. Wait for testnet nodes to sync: `/opt/solo-pool/bin/sync-status.sh`
+4. Switch to production mode: `/opt/solo-pool/bin/switch-mode.sh production`
+5. Get testnet coins from faucets:
    - **BTC testnet4**: https://mempool.space/testnet4/faucet
    - **XMR stagenet**: https://stagenet-faucet.xmr-tw.org/
    - **Tari esmeralda**: Community faucets or testnet mining
@@ -641,6 +647,73 @@ Testnet wallet addresses have different prefixes than mainnet:
 - **Bitcoin testnet**: Addresses start with `tb1`, `m`, `n`, or `2`
 
 The installation scripts automatically handle these differences based on `NETWORK_MODE`.
+
+## Sync Mode
+
+The pool supports a two-phase deployment: fast initial sync, then switch to production mode for mining. This significantly speeds up blockchain synchronization.
+
+### SYNC_MODE Options
+
+| Mode | Bitcoin/BCH/DGB | Monero | Use Case |
+|------|-----------------|--------|----------|
+| `initial` | `blocksonly=1` (no mempool) | `db-sync-mode=fast` | Fast blockchain sync |
+| `production` | Full mempool enabled | `db-sync-mode=safe` | Mining-ready |
+
+### Why Two Modes?
+
+- **Initial sync**: Aggressive settings download blockchain data faster, but nodes can't mine (no transaction mempool)
+- **Production**: Safe settings with full mempool required for block template generation
+
+### Deployment Workflow
+
+1. Deploy with `SYNC_MODE="initial"` (default) for fast sync:
+   ```yaml
+   SYNC_MODE: "initial"
+   ```
+
+2. Monitor sync progress:
+   ```bash
+   /opt/solo-pool/bin/sync-status.sh
+   ```
+
+3. When sync is complete, switch to production mode:
+   ```bash
+   /opt/solo-pool/bin/switch-mode.sh production
+   ```
+
+4. Start mining! Pool services will automatically restart with production settings.
+
+### switch-mode.sh Script
+
+The `switch-mode.sh` script handles:
+- Updating `SYNC_MODE` in config.sh
+- Regenerating node configuration files
+- Restarting affected node services
+
+```bash
+# Switch to production mode (for mining)
+/opt/solo-pool/bin/switch-mode.sh production
+
+# Switch back to initial mode (if needed)
+/opt/solo-pool/bin/switch-mode.sh initial
+```
+
+### Performance Impact
+
+| Coin | Initial Sync Speedup | Notes |
+|------|---------------------|-------|
+| Bitcoin | ~30-50% faster | `blocksonly` skips mempool relay |
+| Bitcoin Cash | ~30-50% faster | `blocksonly` skips mempool relay |
+| DigiByte | ~30-50% faster | `blocksonly` skips mempool relay |
+| Monero | ~20-40% faster | `db-sync-mode=fast` reduces I/O |
+
+All nodes benefit from `dbcache=4096` (4GB RAM cache) and `par=-1` (use all CPU cores) in both modes.
+
+### Important Notes
+
+- **Never mine with `SYNC_MODE="initial"`** - Nodes won't receive transactions, resulting in empty blocks (coinbase only)
+- The `db-sync-mode=fast` setting for Monero has a small risk of database corruption on unexpected shutdown
+- After switching to production mode, nodes need a few minutes to populate their mempool
 
 ## Deployment
 

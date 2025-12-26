@@ -8,6 +8,9 @@ Type=simple
 User=${POOL_USER}
 Group=${POOL_USER}
 
+# Ensure log and data directories exist before starting
+ExecStartPre=/bin/mkdir -p ${ALEO_DIR}/logs
+ExecStartPre=/bin/mkdir -p ${ALEO_DIR}/data
 ExecStart=${ALEO_DIR}/bin/start-node.sh
 
 Restart=on-failure

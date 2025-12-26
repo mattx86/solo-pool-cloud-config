@@ -8,7 +8,11 @@ listen=${BTC_LISTEN}
 ${NETWORK_FLAG}
 
 # Performance
-dbcache=1024
+# dbcache: Use 4GB RAM for UTXO cache (faster sync)
+# par: Use all CPU cores for signature verification
+dbcache=4096
+par=-1
+${BLOCKSONLY_SETTING}
 maxconnections=50
 maxuploadtarget=5000
 

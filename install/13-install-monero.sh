@@ -104,8 +104,17 @@ else
     log "  Network mode: MAINNET"
 fi
 
+# Determine sync mode settings
+if [ "${SYNC_MODE}" = "initial" ]; then
+    export DB_SYNC_MODE="fast"
+    log "  Sync mode: INITIAL (db-sync-mode=fast)"
+else
+    export DB_SYNC_MODE="safe"
+    log "  Sync mode: PRODUCTION (db-sync-mode=safe)"
+fi
+
 # Export variables for template
-export MONERO_DIR MONERO_RPC_PORT MONERO_ZMQ_PORT NETWORK_FLAG XMR_P2P_PORT
+export MONERO_DIR MONERO_RPC_PORT MONERO_ZMQ_PORT NETWORK_FLAG XMR_P2P_PORT DB_SYNC_MODE
 
 # Generate config from template
 envsubst < "${TEMPLATE_DIR}/monerod.conf.template" > ${MONERO_DIR}/config/monerod.conf
