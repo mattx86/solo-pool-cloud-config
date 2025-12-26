@@ -24,6 +24,7 @@ disablewallet=1
 
 # Network-specific settings
 ${NETWORK_SECTION}
+dnsseed=1
 ${DGB_SEED_NODES}
 rpcuser=${DGB_RPC_USER}
 rpcpassword=${DGB_RPC_PASSWORD}

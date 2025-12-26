@@ -12,6 +12,6 @@ exec ${ALEO_DIR}/bin/snarkos start \
     --network ${ALEO_NETWORK} \
     --node ${ALEO_LISTEN}:4130 \
     --rest 127.0.0.1:${ALEO_REST_PORT} \
-    --jwt-secret "${ALEO_JWT_SECRET}" \
+    --jwt-secret "\${ALEO_JWT_SECRET}" \
     --logfile ${ALEO_DIR}/logs/snarkos.log \
     --verbosity 1

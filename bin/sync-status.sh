@@ -139,13 +139,33 @@ case "${ENABLE_MONERO_TARI_POOL}" in
             # Check if gRPC port is listening (Tari uses gRPC, not HTTP)
             if ss -tlnp 2>/dev/null | grep -q ":${TARI_NODE_GRPC_PORT}" || \
                netstat -tlnp 2>/dev/null | grep -q ":${TARI_NODE_GRPC_PORT}"; then
-                echo "  Node running (gRPC port ${TARI_NODE_GRPC_PORT} listening)"
                 echo "  Network: ${TARI_NETWORK:-mainnet}"
-                # Try to get height from logs
-                LAST_HEIGHT=$(journalctl -u node-xtm-minotari --no-pager -n 50 2>/dev/null | \
-                    grep -oP 'height[=: ]+\K[0-9]+' | tail -1)
-                if [ -n "$LAST_HEIGHT" ]; then
-                    echo "  Last seen height: ${LAST_HEIGHT}"
+
+                # Extract sync info from recent logs
+                RECENT_LOGS=$(journalctl -u node-xtm-minotari --no-pager -n 100 2>/dev/null)
+
+                # Look for sync progress patterns like "Syncing 12345/67890" or "height: 12345"
+                SYNC_PROGRESS=$(echo "$RECENT_LOGS" | grep -oP 'Syncing\s+\K[0-9]+/[0-9]+' | tail -1)
+                if [ -n "$SYNC_PROGRESS" ]; then
+                    CURRENT=$(echo "$SYNC_PROGRESS" | cut -d'/' -f1)
+                    TARGET=$(echo "$SYNC_PROGRESS" | cut -d'/' -f2)
+                    if [ "$TARGET" -gt 0 ] 2>/dev/null; then
+                        PERCENT=$((CURRENT * 100 / TARGET))
+                        echo "  Height: ${CURRENT} / ${TARGET}"
+                        echo "  Progress: ${PERCENT}%"
+                    else
+                        echo "  Sync: ${SYNC_PROGRESS}"
+                    fi
+                else
+                    # Fallback: try to get just the height
+                    LAST_HEIGHT=$(echo "$RECENT_LOGS" | grep -oP '(height|Height)[=: ]+\K[0-9]+' | tail -1)
+                    if [ -n "$LAST_HEIGHT" ]; then
+                        echo "  Height: ${LAST_HEIGHT}"
+                        echo "  (Target height not available from logs)"
+                    else
+                        echo "  Node running (gRPC port ${TARI_NODE_GRPC_PORT} listening)"
+                        echo "  (Check logs: journalctl -u node-xtm-minotari -f)"
+                    fi
                 fi
             else
                 echo "  Node running but gRPC not yet available (still starting?)"
