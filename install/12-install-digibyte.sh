@@ -102,7 +102,7 @@ export DGB_RPC_PASSWORD=$(apg -a 1 -m 64 -M NCL -n 1)
 echo "${DGB_RPC_USER}" > ${DIGIBYTE_DIR}/config/rpc.user
 echo "${DGB_RPC_PASSWORD}" > ${DIGIBYTE_DIR}/config/rpc.password
 chmod 600 ${DIGIBYTE_DIR}/config/rpc.user ${DIGIBYTE_DIR}/config/rpc.password
-log "  Generated RPC credentials (user: ${DGB_RPC_USER})"
+log "  Generated RPC credentials"
 
 # Export variables for template
 export DIGIBYTE_DIR DGB_RPC_PORT DGB_ZMQ_BLOCK_PORT DGB_ZMQ_TX_PORT NETWORK_FLAG NETWORK_SECTION EFFECTIVE_RPC_PORT BLOCKSONLY_SETTING DGB_RPC_USER DGB_SEED_NODES

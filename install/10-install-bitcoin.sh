@@ -114,7 +114,7 @@ export BTC_RPC_PASSWORD=$(apg -a 1 -m 64 -M NCL -n 1)
 echo "${BTC_RPC_USER}" > ${BITCOIN_DIR}/config/rpc.user
 echo "${BTC_RPC_PASSWORD}" > ${BITCOIN_DIR}/config/rpc.password
 chmod 600 ${BITCOIN_DIR}/config/rpc.user ${BITCOIN_DIR}/config/rpc.password
-log "  Generated RPC credentials (user: ${BTC_RPC_USER})"
+log "  Generated RPC credentials"
 
 # Export variables for template
 export BITCOIN_DIR BITCOIN_RPC_PORT BITCOIN_ZMQ_BLOCK_PORT BITCOIN_ZMQ_TX_PORT NETWORK_FLAG NETWORK_SECTION EFFECTIVE_RPC_PORT BLOCKSONLY_SETTING BTC_RPC_USER

@@ -97,7 +97,7 @@ export BCH_RPC_PASSWORD=$(apg -a 1 -m 64 -M NCL -n 1)
 echo "${BCH_RPC_USER}" > ${BCHN_DIR}/config/rpc.user
 echo "${BCH_RPC_PASSWORD}" > ${BCHN_DIR}/config/rpc.password
 chmod 600 ${BCHN_DIR}/config/rpc.user ${BCHN_DIR}/config/rpc.password
-log "  Generated RPC credentials (user: ${BCH_RPC_USER})"
+log "  Generated RPC credentials"
 
 # Export variables for template
 export BCHN_DIR BCH_RPC_PORT BCH_ZMQ_BLOCK_PORT BCH_ZMQ_TX_PORT NETWORK_FLAG NETWORK_SECTION EFFECTIVE_RPC_PORT BLOCKSONLY_SETTING BCH_RPC_USER

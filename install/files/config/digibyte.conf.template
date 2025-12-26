@@ -6,7 +6,6 @@ daemon=0
 txindex=1
 listen=${DGB_LISTEN}
 ${NETWORK_FLAG}
-${DGB_SEED_NODES}
 
 # Performance
 # dbcache: Use 4GB RAM for UTXO cache (faster sync)
@@ -25,6 +24,7 @@ disablewallet=1
 
 # Network-specific settings
 ${NETWORK_SECTION}
+${DGB_SEED_NODES}
 rpcuser=${DGB_RPC_USER}
 rpcpassword=${DGB_RPC_PASSWORD}
 rpcallowip=127.0.0.1

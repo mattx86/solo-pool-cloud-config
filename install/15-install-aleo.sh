@@ -118,7 +118,14 @@ mkdir -p ${ALEO_DIR}/logs
 echo "${ALEO_RPC_USER}" > ${ALEO_DIR}/config/rpc.user
 echo "${ALEO_RPC_PASSWORD}" > ${ALEO_DIR}/config/rpc.password
 chmod 600 ${ALEO_DIR}/config/rpc.user ${ALEO_DIR}/config/rpc.password
-log "  Generated RPC credentials (user: ${ALEO_RPC_USER})"
+log "  Generated RPC credentials"
+
+# Generate JWT secret for REST API authentication (snarkOS v4.x)
+# JWT secret must be base64 encoded (16 bytes = 128 bits)
+ALEO_JWT_SECRET=$(openssl rand -base64 16)
+echo "${ALEO_JWT_SECRET}" > ${ALEO_DIR}/config/jwt.secret
+chmod 600 ${ALEO_DIR}/config/jwt.secret
+log "  Generated JWT secret for REST API authentication"
 
 # Install binaries
 log "  Installing snarkOS binary..."
@@ -220,9 +227,61 @@ echo "${ALEO_PRIVATE_KEY}" > ${ALEO_DIR}/wallet/keys/pool-wallet.privatekey
 chmod 600 ${ALEO_DIR}/wallet/keys/pool-wallet.privatekey
 
 log_success "ALEO pool wallet generated"
-log "  Address: ${ALEO_POOL_ADDRESS}"
+log "  Address: ${ALEO_POOL_ADDRESS:0:30}[...]"
 log "  Keys file: ${ALEO_DIR}/wallet/keys/pool-wallet.keys"
 log "  *** BACKUP ${ALEO_DIR}/wallet/keys/pool-wallet.keys IMMEDIATELY! ***"
+
+# Generate JWT token for payments service to access protected REST API endpoints
+# snarkOS v4.x uses HS256 JWT tokens with sub (address), iat (issued), exp (expiry)
+log "  Generating JWT token for payments service..."
+
+# Read the JWT secret we generated earlier
+ALEO_JWT_SECRET=$(cat ${ALEO_DIR}/config/jwt.secret)
+
+# JWT timestamps (issued now, expires in 10 years - same as snarkOS default)
+JWT_IAT=$(date +%s)
+JWT_EXP=$((JWT_IAT + 315360000))
+
+# Create JWT using Python (more reliable than bash for base64url encoding)
+ALEO_JWT_TOKEN=$(python3 << PYEOF
+import base64
+import hmac
+import hashlib
+import json
+
+def base64url_encode(data):
+    if isinstance(data, str):
+        data = data.encode('utf-8')
+    return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
+
+# JWT Header
+header = {"alg": "HS256", "typ": "JWT"}
+header_b64 = base64url_encode(json.dumps(header, separators=(',', ':')))
+
+# JWT Payload
+payload = {
+    "sub": "${ALEO_POOL_ADDRESS}",
+    "iat": ${JWT_IAT},
+    "exp": ${JWT_EXP}
+}
+payload_b64 = base64url_encode(json.dumps(payload, separators=(',', ':')))
+
+# Signature
+secret = base64.b64decode("${ALEO_JWT_SECRET}")
+message = f"{header_b64}.{payload_b64}".encode('utf-8')
+signature = hmac.new(secret, message, hashlib.sha256).digest()
+signature_b64 = base64url_encode(signature)
+
+# Complete JWT
+jwt_token = f"{header_b64}.{payload_b64}.{signature_b64}"
+print(jwt_token)
+PYEOF
+)
+
+# Save JWT token for payments service
+echo "${ALEO_JWT_TOKEN}" > ${ALEO_DIR}/config/jwt.token
+chmod 600 ${ALEO_DIR}/config/jwt.token
+log "  JWT token generated (expires in 10 years)"
 
 # =============================================================================
 # 5. CONFIGURE SNARKOS NODE
@@ -258,7 +317,7 @@ mkdir -p ${ALEO_POOL_DIR}/data
 mkdir -p ${ALEO_POOL_DIR}/logs
 
 # ALEO_POOL_ADDRESS was set during keypair generation
-log "  Using generated pool address: ${ALEO_POOL_ADDRESS:0:30}..."
+log "  Using generated pool address: ${ALEO_POOL_ADDRESS:0:30}[...]"
 
 # Export variables for templates
 export ALEO_STRATUM_PORT ALEO_REST_PORT ALEO_POOL_DIR ALEO_POOL_ADDRESS ALEO_PRIVATE_KEY
@@ -316,8 +375,19 @@ ASIC MINER CONFIGURATION:
 
 NETWORK PORTS:
 - P2P: 4130 (ALEO network connectivity)
-- REST API: 3030 (internal, localhost only)
+- REST API: 3030 (internal, localhost only, JWT protected)
 - Stratum: ${ALEO_STRATUM_PORT} (miners connect here)
+
+REST API AUTHENTICATION (JWT):
+The snarkOS REST API uses JWT authentication for protected endpoints.
+- JWT Secret: ${ALEO_DIR}/config/jwt.secret
+- JWT Token: ${ALEO_DIR}/config/jwt.token (for payments service)
+- Protected endpoints: /node/address, /program/{id}/mapping/{name}, /db_backup
+- Public endpoints: /sync/status, /block/height/latest (no auth needed)
+
+To use JWT token with curl:
+  curl -H "Authorization: Bearer \$(cat ${ALEO_DIR}/config/jwt.token)" \\
+       "http://127.0.0.1:3030/${ALEO_NETWORK_NAME}/program/credits.aleo/mapping/account/\${ADDRESS}"
 
 FIREWALL:
 To allow miners to connect:
@@ -347,6 +417,6 @@ log_success "ALEO snarkOS v${SNARKOS_VERSION} and Pool Server installed"
 log "  Node: ${ALEO_DIR}"
 log "  Pool: ${ALEO_POOL_DIR}"
 log "  Stratum port: ${ALEO_STRATUM_PORT}"
-log "  Pool address: ${ALEO_POOL_ADDRESS}"
+log "  Pool address: ${ALEO_POOL_ADDRESS:0:30}[...]"
 log ""
 log "  *** BACKUP ${ALEO_DIR}/wallet/keys/pool-wallet.keys IMMEDIATELY! ***"

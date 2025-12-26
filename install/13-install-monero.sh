@@ -128,10 +128,10 @@ log "  RPC auth: ENABLED"
 echo "${XMR_RPC_USER}" > ${MONERO_DIR}/config/rpc.user
 echo "${XMR_RPC_PASSWORD}" > ${MONERO_DIR}/config/rpc.password
 chmod 600 ${MONERO_DIR}/config/rpc.user ${MONERO_DIR}/config/rpc.password
-log "  Generated RPC credentials (user: ${XMR_RPC_USER})"
+log "  Generated RPC credentials"
 
 # Export variables for template
-export MONERO_DIR MONERO_RPC_PORT MONERO_ZMQ_PORT NETWORK_FLAG XMR_P2P_PORT DB_SYNC_MODE
+export MONERO_DIR MONERO_RPC_PORT MONERO_ZMQ_PORT NETWORK_FLAG XMR_P2P_PORT DB_SYNC_MODE EFFECTIVE_RPC_PORT
 
 # Generate config from template
 envsubst < "${TEMPLATE_DIR}/monerod.conf.template" > ${MONERO_DIR}/config/monerod.conf
@@ -229,10 +229,9 @@ chmod +x ${MONERO_DIR}/bin/start-wallet-rpc.sh
 chown -R ${POOL_USER}:${POOL_USER} ${MONERO_DIR}/wallet
 
 log_success "Pool wallet created"
-log "  Address: ${XMR_POOL_WALLET_ADDRESS}"
+log "  Address: ${XMR_POOL_WALLET_ADDRESS:0:20}[...]"
 log "  Wallet file: ${MONERO_DIR}/wallet/keys/pool-wallet"
-log "  Password file: ${MONERO_DIR}/wallet/keys/pool-wallet.password"
-log "  *** BACKUP ${MONERO_DIR}/wallet/keys/SEED_BACKUP.txt IMMEDIATELY! ***"
+log "  *** BACKUP wallet keys and seed IMMEDIATELY! ***"
 
 # =============================================================================
 # 3. INSTALL MONERO-POOL

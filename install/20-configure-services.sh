@@ -123,8 +123,15 @@ case "${ENABLE_MONERO_TARI_POOL}" in
     merge|merged|tari_only)
         log "Creating Tari services..."
 
+        # Determine Tari network based on NETWORK_MODE
+        if [ "${NETWORK_MODE}" = "testnet" ]; then
+            export TARI_NETWORK="esmeralda"
+        else
+            export TARI_NETWORK="mainnet"
+        fi
+
         # Export variables needed for templates
-        export POOL_USER TARI_DIR XMR_XTM_MERGE_DIR XTM_MINER_DIR
+        export POOL_USER TARI_DIR XMR_XTM_MERGE_DIR XTM_MINER_DIR TARI_NETWORK
 
         install_service "node-xtm-minotari" "node-xtm-minotari"
         install_service "wallet-xtm" "wallet-xtm"

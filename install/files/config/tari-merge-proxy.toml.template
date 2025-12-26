@@ -4,18 +4,18 @@
 # Network
 network = "${TARI_NETWORK}"
 
-# Stratum listener (miners connect here)
-listener_address = "0.0.0.0:${XMR_XTM_MERGE_STRATUM_PORT}"
+# Stratum listener (miners connect here) - libp2p multiaddress format
+listener_address = "/ip4/0.0.0.0/tcp/${XMR_XTM_MERGE_STRATUM_PORT}"
 
-# Monero node connection
-monerod_url = "http://127.0.0.1:${MONERO_RPC_PORT}"
+# Monero node connection (uses EFFECTIVE port for testnet/stagenet)
+monerod_url = ["http://127.0.0.1:${XMR_EFFECTIVE_RPC_PORT}"]
 monerod_username = "${XMR_RPC_USER}"
 monerod_password = "${XMR_RPC_PASSWORD}"
 monerod_use_auth = true
 
-# Tari node connection (gRPC)
-grpc_base_node_address = "127.0.0.1:${TARI_NODE_GRPC_PORT}"
-grpc_console_wallet_address = "127.0.0.1:${TARI_WALLET_GRPC_PORT}"
+# Tari node connection (gRPC) - use http:// prefix
+base_node_grpc_address = "http://127.0.0.1:${TARI_NODE_GRPC_PORT}"
+console_wallet_grpc_address = "http://127.0.0.1:${TARI_WALLET_GRPC_PORT}"
 base_node_grpc_authentication = { username = "${XTM_RPC_USER}", password = "${XTM_RPC_PASSWORD}" }
 
 # Wallet for Tari coinbase

@@ -1,18 +1,17 @@
 #!/bin/bash
 # ALEO snarkOS Node Start Script
-# Runs as a network node (not prover mode)
+# Runs as a client node (syncs blockchain, provides REST API)
+# JWT authentication enabled for protected endpoints (balance queries, etc.)
 
-# Read RPC credentials from stored files
-ALEO_RPC_USER=$(cat ${ALEO_DIR}/config/rpc.user 2>/dev/null || echo "")
-ALEO_RPC_PASSWORD=$(cat ${ALEO_DIR}/config/rpc.password 2>/dev/null || echo "")
+# Read JWT secret from file
+ALEO_JWT_SECRET=$(cat ${ALEO_DIR}/config/jwt.secret)
 
 exec ${ALEO_DIR}/bin/snarkos start \
+    --client \
     --nodisplay \
     --network ${ALEO_NETWORK} \
     --node ${ALEO_LISTEN}:4130 \
     --rest 127.0.0.1:${ALEO_REST_PORT} \
-    --rest-rps 1000 \
-    --username "${ALEO_RPC_USER}" \
-    --password "${ALEO_RPC_PASSWORD}" \
-    --log ${ALEO_DIR}/logs/snarkos.log \
+    --jwt-secret "${ALEO_JWT_SECRET}" \
+    --logfile ${ALEO_DIR}/logs/snarkos.log \
     --verbosity 1

@@ -484,7 +484,7 @@ node_rpc_user = "${EFFECTIVE_XMR_RPC_USER}"
 node_rpc_password = "${EFFECTIVE_XMR_RPC_PASSWORD}"
 EOF
         log "  Monero monero-pool enabled (RPC port: ${EFFECTIVE_XMR_RPC_PORT})"
-        [ -n "${XMR_POOL_ADDR}" ] && log "  XMR pool wallet: ${XMR_POOL_ADDR:0:20}..."
+        [ -n "${XMR_POOL_ADDR}" ] && log "  XMR pool wallet: ${XMR_POOL_ADDR:0:20}[...]"
 
 elif [ "${ENABLE_MONERO_TARI_POOL}" = "tari_only" ]; then
         # Read XTM pool wallet address if available
@@ -512,7 +512,7 @@ password = "x"
 node_grpc_port = ${TARI_NODE_GRPC_PORT:-18142}
 EOF
         log "  Tari solo mining enabled"
-        [ -n "${XTM_POOL_ADDR}" ] && log "  XTM pool wallet: ${XTM_POOL_ADDR:0:20}..."
+        [ -n "${XTM_POOL_ADDR}" ] && log "  XTM pool wallet: ${XTM_POOL_ADDR:0:20}[...]"
 
 elif [ "${ENABLE_MONERO_TARI_POOL}" = "merge" ] || [ "${ENABLE_MONERO_TARI_POOL}" = "merged" ]; then
         # Read both XMR and XTM pool wallet addresses for merge mining
@@ -550,8 +550,8 @@ xmr_node_rpc_password = "${EFFECTIVE_XMR_RPC_PASSWORD}"
 xtm_node_grpc_port = ${TARI_NODE_GRPC_PORT:-18142}
 EOF
         log "  XMR+XTM merge mining enabled (XMR RPC port: ${EFFECTIVE_XMR_RPC_PORT})"
-        [ -n "${XMR_POOL_ADDR}" ] && log "  XMR pool wallet: ${XMR_POOL_ADDR:0:20}..."
-        [ -n "${XTM_POOL_ADDR}" ] && log "  XTM pool wallet: ${XTM_POOL_ADDR:0:20}..."
+        [ -n "${XMR_POOL_ADDR}" ] && log "  XMR pool wallet: ${XMR_POOL_ADDR:0:20}[...]"
+        [ -n "${XTM_POOL_ADDR}" ] && log "  XTM pool wallet: ${XTM_POOL_ADDR:0:20}[...]"
 fi
 
 # Add ALEO pool if enabled
@@ -584,7 +584,7 @@ node_rpc_password = "${EFFECTIVE_ALEO_RPC_PASSWORD}"
 network = "${EFFECTIVE_ALEO_NETWORK}"
 EOF
     log "  ALEO pool enabled (network: ${EFFECTIVE_ALEO_NETWORK})"
-    [ -n "${ALEO_POOL_ADDR}" ] && log "  ALEO pool wallet: ${ALEO_POOL_ADDR:0:20}..."
+    [ -n "${ALEO_POOL_ADDR}" ] && log "  ALEO pool wallet: ${ALEO_POOL_ADDR:0:20}[...]"
 fi
 
 log "  Configuration generated"

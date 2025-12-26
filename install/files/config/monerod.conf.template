@@ -12,7 +12,7 @@ ${XMR_IN_PEERS}
 
 # RPC
 rpc-bind-ip=127.0.0.1
-rpc-bind-port=${MONERO_RPC_PORT}
+rpc-bind-port=${EFFECTIVE_RPC_PORT}
 confirm-external-bind=1
 restricted-rpc=0
 ${XMR_RPC_LOGIN_LINE}

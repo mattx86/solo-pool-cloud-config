@@ -141,11 +141,11 @@ log "2. Configuring Minotari Node..."
 # Create base config directory
 mkdir -p ${TARI_DIR}/config
 
-# Determine P2P listen address based on inbound config
+# Determine P2P listen address based on inbound config (libp2p multiaddress format)
 if [ "${ENABLE_INBOUND_P2P}" = "true" ]; then
-    export TARI_P2P_ADDRESS="0.0.0.0:18189"
+    export TARI_P2P_MULTIADDR="/ip4/0.0.0.0/tcp/18189"
 else
-    export TARI_P2P_ADDRESS="127.0.0.1:18189"
+    export TARI_P2P_MULTIADDR="/ip4/127.0.0.1/tcp/18189"
 fi
 
 # Generate password for node's internal wallet
@@ -160,10 +160,10 @@ export XTM_RPC_PASSWORD=$(apg -a 1 -m 64 -M NCL -n 1)
 echo "${XTM_RPC_USER}" > ${TARI_DIR}/config/rpc.user
 echo "${XTM_RPC_PASSWORD}" > ${TARI_DIR}/config/rpc.password
 chmod 600 ${TARI_DIR}/config/rpc.user ${TARI_DIR}/config/rpc.password
-log "  Generated gRPC credentials (user: ${XTM_RPC_USER})"
+log "  Generated gRPC credentials"
 
 # Export variables for template
-export TARI_DIR TARI_NODE_GRPC_PORT TARI_WALLET_GRPC_PORT TARI_NETWORK TARI_P2P_ADDRESS
+export TARI_DIR TARI_NODE_GRPC_PORT TARI_WALLET_GRPC_PORT TARI_NETWORK TARI_P2P_MULTIADDR
 export XTM_RPC_USER XTM_RPC_PASSWORD
 
 # Generate config from template
@@ -277,9 +277,8 @@ touch ${TARI_DIR}/wallet/keys/.initialized
 chown -R ${POOL_USER}:${POOL_USER} ${TARI_DIR}/wallet
 
 log_success "Pool wallet generated"
-log "  Wallet address: ${XTM_WALLET_ADDRESS}"
-log "  Wallet config: ${TARI_DIR}/wallet/config/config.toml"
-log "  *** BACKUP ${TARI_DIR}/wallet/keys/ IMMEDIATELY! ***"
+log "  Wallet address: ${XTM_WALLET_ADDRESS:0:20}[...]"
+log "  *** BACKUP wallet keys and seed IMMEDIATELY! ***"
 
 # =============================================================================
 # 4. CONFIGURE BASED ON MODE
@@ -301,14 +300,21 @@ if [ "${ENABLE_MONERO_TARI_POOL}" = "merge" ] || [ "${ENABLE_MONERO_TARI_POOL}" 
     if [ -f "${MONERO_DIR}/config/rpc.user" ] && [ -f "${MONERO_DIR}/config/rpc.password" ]; then
         export XMR_RPC_USER=$(cat "${MONERO_DIR}/config/rpc.user")
         export XMR_RPC_PASSWORD=$(cat "${MONERO_DIR}/config/rpc.password")
-        log "  Read Monero RPC credentials (user: ${XMR_RPC_USER})"
+        log "  Read Monero RPC credentials"
     else
         log_error "  Monero RPC credentials not found - was 13-install-monero.sh run?"
         exit 1
     fi
 
+    # Determine effective Monero RPC port (stagenet uses 38081)
+    if [ "${NETWORK_MODE}" = "testnet" ]; then
+        export XMR_EFFECTIVE_RPC_PORT="38081"
+    else
+        export XMR_EFFECTIVE_RPC_PORT="${MONERO_RPC_PORT}"
+    fi
+
     # Export variables for template
-    export XMR_XTM_MERGE_STRATUM_PORT MONERO_RPC_PORT XTM_WALLET_ADDRESS XMR_XTM_MERGE_DIR
+    export XMR_XTM_MERGE_STRATUM_PORT XMR_EFFECTIVE_RPC_PORT XTM_WALLET_ADDRESS XMR_XTM_MERGE_DIR
     export TARI_NODE_GRPC_PORT TARI_WALLET_GRPC_PORT TARI_NETWORK
 
     # Create merge mining proxy config from template
@@ -361,11 +367,5 @@ fi
 # =============================================================================
 log "5. Installation summary..."
 log "  Pool wallet location: ${TARI_DIR}/wallet/"
-log "  Pool wallet address: ${XTM_WALLET_ADDRESS}"
-log ""
-log "  Wallet files:"
-log "    Address:  ${TARI_DIR}/wallet/keys/pool-wallet.address"
-log "    Seed:     ${TARI_DIR}/wallet/keys/SEED_BACKUP.txt"
-log "    Password: ${TARI_DIR}/wallet/keys/pool-wallet.password"
-log ""
+log "  Pool wallet address: ${XTM_WALLET_ADDRESS:0:20}[...]"
 log "  *** BACKUP ${TARI_DIR}/wallet/keys/ IMMEDIATELY! ***"

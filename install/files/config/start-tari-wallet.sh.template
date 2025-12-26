@@ -5,6 +5,9 @@
 PASSWORD=$(cat ${TARI_DIR}/wallet/keys/pool-wallet.password)
 
 exec ${TARI_DIR}/bin/minotari_console_wallet \
+    --network ${TARI_NETWORK} \
     --config ${TARI_DIR}/wallet/config/config.toml \
+    --base-path ${TARI_DIR}/wallet/data \
     --password "${PASSWORD}" \
-    --daemon
+    --grpc-enabled \
+    --non-interactive-mode

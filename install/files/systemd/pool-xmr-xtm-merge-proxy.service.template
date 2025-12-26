@@ -8,7 +8,7 @@ Type=simple
 User=${POOL_USER}
 Group=${POOL_USER}
 
-ExecStart=${TARI_DIR}/bin/minotari_merge_mining_proxy --config=${XMR_XTM_MERGE_DIR}/config/config.toml
+ExecStart=${TARI_DIR}/bin/minotari_merge_mining_proxy --network=${TARI_NETWORK} --config=${XMR_XTM_MERGE_DIR}/config/config.toml --non-interactive-mode
 ExecStop=/bin/kill -SIGTERM $MAINPID
 
 Restart=on-failure

@@ -266,7 +266,7 @@ if [ "${ENABLE_MONERO_TARI_POOL}" = "monero_only" ] || [ "${ENABLE_MONERO_TARI_P
     XMR_POOL_WALLET_ADDRESS_FILE="${MONERO_DIR}/wallet/keys/pool-wallet.address"
     if [ -f "${XMR_POOL_WALLET_ADDRESS_FILE}" ] && [ -s "${XMR_POOL_WALLET_ADDRESS_FILE}" ]; then
         XMR_POOL_WALLET_ADDRESS=$(cat "${XMR_POOL_WALLET_ADDRESS_FILE}")
-        log "  Using generated XMR pool wallet: ${XMR_POOL_WALLET_ADDRESS:0:20}..."
+        log "  Using generated XMR pool wallet: ${XMR_POOL_WALLET_ADDRESS:0:20}[...]"
     else
         log_error "XMR pool wallet not found: ${XMR_POOL_WALLET_ADDRESS_FILE}"
         log_error "This file should have been created by 13-install-monero.sh"
@@ -298,7 +298,7 @@ if [ "${ENABLE_MONERO_TARI_POOL}" = "merge" ] || [ "${ENABLE_MONERO_TARI_POOL}" 
     XTM_POOL_WALLET_ADDRESS_FILE="${TARI_DIR}/wallet/keys/pool-wallet.address"
     if [ -f "${XTM_POOL_WALLET_ADDRESS_FILE}" ] && [ -s "${XTM_POOL_WALLET_ADDRESS_FILE}" ]; then
         XTM_POOL_WALLET_ADDRESS=$(cat "${XTM_POOL_WALLET_ADDRESS_FILE}")
-        log "  Using generated XTM pool wallet: ${XTM_POOL_WALLET_ADDRESS:0:20}..."
+        log "  Using generated XTM pool wallet: ${XTM_POOL_WALLET_ADDRESS:0:20}[...]"
     else
         log_error "XTM pool wallet not found: ${XTM_POOL_WALLET_ADDRESS_FILE}"
         log_error "This file should have been created by 14-install-tari.sh"
@@ -344,7 +344,7 @@ if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
 
     if [ -f "${ALEO_POOL_WALLET_ADDRESS_FILE}" ] && [ -s "${ALEO_POOL_WALLET_ADDRESS_FILE}" ]; then
         ALEO_POOL_WALLET_ADDRESS=$(cat "${ALEO_POOL_WALLET_ADDRESS_FILE}")
-        log "  Using generated ALEO pool wallet: ${ALEO_POOL_WALLET_ADDRESS:0:30}..."
+        log "  Using generated ALEO pool wallet: ${ALEO_POOL_WALLET_ADDRESS:0:30}[...]"
     else
         log_error "ALEO pool wallet not found: ${ALEO_POOL_WALLET_ADDRESS_FILE}"
         log_error "This file should have been created by 15-install-aleo.sh"

@@ -161,17 +161,12 @@ esac
 if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
     echo "ALEO:"
     if check_service "node-aleo-snarkos"; then
-        # Read ALEO RPC credentials
-        ALEO_RPC_USER=$(cat ${ALEO_DIR}/config/rpc.user 2>/dev/null || echo "")
-        ALEO_RPC_PASSWORD=$(cat ${ALEO_DIR}/config/rpc.password 2>/dev/null || echo "")
+        # Note: snarkOS v4.x uses JWT auth for protected endpoints (balance queries)
+        # but sync status and block height are public endpoints - no auth needed here
+        # JWT token for protected endpoints: ${ALEO_DIR}/config/jwt.token
 
-        ALEO_CURL_AUTH=""
-        if [ -n "${ALEO_RPC_USER}" ] && [ -n "${ALEO_RPC_PASSWORD}" ]; then
-            ALEO_CURL_AUTH="-u ${ALEO_RPC_USER}:${ALEO_RPC_PASSWORD}"
-        fi
-
-        # Check sync status endpoint first
-        SYNC_STATUS=$(curl -s --max-time 5 ${ALEO_CURL_AUTH} \
+        # Check sync status endpoint first (public)
+        SYNC_STATUS=$(curl -s --max-time 5 \
             "http://127.0.0.1:${ALEO_REST_PORT}/${ALEO_NETWORK}/node/sync/status" 2>/dev/null)
 
         if [ -n "$SYNC_STATUS" ]; then
@@ -179,7 +174,7 @@ if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
         fi
 
         # Get latest height
-        HEIGHT=$(curl -s --max-time 5 ${ALEO_CURL_AUTH} \
+        HEIGHT=$(curl -s --max-time 5 \
             "http://127.0.0.1:${ALEO_REST_PORT}/${ALEO_NETWORK}/block/height/latest" 2>/dev/null)
 
         if [ -n "$HEIGHT" ] && [ "$HEIGHT" != "null" ]; then
