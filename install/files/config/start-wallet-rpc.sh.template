@@ -2,17 +2,13 @@
 # Monero Wallet RPC Start Script
 # Used by payment processor to send payments to miners
 
-# Read monerod RPC credentials
-XMR_RPC_USER=$(cat ${MONERO_DIR}/config/rpc.user 2>/dev/null || echo "")
-XMR_RPC_PASSWORD=$(cat ${MONERO_DIR}/config/rpc.password 2>/dev/null || echo "")
-
 exec ${MONERO_DIR}/bin/monero-wallet-rpc \
     --wallet-file=${MONERO_DIR}/wallet/keys/pool-wallet \
     --password-file=${MONERO_DIR}/wallet/keys/pool-wallet.password \
     --rpc-bind-ip=127.0.0.1 \
     --rpc-bind-port=${MONERO_WALLET_RPC_PORT} \
     --daemon-address=127.0.0.1:${MONERO_RPC_PORT} \
-    --daemon-login=${XMR_RPC_USER}:${XMR_RPC_PASSWORD} \
+    --daemon-login="$(cat ${MONERO_DIR}/config/rpc.user):$(cat ${MONERO_DIR}/config/rpc.password)" \
     --disable-rpc-login \
     --trusted-daemon \
     --log-file=${MONERO_DIR}/wallet/logs/wallet-rpc.log \

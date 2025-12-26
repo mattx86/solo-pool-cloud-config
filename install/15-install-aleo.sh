@@ -121,10 +121,10 @@ chmod 600 ${ALEO_DIR}/config/rpc.user ${ALEO_DIR}/config/rpc.password
 log "  Generated RPC credentials"
 
 # Generate JWT secret for REST API authentication (snarkOS v4.x)
-# snarkOS requires exactly 16 bytes (characters) for JWT secret
-# openssl rand -base64 12 produces exactly 16 base64 characters
-ALEO_JWT_SECRET=$(openssl rand -base64 12)
-echo "${ALEO_JWT_SECRET}" > ${ALEO_DIR}/config/jwt.secret
+# snarkOS base64-decodes the secret and requires 16 decoded bytes
+# openssl rand 16 produces 16 raw bytes, base64 encodes to ~24 chars
+ALEO_JWT_SECRET=$(openssl rand 16 | base64 | tr -d '\n')
+printf '%s' "${ALEO_JWT_SECRET}" > ${ALEO_DIR}/config/jwt.secret
 chmod 600 ${ALEO_DIR}/config/jwt.secret
 log "  Generated JWT secret for REST API authentication"
 

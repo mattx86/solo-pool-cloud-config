@@ -2,12 +2,10 @@
 # Tari Wallet Start Script
 # Runs minotari_console_wallet in daemon mode with gRPC enabled
 
-PASSWORD=$(cat ${TARI_DIR}/wallet/keys/pool-wallet.password)
-
 exec ${TARI_DIR}/bin/minotari_console_wallet \
     --network ${TARI_NETWORK} \
     --config ${TARI_DIR}/wallet/config/config.toml \
     --base-path ${TARI_DIR}/wallet/data \
-    --password "${PASSWORD}" \
+    --password "$(cat ${TARI_DIR}/wallet/keys/pool-wallet.password)" \
     --grpc-enabled \
     --non-interactive-mode

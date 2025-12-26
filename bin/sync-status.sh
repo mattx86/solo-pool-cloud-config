@@ -180,27 +180,37 @@ esac
 if [ "${ENABLE_ALEO_POOL}" = "true" ]; then
     echo "ALEO:"
     if check_service "node-aleo-snarkos"; then
-        # Note: snarkOS v4.x uses JWT auth for protected endpoints (balance queries)
-        # but sync status and block height are public endpoints - no auth needed here
-        # JWT token for protected endpoints: ${ALEO_DIR}/config/jwt.token
+        # snarkOS v4.x sync_status endpoint returns JSON with sync info
+        SYNC_JSON=$(curl -s --max-time 5 \
+            "http://127.0.0.1:${ALEO_REST_PORT}/${ALEO_NETWORK}/sync_status" 2>/dev/null)
 
-        # Check sync status endpoint first (public)
-        SYNC_STATUS=$(curl -s --max-time 5 \
-            "http://127.0.0.1:${ALEO_REST_PORT}/${ALEO_NETWORK}/node/sync/status" 2>/dev/null)
+        if [ -n "$SYNC_JSON" ] && echo "$SYNC_JSON" | jq -e . >/dev/null 2>&1; then
+            # Parse sync status JSON
+            LEDGER_HEIGHT=$(echo "$SYNC_JSON" | jq -r '.ledger_height // 0')
+            IS_SYNCED=$(echo "$SYNC_JSON" | jq -r '.is_synced // false')
+            SYNC_MODE=$(echo "$SYNC_JSON" | jq -r '.sync_mode // "unknown"')
+            TARGET_HEIGHT=$(echo "$SYNC_JSON" | jq -r '.cdn_height // .p2p_height // 0')
 
-        if [ -n "$SYNC_STATUS" ]; then
-            echo "  Sync Mode: ${SYNC_STATUS}"
-        fi
-
-        # Get latest height
-        HEIGHT=$(curl -s --max-time 5 \
-            "http://127.0.0.1:${ALEO_REST_PORT}/${ALEO_NETWORK}/block/height/latest" 2>/dev/null)
-
-        if [ -n "$HEIGHT" ] && [ "$HEIGHT" != "null" ]; then
-            echo "  Latest Height: ${HEIGHT}"
+            echo "  Height: ${LEDGER_HEIGHT} / ${TARGET_HEIGHT}"
+            if [ "$IS_SYNCED" = "true" ]; then
+                echo "  Synced: Yes"
+            elif [ "$TARGET_HEIGHT" -gt 0 ] 2>/dev/null; then
+                PERCENT=$((LEDGER_HEIGHT * 100 / TARGET_HEIGHT))
+                echo "  Synced: No (${PERCENT}%)"
+            else
+                echo "  Synced: No (${SYNC_MODE})"
+            fi
             echo "  Network: ${ALEO_NETWORK}"
         else
-            echo "  Node running but REST API not responding (still starting?)"
+            # Fallback to simple height check if sync_status not available
+            HEIGHT=$(curl -s --max-time 5 \
+                "http://127.0.0.1:${ALEO_REST_PORT}/${ALEO_NETWORK}/block/height/latest" 2>/dev/null)
+            if [ -n "$HEIGHT" ] && [ "$HEIGHT" != "null" ]; then
+                echo "  Height: ${HEIGHT}"
+                echo "  Network: ${ALEO_NETWORK}"
+            else
+                echo "  Node running but REST API not responding (still starting?)"
+            fi
         fi
     else
         echo "  Node service not running"

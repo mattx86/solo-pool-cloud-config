@@ -23,4 +23,5 @@ grpc_authentication = { username = "${XTM_RPC_USER}", password = "${XTM_RPC_PASS
 
 [base_node.p2p]
 # P2P configuration - Tari v5.x format with transport struct
-transport.tcp.listener_address = "${TARI_P2P_MULTIADDR}"
+# Always bind to 0.0.0.0 for P2P (firewall controls inbound access)
+transport.tcp.listener_address = "/ip4/0.0.0.0/tcp/18189"

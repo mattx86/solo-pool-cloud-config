@@ -3,15 +3,12 @@
 # Runs as a client node (syncs blockchain, provides REST API)
 # JWT authentication enabled for protected endpoints (balance queries, etc.)
 
-# Read JWT secret from file
-ALEO_JWT_SECRET=$$(cat ${ALEO_DIR}/config/jwt.secret)
-
 exec ${ALEO_DIR}/bin/snarkos start \
     --client \
     --nodisplay \
     --network ${ALEO_NETWORK} \
-    --node ${ALEO_LISTEN}:4130 \
+    --node 0.0.0.0:4130 \
     --rest 127.0.0.1:${ALEO_REST_PORT} \
-    --jwt-secret "$${ALEO_JWT_SECRET}" \
+    --jwt-secret "$(cat ${ALEO_DIR}/config/jwt.secret)" \
     --logfile ${ALEO_DIR}/logs/snarkos.log \
     --verbosity 1
