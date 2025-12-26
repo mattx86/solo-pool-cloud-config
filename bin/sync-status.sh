@@ -120,7 +120,7 @@ case "${ENABLE_MONERO_TARI_POOL}" in
                 -d '{"jsonrpc":"2.0","id":"0","method":"get_info"}' \
                 -H 'Content-Type: application/json' 2>/dev/null)
             if [ $? -eq 0 ] && [ -n "$RESULT" ]; then
-                echo "$RESULT" | jq -r '"  Height: \(.result.height) / Target: \(.result.target_height)\n  Synced: \(if .result.synchronized then "Yes" else "No (\(.result.height * 100 / .result.target_height | floor)%)" end)\n  Network: \(if .result.stagenet then "stagenet" elif .result.testnet then "testnet" else "mainnet" end)"'
+                echo "$RESULT" | jq -r '"  Height: \(.result.height) / Target: \(.result.target_height // 0)\n  Synced: \(if .result.synchronized then "Yes" elif (.result.target_height // 0) == 0 then "No (waiting for peers)" else "No (\(.result.height * 100 / .result.target_height | floor)%)" end)\n  Network: \(if .result.stagenet then "stagenet" elif .result.testnet then "testnet" else "mainnet" end)"'
             else
                 echo "  Node running but RPC not responding (still starting?)"
             fi
@@ -136,36 +136,35 @@ case "${ENABLE_MONERO_TARI_POOL}" in
     merge|merged|tari_only)
         echo "Tari (XTM):"
         if check_service "node-xtm-minotari"; then
-            # Check if gRPC port is listening (Tari uses gRPC, not HTTP)
+            # Check if gRPC port is listening
             if ss -tlnp 2>/dev/null | grep -q ":${TARI_NODE_GRPC_PORT}" || \
                netstat -tlnp 2>/dev/null | grep -q ":${TARI_NODE_GRPC_PORT}"; then
                 echo "  Network: ${TARI_NETWORK:-mainnet}"
 
-                # Extract sync info from recent logs
-                RECENT_LOGS=$(journalctl -u node-xtm-minotari --no-pager -n 100 2>/dev/null)
+                # Read RPC credentials
+                XTM_RPC_USER=$(cat ${TARI_DIR}/config/rpc.user 2>/dev/null || echo "")
+                XTM_RPC_PASSWORD=$(cat ${TARI_DIR}/config/rpc.password 2>/dev/null || echo "")
 
-                # Look for sync progress patterns like "Syncing 12345/67890" or "height: 12345"
-                SYNC_PROGRESS=$(echo "$RECENT_LOGS" | grep -oP 'Syncing\s+\K[0-9]+/[0-9]+' | tail -1)
-                if [ -n "$SYNC_PROGRESS" ]; then
-                    CURRENT=$(echo "$SYNC_PROGRESS" | cut -d'/' -f1)
-                    TARGET=$(echo "$SYNC_PROGRESS" | cut -d'/' -f2)
-                    if [ "$TARGET" -gt 0 ] 2>/dev/null; then
-                        PERCENT=$((CURRENT * 100 / TARGET))
-                        echo "  Height: ${CURRENT} / ${TARGET}"
+                # Query sync progress via gRPC
+                GRPC_RESULT=$(grpcurl -plaintext \
+                    -H "authorization: Basic $(echo -n "${XTM_RPC_USER}:${XTM_RPC_PASSWORD}" | base64)" \
+                    127.0.0.1:${TARI_NODE_GRPC_PORT} \
+                    tari.rpc.BaseNode/GetSyncProgress 2>/dev/null)
+
+                if [ -n "$GRPC_RESULT" ]; then
+                    # Parse JSON response
+                    TIP_HEIGHT=$(echo "$GRPC_RESULT" | jq -r '.tipHeight // 0' 2>/dev/null)
+                    LOCAL_HEIGHT=$(echo "$GRPC_RESULT" | jq -r '.localHeight // 0' 2>/dev/null)
+                    STATE=$(echo "$GRPC_RESULT" | jq -r '.state // "unknown"' 2>/dev/null)
+
+                    echo "  Height: ${LOCAL_HEIGHT} / ${TIP_HEIGHT}"
+                    if [ "$TIP_HEIGHT" -gt 0 ] 2>/dev/null; then
+                        PERCENT=$((LOCAL_HEIGHT * 100 / TIP_HEIGHT))
                         echo "  Progress: ${PERCENT}%"
-                    else
-                        echo "  Sync: ${SYNC_PROGRESS}"
                     fi
+                    echo "  State: ${STATE}"
                 else
-                    # Fallback: try to get just the height
-                    LAST_HEIGHT=$(echo "$RECENT_LOGS" | grep -oP '(height|Height)[=: ]+\K[0-9]+' | tail -1)
-                    if [ -n "$LAST_HEIGHT" ]; then
-                        echo "  Height: ${LAST_HEIGHT}"
-                        echo "  (Target height not available from logs)"
-                    else
-                        echo "  Node running (gRPC port ${TARI_NODE_GRPC_PORT} listening)"
-                        echo "  (Check logs: journalctl -u node-xtm-minotari -f)"
-                    fi
+                    echo "  gRPC not responding (still starting?)"
                 fi
             else
                 echo "  Node running but gRPC not yet available (still starting?)"

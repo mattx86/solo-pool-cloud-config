@@ -164,4 +164,26 @@ else
     log "4. Skipping Rust (no Rust-based components enabled)"
 fi
 
+# =============================================================================
+# 5. GRPCURL (for Tari gRPC status queries)
+# =============================================================================
+case "${ENABLE_MONERO_TARI_POOL}" in
+    merge|merged|tari_only)
+        log "5. Installing grpcurl for Tari gRPC queries..."
+
+        GRPCURL_VERSION="1.9.1"
+        cd /tmp
+        wget -q "https://github.com/fullstorydev/grpcurl/releases/download/v${GRPCURL_VERSION}/grpcurl_${GRPCURL_VERSION}_linux_x86_64.tar.gz" -O grpcurl.tar.gz
+        tar -xzf grpcurl.tar.gz grpcurl
+        mv grpcurl /usr/local/bin/
+        chmod +x /usr/local/bin/grpcurl
+        rm -f grpcurl.tar.gz
+
+        log "  grpcurl v${GRPCURL_VERSION} installed"
+        ;;
+    *)
+        log "5. Skipping grpcurl (Tari not enabled)"
+        ;;
+esac
+
 log_success "Build dependencies installed"
