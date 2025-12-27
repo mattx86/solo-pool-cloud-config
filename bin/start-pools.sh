@@ -30,10 +30,10 @@ esac
 
 # Start WebUI dashboard (if binary exists)
 if [ "${ENABLE_WEBUI}" = "true" ]; then
-    if [ -x "${WEBUI_DIR}/solo-pool-webui" ]; then
+    if [ -x "${WEBUI_DIR}/bin/solo-pool-webui" ]; then
         sudo systemctl start solo-pool-webui && echo "  Started solo-pool-webui"
     else
-        echo "  [SKIP] WebUI binary not found at ${WEBUI_DIR}/solo-pool-webui"
+        echo "  [SKIP] WebUI binary not found at ${WEBUI_DIR}/bin/solo-pool-webui"
     fi
 fi
 
@@ -46,10 +46,10 @@ esac
 [ "${ENABLE_ALEO_POOL}" = "true" ] && NEED_PAYMENTS="true"
 
 if [ "${NEED_PAYMENTS}" = "true" ]; then
-    if [ -x "${PAYMENTS_DIR}/solo-pool-payments" ]; then
+    if [ -x "${PAYMENTS_DIR}/bin/solo-pool-payments" ]; then
         sudo systemctl start solo-pool-payments && echo "  Started solo-pool-payments"
     else
-        echo "  [SKIP] Payment processor binary not found at ${PAYMENTS_DIR}/solo-pool-payments"
+        echo "  [SKIP] Payment processor binary not found at ${PAYMENTS_DIR}/bin/solo-pool-payments"
     fi
 fi
 

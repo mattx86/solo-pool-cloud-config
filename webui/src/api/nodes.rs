@@ -56,15 +56,21 @@ pub async fn fetch_bitcoin_sync(rpc_url: &str, rpc_user: &str, rpc_pass: &str) -
         Ok(response) => {
             if let Ok(rpc_resp) = response.json::<RpcResponse>().await {
                 if let Some(info) = rpc_resp.result {
-                    let sync_percent = info.verificationprogress * 100.0;
-                    let is_synced = !info.initialblockdownload && sync_percent >= 99.9;
+                    // Show 100% if blocks == headers, otherwise use verificationprogress
+                    let sync_percent = if info.blocks == info.headers {
+                        100.0
+                    } else {
+                        (info.verificationprogress * 100.0).min(100.0)
+                    };
+                    let is_synced = info.blocks == info.headers ||
+                                    (!info.initialblockdownload && sync_percent >= 99.9);
 
                     return SyncStatus {
                         node_online: true,
                         is_synced,
                         current_height: info.blocks,
                         target_height: Some(info.headers),
-                        sync_percent: sync_percent.min(100.0),
+                        sync_percent,
                         status_message: if is_synced {
                             format!("Synced ({})", info.blocks)
                         } else {

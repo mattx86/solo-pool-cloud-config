@@ -18,7 +18,8 @@ Restart=on-failure
 RestartSec=10
 
 NoNewPrivileges=true
-PrivateTmp=true
+# Note: PrivateTmp disabled so WebUI can access CKPool sockets in /tmp
+# PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target

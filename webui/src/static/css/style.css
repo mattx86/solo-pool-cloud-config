@@ -215,6 +215,29 @@ header h1 {
     font-weight: 500;
 }
 
+.sync-label {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* Pool Status Wrapper */
+.pool-status-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pool-status-label {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
 .sync-status.offline {
     color: var(--warning);
 }

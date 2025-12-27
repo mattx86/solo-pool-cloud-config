@@ -317,8 +317,9 @@ function createSyncStatusHtml(syncStatus, iconClass) {
         // Node offline - show offline indicator
         if (syncStatus && syncStatus.status_message) {
             return `<div class="sync-status offline" title="${escapeHtml(syncStatus.status_message)}">
+                <span class="sync-label">Node:</span>
                 <span class="sync-icon">⚠</span>
-                <span class="sync-text">Node Offline</span>
+                <span class="sync-text">Offline</span>
             </div>`;
         }
         return '';
@@ -327,6 +328,7 @@ function createSyncStatusHtml(syncStatus, iconClass) {
     if (syncStatus.is_synced) {
         // Fully synced - show green checkmark
         return `<div class="sync-status synced" title="${escapeHtml(syncStatus.status_message || 'Synced')}">
+            <span class="sync-label">Node:</span>
             <span class="sync-icon">✓</span>
             <span class="sync-text">Synced</span>
         </div>`;
@@ -338,6 +340,7 @@ function createSyncStatusHtml(syncStatus, iconClass) {
     const strokeDashoffset = circumference - (percent / 100) * circumference;
 
     return `<div class="sync-status syncing" title="${escapeHtml(syncStatus.status_message || 'Syncing...')}">
+        <span class="sync-label">Node:</span>
         <svg class="sync-progress-ring" width="44" height="44">
             <circle class="sync-progress-ring-bg" cx="22" cy="22" r="18" />
             <circle class="sync-progress-ring-fill ${iconClass}" cx="22" cy="22" r="18"
@@ -368,7 +371,10 @@ function createPoolCard(pool, stats) {
             </h2>
             <div class="pool-header-right">
                 ${syncHtml}
-                <span class="pool-status ${statusClass}">${statusText}</span>
+                <div class="pool-status-wrapper">
+                    <span class="pool-status-label">Pool:</span>
+                    <span class="pool-status ${statusClass}">${statusText}</span>
+                </div>
             </div>
         </div>
 

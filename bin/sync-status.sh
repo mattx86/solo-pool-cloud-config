@@ -57,7 +57,8 @@ if [ "${ENABLE_BITCOIN_POOL}" = "true" ]; then
             -conf=${BITCOIN_DIR}/config/bitcoin.conf \
             getblockchaininfo 2>/dev/null)
         if [ $? -eq 0 ] && [ -n "$RESULT" ]; then
-            echo "$RESULT" | jq -r '"  Blocks: \(.blocks) / Headers: \(.headers)\n  Progress: \((.verificationprogress * 100 * 100 | floor) / 100)%\n  Chain: \(.chain)"'
+            # Show 100% if blocks == headers, otherwise use verificationprogress
+            echo "$RESULT" | jq -r '"  Blocks: \(.blocks) / Headers: \(.headers)\n  Progress: \(if .blocks == .headers then 100 else (.verificationprogress * 100 * 100 | floor) / 100 end)%\n  Chain: \(.chain)"'
         else
             echo "  Node running but RPC not responding (still starting?)"
         fi
@@ -76,7 +77,8 @@ if [ "${ENABLE_BCH_POOL}" = "true" ]; then
             -conf=${BCHN_DIR}/config/bitcoin.conf \
             getblockchaininfo 2>/dev/null)
         if [ $? -eq 0 ] && [ -n "$RESULT" ]; then
-            echo "$RESULT" | jq -r '"  Blocks: \(.blocks) / Headers: \(.headers)\n  Progress: \((.verificationprogress * 100 * 100 | floor) / 100)%\n  Chain: \(.chain)"'
+            # Show 100% if blocks == headers, otherwise use verificationprogress
+            echo "$RESULT" | jq -r '"  Blocks: \(.blocks) / Headers: \(.headers)\n  Progress: \(if .blocks == .headers then 100 else (.verificationprogress * 100 * 100 | floor) / 100 end)%\n  Chain: \(.chain)"'
         else
             echo "  Node running but RPC not responding (still starting?)"
         fi
@@ -95,7 +97,8 @@ if [ "${ENABLE_DGB_POOL}" = "true" ]; then
             -conf=${DIGIBYTE_DIR}/config/digibyte.conf \
             getblockchaininfo 2>/dev/null)
         if [ $? -eq 0 ] && [ -n "$RESULT" ]; then
-            echo "$RESULT" | jq -r '"  Blocks: \(.blocks) / Headers: \(.headers)\n  Progress: \((.verificationprogress * 100 * 100 | floor) / 100)%\n  Chain: \(.chain)"'
+            # Show 100% if blocks == headers, otherwise use verificationprogress
+            echo "$RESULT" | jq -r '"  Blocks: \(.blocks) / Headers: \(.headers)\n  Progress: \(if .blocks == .headers then 100 else (.verificationprogress * 100 * 100 | floor) / 100 end)%\n  Chain: \(.chain)"'
         else
             echo "  Node running but RPC not responding (still starting?)"
         fi
