@@ -1,5 +1,5 @@
 [Unit]
-Description=Solo Mining Pool - All Services
+Description=Solopool - All Services
 After=network-online.target
 Wants=network-online.target
 

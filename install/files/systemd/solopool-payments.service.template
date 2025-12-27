@@ -1,5 +1,5 @@
 [Unit]
-Description=Solo Pool Payment Processor
+Description=Solopool Payment Processor
 After=network-online.target
 Wants=network-online.target
 # Payments can start early - it will gracefully handle unavailable wallets
@@ -10,7 +10,7 @@ User=${POOL_USER}
 Group=${POOL_USER}
 
 WorkingDirectory=${PAYMENTS_DIR}
-ExecStart=${PAYMENTS_DIR}/bin/solo-pool-payments ${PAYMENTS_DIR}/config/config.toml
+ExecStart=${PAYMENTS_DIR}/bin/solopool-payments ${PAYMENTS_DIR}/config/config.toml
 
 Environment=RUST_LOG=info
 

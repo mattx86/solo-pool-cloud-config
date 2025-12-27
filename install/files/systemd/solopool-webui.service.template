@@ -1,5 +1,5 @@
 [Unit]
-Description=Solo Pool Web UI Dashboard
+Description=Solopool Web UI Dashboard
 After=network-online.target
 Wants=network-online.target
 
@@ -9,7 +9,7 @@ User=${POOL_USER}
 Group=${POOL_USER}
 
 WorkingDirectory=${WEBUI_DIR}
-ExecStart=${WEBUI_DIR}/bin/solo-pool-webui
+ExecStart=${WEBUI_DIR}/bin/solopool-webui
 
 Environment=RUST_LOG=info
 Environment=CONFIG_PATH=${WEBUI_DIR}/config/config.toml

@@ -1,4 +1,4 @@
-# Solo Pool Daily Maintenance
+# Solopool Daily Maintenance
 # Auto-generated during installation
 #
 # Schedule: ${MAINTENANCE_MINUTE} ${MAINTENANCE_HOUR} * * * (default: 2:15 AM daily)
