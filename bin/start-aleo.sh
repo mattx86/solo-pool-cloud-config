@@ -5,7 +5,7 @@
 # Note: ALEO wallet (keypair) is generated during installation
 # =============================================================================
 
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
     echo "[ALEO] ERROR: Failed to load configuration" >&2

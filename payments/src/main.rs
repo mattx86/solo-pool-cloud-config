@@ -34,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
     // Parse command line args
     let config_path = std::env::args()
         .nth(1)
-        .unwrap_or_else(|| "/opt/solo-pool/payments/config/config.toml".to_string());
+        .unwrap_or_else(|| "/opt/solopool/payments/config/config.toml".to_string());
 
     // Load configuration
     let config = Config::load_with_env(&config_path)?;

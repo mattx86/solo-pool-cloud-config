@@ -12,7 +12,7 @@
 set -e
 
 # Source configuration
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 # Validate config was loaded successfully
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
@@ -23,7 +23,7 @@ fi
 log "Configuring systemd services..."
 
 # Template directory
-TEMPLATE_DIR="/opt/solo-pool/install/files/systemd"
+TEMPLATE_DIR="/opt/solopool/install/files/systemd"
 
 # =============================================================================
 # Helper function to install service from template
@@ -174,7 +174,7 @@ if [ "${ENABLE_WEBUI}" = "true" ]; then
     # Export variables needed for template
     export POOL_USER WEBUI_DIR
 
-    install_service "solo-pool-webui" "solo-pool-webui"
+    install_service "solopool-webui" "solopool-webui"
 
     log "  WebUI service created"
 fi
@@ -194,22 +194,22 @@ if [ "${NEED_PAYMENTS}" = "true" ]; then
     # Export variables needed for template
     export POOL_USER PAYMENTS_DIR
 
-    install_service "solo-pool-payments" "solo-pool-payments"
+    install_service "solopool-payments" "solopool-payments"
 
     log "  Payment Processor service created"
 fi
 
 # =============================================================================
-# MASTER SOLO-POOL SERVICE
+# MASTER SOLOPOOL SERVICE
 # =============================================================================
-log "Creating master solo-pool service..."
+log "Creating master solopool service..."
 
 # Export variables needed for template
 export BIN_DIR
 
-install_service "solo-pool" "solo-pool"
+install_service "solopool" "solopool"
 
-log "  Master solo-pool service created"
+log "  Master solopool service created"
 
 # =============================================================================
 # RELOAD AND ENABLE MASTER SERVICE ONLY
@@ -217,22 +217,22 @@ log "  Master solo-pool service created"
 log "Reloading systemd..."
 run_cmd systemctl daemon-reload
 
-# Only enable the master solo-pool service
+# Only enable the master solopool service
 # Individual services (nodes, pools, wallets, webui, payments) are NOT enabled
-# on boot. The solo-pool master service manages them all via start-all.sh/stop-all.sh
-log "Enabling master solo-pool service..."
-systemctl enable solo-pool >/dev/null 2>&1
+# on boot. The solopool master service manages them all via start-all.sh/stop-all.sh
+log "Enabling master solopool service..."
+systemctl enable solopool >/dev/null 2>&1
 
 log_success "Systemd services configured"
 log ""
-log "IMPORTANT: Only the master 'solo-pool' service is enabled on boot."
+log "IMPORTANT: Only the master 'solopool' service is enabled on boot."
 log "All other services (nodes, pools, wallets, webui, payments) are managed by it."
 log ""
 log "Manage all services:"
-log "  sudo systemctl start solo-pool     # Start all services"
-log "  sudo systemctl stop solo-pool      # Stop all services"
-log "  sudo systemctl restart solo-pool   # Restart all services"
-log "  sudo systemctl status solo-pool    # Check master service status"
+log "  sudo systemctl start solopool     # Start all services"
+log "  sudo systemctl stop solopool      # Stop all services"
+log "  sudo systemctl restart solopool   # Restart all services"
+log "  sudo systemctl status solopool    # Check master service status"
 log ""
 log "Check detailed status:"
 log "  ${BIN_DIR}/status.sh"

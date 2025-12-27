@@ -7,7 +7,7 @@
 set -e
 
 # Source configuration
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 # Validate config was loaded successfully
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
@@ -24,7 +24,7 @@ fi
 log "Installing Bitcoin Cash Node and CKPool..."
 
 # Template directory
-TEMPLATE_DIR="/opt/solo-pool/install/files/config"
+TEMPLATE_DIR="/opt/solopool/install/files/config"
 
 # =============================================================================
 # 1. INSTALL BITCOIN CASH NODE (BCHN)

@@ -21,7 +21,7 @@ log_level = "info"
 
 [database]
 # SQLite database path for share tracking and payment history
-path = "/opt/solo-pool/payments/data/payments.db"
+path = "/opt/solopool/payments/data/payments.db"
 
 [api]
 # API server listen address
@@ -54,7 +54,7 @@ pool_api_url = "http://127.0.0.1:4243"
 pool_type = "monero_pool"
 
 # Path to pool data directory
-pool_data_path = "/opt/solo-pool/pool/xmr-monero-pool/data"
+pool_data_path = "/opt/solopool/pool/xmr/data"
 
 # Minimum payout threshold (in atomic units - piconero)
 # Any balance > 0 will be paid out. Set higher if desired.
@@ -89,9 +89,9 @@ pool_api_url = "http://127.0.0.1:18081"
 pool_type = "merge_proxy"
 
 # Path to pool data directory (varies by mode)
-# - merge mode: /opt/solo-pool/pool/xmr-xtm-minotari-merge-proxy/data
-# - tari_only mode: /opt/solo-pool/pool/xtm-minotari-miner/data
-pool_data_path = "/opt/solo-pool/pool/xmr-xtm-minotari-merge-proxy/data"
+# - merge mode: /opt/solopool/pool/xmr-xtm/data
+# - tari_only mode: /opt/solopool/pool/xtm/data
+pool_data_path = "/opt/solopool/pool/xmr-xtm/data"
 
 # Minimum payout threshold (in microTari)
 # Any balance > 0 will be paid out. Set higher if desired.
@@ -119,7 +119,7 @@ node_rpc_url = "http://127.0.0.1:3033"
 pool_api_url = "http://127.0.0.1:4000"
 
 # Path to ALEO pool data directory
-pool_data_path = "/opt/solo-pool/pool/aleo-pool-server/data"
+pool_data_path = "/opt/solopool/pool/aleo/data"
 
 # Minimum payout threshold (in microcredits)
 # Any balance > 0 will be paid out. Set higher if desired.

@@ -11,7 +11,7 @@
 #   ./start-all.sh --daemon  # Run in background with logging
 # =============================================================================
 
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
     echo "ERROR: Failed to load configuration" >&2
@@ -45,8 +45,8 @@ declare -A PIDS
 # Start WebUI first (doesn't need sync)
 if [ "${ENABLE_WEBUI}" = "true" ]; then
     echo "[WEBUI] Starting dashboard..."
-    sudo systemctl start solo-pool-webui
-    if systemctl is-active --quiet solo-pool-webui; then
+    sudo systemctl start solopool-webui
+    if systemctl is-active --quiet solopool-webui; then
         echo "[WEBUI] Dashboard started"
     fi
 fi
@@ -59,7 +59,7 @@ esac
 [ "${ENABLE_ALEO_POOL}" = "true" ] && NEED_PAYMENTS="true"
 if [ "${NEED_PAYMENTS}" = "true" ]; then
     echo "[PAYMENTS] Starting payment processor..."
-    sudo systemctl start solo-pool-payments 2>/dev/null || true
+    sudo systemctl start solopool-payments 2>/dev/null || true
 fi
 
 echo ""

@@ -17,7 +17,7 @@
 set -e
 
 # Source configuration
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 # Validate config was loaded successfully
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
@@ -34,7 +34,7 @@ fi
 log "Installing ALEO snarkOS v${SNARKOS_VERSION} and ALEO Pool Server..."
 
 # Template directory
-TEMPLATE_DIR="/opt/solo-pool/install/files/config"
+TEMPLATE_DIR="/opt/solopool/install/files/config"
 
 # Determine network mode settings
 # snarkOS --network expects a number: 0=mainnet, 1=testnet

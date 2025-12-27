@@ -1,0 +1,243 @@
+#!/bin/bash
+# =============================================================================
+# Solopool Configuration
+# =============================================================================
+# Copy this file to config.sh and edit before running install.sh:
+#   cp config.sh.example config.sh
+#   nano config.sh
+#   sudo ./install.sh
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# MOUNT POINT - Optional external storage
+# -----------------------------------------------------------------------------
+# Leave empty to use /opt/solopool as the base directory
+# Set to a mount point path to use external storage (e.g., "/mnt/data")
+# The mount point must exist and be mounted before running install.sh
+MOUNT_POINT=""
+
+# -----------------------------------------------------------------------------
+# NETWORK MODE - Testing vs Production
+# -----------------------------------------------------------------------------
+# Options: "mainnet" (production) or "testnet" (testing)
+# - mainnet: Real coins, real blockchain, production use
+# - testnet: Public test networks for testing without real funds
+#            Bitcoin/BCH/DGB use testnet, Monero uses stagenet,
+#            Tari uses esmeralda, ALEO uses testnet
+NETWORK_MODE="mainnet"
+
+# -----------------------------------------------------------------------------
+# SYNC MODE - Initial Sync vs Production
+# -----------------------------------------------------------------------------
+# Options: "initial" (fast sync) or "production" (mining-ready)
+# - initial: Aggressive settings for fast blockchain sync
+#            Bitcoin/BCH/DGB: blocksonly=1 (no mempool, faster)
+#            Monero: db-sync-mode=fast (faster, risk on crash)
+# - production: Safe settings required for mining operations
+#            Bitcoin/BCH/DGB: full mempool for block templates
+#            Monero: db-sync-mode=safe (data integrity)
+#
+# WORKFLOW: Deploy with "initial", wait for sync, then run:
+#   /opt/solopool/bin/switch-mode.sh production
+SYNC_MODE="initial"
+
+# -----------------------------------------------------------------------------
+# POOL SELECTION - Enable/disable each pool
+# -----------------------------------------------------------------------------
+ENABLE_BITCOIN_POOL="true"
+ENABLE_BCH_POOL="true"
+ENABLE_DGB_POOL="true"
+ENABLE_ALEO_POOL="true"
+
+# -----------------------------------------------------------------------------
+# MONERO/TARI POOL MODE
+# Options: "merge" (both coins via merge mining proxy - recommended)
+#          "monero_only" (XMR only via monero-pool)
+#          "tari_only" (XTM only via minotari_miner)
+#          "false" or "" to disable both Monero and Tari pools
+# Note: "merged" is accepted as an alias for "merge"
+# -----------------------------------------------------------------------------
+ENABLE_MONERO_TARI_POOL="merge"
+
+# -----------------------------------------------------------------------------
+# SSH CONFIGURATION
+# -----------------------------------------------------------------------------
+SSH_PORT="22"
+
+# -----------------------------------------------------------------------------
+# SYSTEM TIMEZONE
+# -----------------------------------------------------------------------------
+# Timezone for the server (used for logs, maintenance schedules, etc.)
+# See: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+# Examples: "UTC", "America/New_York", "Europe/London", "Asia/Tokyo"
+TIMEZONE="UTC"
+
+# -----------------------------------------------------------------------------
+# STRATUM PORTS - Ports miners connect to
+# -----------------------------------------------------------------------------
+BTC_STRATUM_PORT="3333"
+BCH_STRATUM_PORT="3334"
+DGB_STRATUM_PORT="3335"
+XMR_STRATUM_PORT="3336"
+XTM_STRATUM_PORT="3337"
+XMR_XTM_MERGE_STRATUM_PORT="3338"
+ALEO_STRATUM_PORT="3339"
+
+# -----------------------------------------------------------------------------
+# POOL API PORTS - Internal ports for pool software stats
+# -----------------------------------------------------------------------------
+# monero-pool WebUI/API port (for stats/shares)
+MONERO_POOL_API_PORT="4243"
+# Merge mining proxy stats API
+MERGE_PROXY_API_PORT="18081"
+# Minotari miner stats API (for tari_only mode)
+TARI_MINER_API_PORT="18084"
+# ALEO pool server stats API
+ALEO_POOL_API_PORT="4000"
+
+# -----------------------------------------------------------------------------
+# PAYMENT PROCESSOR
+# -----------------------------------------------------------------------------
+# Payment processor REST API port (for WebUI integration)
+PAYMENTS_API_PORT="8081"
+
+# -----------------------------------------------------------------------------
+# NODE RPC PORTS - For pool software to communicate with nodes
+# -----------------------------------------------------------------------------
+# Bitcoin Core RPC
+BITCOIN_RPC_PORT="8332"
+# Bitcoin Cash Node RPC
+BCH_RPC_PORT="8334"
+# DigiByte Core RPC
+DGB_RPC_PORT="14022"
+# Monero daemon RPC (JSON-RPC)
+MONERO_RPC_PORT="18081"
+# Tari node GRPC
+TARI_NODE_GRPC_PORT="18142"
+# ALEO snarkOS REST API
+ALEO_REST_PORT="3030"
+# ALEO snarkOS RPC (for transactions)
+ALEO_RPC_PORT="3033"
+
+# -----------------------------------------------------------------------------
+# WALLET RPC PORTS - For payment processor to send transactions
+# -----------------------------------------------------------------------------
+# Monero wallet RPC (monero-wallet-rpc)
+MONERO_WALLET_RPC_PORT="18082"
+# Tari console wallet GRPC
+TARI_WALLET_GRPC_PORT="18143"
+
+# -----------------------------------------------------------------------------
+# ZMQ PORTS - For real-time block/transaction notifications
+# -----------------------------------------------------------------------------
+# Bitcoin ZMQ
+BITCOIN_ZMQ_BLOCK_PORT="28332"
+BITCOIN_ZMQ_TX_PORT="28333"
+# Bitcoin Cash ZMQ
+BCH_ZMQ_BLOCK_PORT="28334"
+BCH_ZMQ_TX_PORT="28335"
+# DigiByte ZMQ
+DGB_ZMQ_BLOCK_PORT="28336"
+DGB_ZMQ_TX_PORT="28337"
+# Monero ZMQ
+MONERO_ZMQ_PORT="18083"
+
+# -----------------------------------------------------------------------------
+# STARTING DIFFICULTY - Initial difficulty for miners
+# -----------------------------------------------------------------------------
+# Set ENABLE_CUSTOM_DIFFICULTY="true" to use custom starting difficulties
+# When disabled, pools use their default starting difficulties
+ENABLE_CUSTOM_DIFFICULTY="false"
+
+# CKPool (BTC/BCH/DGB) - Default: 6000 (tuned for Avalon Nano 3S @ 6 TH/s)
+# Formula: difficulty = hashrate_TH x 1000 (targets ~3 second share intervals)
+# Adjust based on your miners: 1 TH/s = 1000, 100 TH/s = 100000
+BTC_START_DIFFICULTY="6000"
+BCH_START_DIFFICULTY="6000"
+DGB_START_DIFFICULTY="6000"
+
+# monero-pool (XMR) - Default: 4500 (tuned for 1.5 KH/s RandomX)
+# monero-pool uses vardiff, but this sets the initial difficulty
+# Formula: difficulty = hashrate_KH x 3 (targets ~3 second share intervals)
+XMR_START_DIFFICULTY="4500"
+
+# Tari (XTM) - Default: 4500 (tuned for 1.5 KH/s RandomX)
+XTM_START_DIFFICULTY="4500"
+
+# Merge Mining Proxy (XMR+XTM) - Default: 4500 (tuned for 1.5 KH/s RandomX)
+XMR_XTM_MERGE_START_DIFFICULTY="4500"
+
+# ALEO - Default: 1 (tuned for IceRiver AE0 @ 60 MH/s)
+# ALEO uses zkSNARK proof generation, difficulty scaling differs from hash mining
+ALEO_START_DIFFICULTY="1"
+
+# -----------------------------------------------------------------------------
+# NETWORK MODE - P2P connectivity settings
+# -----------------------------------------------------------------------------
+# Set to "false" for outbound-only mode (recommended for private pools)
+# This reduces attack surface and simplifies firewall - only stratum ports needed
+# Set to "true" to accept incoming P2P connections from coin networks
+ENABLE_INBOUND_P2P="false"
+
+# -----------------------------------------------------------------------------
+# WEB UI CONFIGURATION
+# -----------------------------------------------------------------------------
+# Enable/disable WebUI entirely
+ENABLE_WEBUI="true"
+# HTTP server settings (disabled by default - use HTTPS)
+WEBUI_HTTP_ENABLED="false"
+WEBUI_HTTP_PORT="8080"
+# HTTPS server settings (uses self-signed 10-year certificate)
+WEBUI_HTTPS_ENABLED="true"
+WEBUI_HTTPS_PORT="8443"
+# Stats refresh interval in seconds (how often to poll pool backends)
+WEBUI_REFRESH_INTERVAL="15"
+# WebUI authentication username (password is auto-generated)
+WEBUI_USER="admin"
+
+# -----------------------------------------------------------------------------
+# MAINTENANCE SCHEDULING
+# -----------------------------------------------------------------------------
+# Daily maintenance time (SQLite optimization, log rotation, backup)
+# Uses TIMEZONE setting above. Default: 2:15 AM
+MAINTENANCE_HOUR="2"
+MAINTENANCE_MINUTE="15"
+
+# -----------------------------------------------------------------------------
+# LOG RETENTION AND ROTATION
+# -----------------------------------------------------------------------------
+# Number of days to keep log files before deletion
+LOG_RETENTION_DAYS="30"
+# Number of days before compressing rotated logs
+LOG_COMPRESS_AFTER_DAYS="14"
+
+# -----------------------------------------------------------------------------
+# SYSTEM USER - Dedicated user for running pool services
+# -----------------------------------------------------------------------------
+POOL_USER="pool"
+
+# -----------------------------------------------------------------------------
+# BACKUP CONFIGURATION
+# -----------------------------------------------------------------------------
+# Maximum age of backups in days (older backups are deleted)
+BACKUP_RETENTION_DAYS="30"
+
+# -----------------------------------------------------------------------------
+# VERSION PINNING - Node Software
+# -----------------------------------------------------------------------------
+BITCOIN_VERSION="30.0"
+BCHN_VERSION="28.0.1"
+DIGIBYTE_VERSION="8.26.1"
+MONERO_VERSION="0.18.4.4"
+TARI_VERSION="5.1.0"
+SNARKOS_VERSION="4.4.0"
+
+# -----------------------------------------------------------------------------
+# VERSION PINNING - Pool Software
+# -----------------------------------------------------------------------------
+# CKPool: No formal releases, pinned to specific commit
+CKPOOL_COMMIT="590fb2a2c6164beb85d458b3a212723507a9d8ac"
+# monero-pool: Monero mining pool with share tracking (jtgrassie/monero-pool)
+MONERO_POOL_COMMIT="master"
+# ALEO Pool Server: Stratum server for ALEO ASIC mining
+ALEO_POOL_COMMIT="992792eb9aaf29fde0c20c9942ec5a9244a4a0a6"

@@ -2,7 +2,7 @@
 # See: https://github.com/jtgrassie/monero-pool
 
 # Pool wallet address (receives block rewards)
-# Uses the generated pool wallet from /opt/solo-pool/node/monero/wallet/
+# Uses the generated pool wallet from /opt/solopool/node/xmr/wallet/
 pool-wallet = ${XMR_POOL_WALLET_ADDRESS}
 
 # Stratum listen address and port

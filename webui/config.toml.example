@@ -9,20 +9,20 @@ port = 8080
 refresh_interval_secs = 10
 
 # Database directory for worker stats
-db_dir = "/opt/solo-pool/webui/data"
+db_dir = "/opt/solopool/webui/data"
 
 # HTTPS Configuration
 # Uses a self-signed certificate by default (10-year validity)
 [server.https]
 enabled = true
 port = 8443
-cert_path = "/opt/solo-pool/webui/certs/server.crt"
-key_path = "/opt/solo-pool/webui/certs/server.key"
+cert_path = "/opt/solopool/webui/certs/server.crt"
+key_path = "/opt/solopool/webui/certs/server.key"
 
 # Logging Configuration
 # Apache Combined Log Format for access.log, standard format for error.log
 [server.logging]
-log_dir = "/opt/solo-pool/webui/logs"
+log_dir = "/opt/solopool/webui/logs"
 access_log_enabled = true
 error_log_enabled = true
 
@@ -32,12 +32,12 @@ error_log_enabled = true
 # =============================================================================
 [auth]
 enabled = true
-# Credentials file containing SOLO_POOL_WEBUI_USER and SOLO_POOL_WEBUI_PASS
-credentials_file = "/opt/solo-pool/.credentials"
+# Credentials file containing SOLOPOOL_WEBUI_USER and SOLOPOOL_WEBUI_PASS
+credentials_file = "/opt/solopool/.credentials"
 # Session timeout in seconds (default: 24 hours)
 session_timeout_secs = 86400
 # Cookie name for session management
-cookie_name = "solo_pool_session"
+cookie_name = "solopool_session"
 
 # =============================================================================
 # CKPool-based pools (BTC, BCH, DGB)

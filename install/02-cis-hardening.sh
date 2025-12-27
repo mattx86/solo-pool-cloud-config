@@ -10,7 +10,7 @@
 set -e
 
 # Source configuration
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 # Validate config was loaded successfully
 if [ "${CONFIG_LOADED:-}" != "true" ]; then

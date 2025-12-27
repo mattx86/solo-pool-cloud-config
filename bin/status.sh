@@ -1,6 +1,6 @@
 #!/bin/bash
 # Check status of all services
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 # Validate config was loaded
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
@@ -51,7 +51,7 @@ esac
 
 echo ""
 echo "=== Web Dashboard ==="
-[ "${ENABLE_WEBUI}" = "true" ] && systemctl status solo-pool-webui --no-pager -l | head -5
+[ "${ENABLE_WEBUI}" = "true" ] && systemctl status solopool-webui --no-pager -l | head -5
 
 echo ""
 echo "=== Payment Processor ==="
@@ -60,4 +60,4 @@ case "${ENABLE_MONERO_TARI_POOL}" in
     merge|merged|monero_only|tari_only) NEED_PAYMENTS="true" ;;
 esac
 [ "${ENABLE_ALEO_POOL}" = "true" ] && NEED_PAYMENTS="true"
-[ "${NEED_PAYMENTS}" = "true" ] && systemctl status solo-pool-payments --no-pager -l | head -5
+[ "${NEED_PAYMENTS}" = "true" ] && systemctl status solopool-payments --no-pager -l | head -5

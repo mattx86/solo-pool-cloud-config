@@ -12,7 +12,7 @@
 # Run via cron at scheduled time (default: 2:15 AM)
 # =============================================================================
 
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
     echo "ERROR: Failed to load configuration" >&2
@@ -138,7 +138,7 @@ done
 log "  Removed ${DELETED_COUNT} old log archive(s)"
 
 # Remove temporary files older than 7 days
-find /tmp -name "solo-pool-*" -mtime +7 -delete 2>/dev/null || true
+find /tmp -name "solopool-*" -mtime +7 -delete 2>/dev/null || true
 
 # =============================================================================
 # 4. BACKUP

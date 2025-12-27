@@ -9,14 +9,14 @@
 # 2. Paste into your cloud provider's cloud-config/user-data field
 # 3. Launch your server
 #
-# Output is logged to /opt/solo-pool/install/install.log and /dev/tty1
+# Output is logged to /opt/solopool/install/install.log and /dev/tty1
 
 # =============================================================================
 # CONFIGURATION VARIABLES - EDIT THESE BEFORE DEPLOYMENT
 # =============================================================================
 
 write_files:
-  - path: /opt/solo-pool/install/config.sh
+  - path: /opt/solopool/install/config.sh
     permissions: '0600'
     owner: root:root
     content: |
@@ -28,7 +28,7 @@ write_files:
       # SCRIPT SOURCE - Where to download setup scripts from
       # ---------------------------------------------------------------------
       # Change this to your GitHub raw URL or web server hosting the scripts
-      SCRIPTS_BASE_URL="https://raw.githubusercontent.com/mattx86/solo-pool-cloud-config/refs/heads/main/install"
+      SCRIPTS_BASE_URL="https://raw.githubusercontent.com/mattx86/solopool/refs/heads/main/install"
 
       # ---------------------------------------------------------------------
       # NETWORK MODE - Testing vs Production
@@ -52,7 +52,7 @@ write_files:
       #            Monero: db-sync-mode=safe (data integrity)
       #
       # WORKFLOW: Deploy with "initial", wait for sync, then run:
-      #   /opt/solo-pool/bin/switch-mode.sh production
+      #   /opt/solopool/bin/switch-mode.sh production
       SYNC_MODE="initial"
 
       # ---------------------------------------------------------------------
@@ -245,28 +245,28 @@ write_files:
       # ---------------------------------------------------------------------
       # DIRECTORY STRUCTURE
       # ---------------------------------------------------------------------
-      BASE_DIR="/opt/solo-pool"
+      BASE_DIR="/opt/solopool"
       BIN_DIR="${BASE_DIR}/bin"
       INSTALL_DIR="${BASE_DIR}/install"
       NODE_DIR="${BASE_DIR}/node"
       POOL_DIR="${BASE_DIR}/pool"
 
       # Node directories
-      BITCOIN_DIR="${NODE_DIR}/bitcoin"
-      BCHN_DIR="${NODE_DIR}/bchn"
-      DIGIBYTE_DIR="${NODE_DIR}/digibyte"
-      MONERO_DIR="${NODE_DIR}/monero"
-      TARI_DIR="${NODE_DIR}/tari"
+      BITCOIN_DIR="${NODE_DIR}/btc"
+      BCHN_DIR="${NODE_DIR}/bch"
+      DIGIBYTE_DIR="${NODE_DIR}/dgb"
+      MONERO_DIR="${NODE_DIR}/xmr"
+      TARI_DIR="${NODE_DIR}/xtm"
       ALEO_DIR="${NODE_DIR}/aleo"
 
       # Pool directories
-      BTC_CKPOOL_DIR="${POOL_DIR}/btc-ckpool"
-      BCH_CKPOOL_DIR="${POOL_DIR}/bch-ckpool"
-      DGB_CKPOOL_DIR="${POOL_DIR}/dgb-ckpool"
-      XMR_MONERO_POOL_DIR="${POOL_DIR}/xmr-monero-pool"
-      XTM_MINER_DIR="${POOL_DIR}/xtm-minotari-miner"
-      XMR_XTM_MERGE_DIR="${POOL_DIR}/xmr-xtm-minotari-merge-proxy"
-      ALEO_POOL_DIR="${POOL_DIR}/aleo-pool-server"
+      BTC_CKPOOL_DIR="${POOL_DIR}/btc"
+      BCH_CKPOOL_DIR="${POOL_DIR}/bch"
+      DGB_CKPOOL_DIR="${POOL_DIR}/dgb"
+      XMR_MONERO_POOL_DIR="${POOL_DIR}/xmr"
+      XTM_MINER_DIR="${POOL_DIR}/xtm"
+      XMR_XTM_MERGE_DIR="${POOL_DIR}/xmr-xtm"
+      ALEO_POOL_DIR="${POOL_DIR}/aleo"
 
       # WebUI directory
       WEBUI_DIR="${BASE_DIR}/webui"
@@ -361,7 +361,7 @@ write_files:
 
 runcmd:
   # Create directory structure first (needed for log file)
-  - mkdir -p /opt/solo-pool/install
+  - mkdir -p /opt/solopool/install
 
   # Ensure /dev/tty1 is available for output (create symlink if needed for cloud environments)
   - |
@@ -369,24 +369,24 @@ runcmd:
       # Some cloud environments don't have tty1, use console instead
       ln -sf /dev/console /dev/tty1 2>/dev/null || true
     fi
-    LOG_FILE="/opt/solo-pool/install/install.log"
+    LOG_FILE="/opt/solopool/install/install.log"
     echo "=============================================="  | tee -a "${LOG_FILE}" | tee -a /dev/tty1
     echo "Solo Mining Pool Setup - Starting"             | tee -a "${LOG_FILE}" | tee -a /dev/tty1
     echo "$(date)"                                       | tee -a "${LOG_FILE}" | tee -a /dev/tty1
     echo "=============================================="  | tee -a "${LOG_FILE}" | tee -a /dev/tty1
 
   # Make config readable
-  - chmod 600 /opt/solo-pool/install/config.sh
+  - chmod 600 /opt/solopool/install/config.sh
 
   # Source config to get SCRIPTS_BASE_URL
   - |
-    . /opt/solo-pool/install/config.sh
+    . /opt/solopool/install/config.sh
     log "Scripts will be downloaded from: ${SCRIPTS_BASE_URL}"
 
   # Download all scripts
   - |
-    . /opt/solo-pool/install/config.sh
-    cd /opt/solo-pool/install
+    . /opt/solopool/install/config.sh
+    cd /opt/solopool/install
 
     log "Downloading setup scripts..."
     for script in \
@@ -417,8 +417,8 @@ runcmd:
 
   # Download template files
   - |
-    . /opt/solo-pool/install/config.sh
-    cd /opt/solo-pool/install
+    . /opt/solopool/install/config.sh
+    cd /opt/solopool/install
 
     # Create directory structure
     mkdir -p files/config files/systemd files/motd
@@ -441,7 +441,7 @@ runcmd:
       files/config/start-tari-wallet.sh.template \
       files/config/start-aleo-pool.sh.template \
       files/config/start-aleo-node.sh.template \
-      files/config/solo-pool.cron.template \
+      files/config/solopool.cron.template \
       files/config/logrotate.conf.template
     do
       if wget -q "${SCRIPTS_BASE_URL}/${template}" -O "${template}"; then
@@ -468,9 +468,9 @@ runcmd:
       files/systemd/pool-aleo.service.template \
       files/systemd/wallet-xmr-rpc.service.template \
       files/systemd/wallet-xtm.service.template \
-      files/systemd/solo-pool.service.template \
-      files/systemd/solo-pool-webui.service.template \
-      files/systemd/solo-pool-payments.service.template
+      files/systemd/solopool.service.template \
+      files/systemd/solopool-webui.service.template \
+      files/systemd/solopool-payments.service.template
     do
       if wget -q "${SCRIPTS_BASE_URL}/${template}" -O "${template}"; then
         log "  ${template} OK"
@@ -480,16 +480,16 @@ runcmd:
     done
 
     log "Downloading motd file..."
-    if wget -q "${SCRIPTS_BASE_URL}/files/motd/99-solo-pool" -O "files/motd/99-solo-pool"; then
-      log "  files/motd/99-solo-pool OK"
+    if wget -q "${SCRIPTS_BASE_URL}/files/motd/99-solopool" -O "files/motd/99-solopool"; then
+      log "  files/motd/99-solopool OK"
     else
-      log_error "  files/motd/99-solo-pool FAILED"
+      log_error "  files/motd/99-solopool FAILED"
     fi
 
   # Execute scripts in order
   - |
-    . /opt/solo-pool/install/config.sh
-    cd /opt/solo-pool/install
+    . /opt/solopool/install/config.sh
+    cd /opt/solopool/install
 
     log ""
     log "=============================================="
@@ -617,12 +617,12 @@ runcmd:
 final_message: |
   Solo Mining Pool server setup complete!
 
-  Management Scripts: /opt/solo-pool/bin/
-  Install Scripts: /opt/solo-pool/install/
-  Configuration: /opt/solo-pool/install/config.sh
-  Install Log: /opt/solo-pool/install/install.log
-  Nodes: /opt/solo-pool/node/
-  Pools: /opt/solo-pool/pool/
+  Management Scripts: /opt/solopool/bin/
+  Install Scripts: /opt/solopool/install/
+  Configuration: /opt/solopool/install/config.sh
+  Install Log: /opt/solopool/install/install.log
+  Nodes: /opt/solopool/node/
+  Pools: /opt/solopool/pool/
 
   Check service status with: systemctl status <service-name>
   View logs with: journalctl -u <service-name> -f

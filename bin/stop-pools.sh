@@ -1,6 +1,6 @@
 #!/bin/bash
 # Stop all enabled pool services
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 # Validate config was loaded
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
@@ -19,11 +19,11 @@ esac
 [ "${ENABLE_ALEO_POOL}" = "true" ] && NEED_PAYMENTS="true"
 
 if [ "${NEED_PAYMENTS}" = "true" ]; then
-    sudo systemctl stop solo-pool-payments 2>/dev/null && echo "  Stopped solo-pool-payments"
+    sudo systemctl stop solopool-payments 2>/dev/null && echo "  Stopped solopool-payments"
 fi
 
 # Stop WebUI dashboard
-[ "${ENABLE_WEBUI}" = "true" ] && sudo systemctl stop solo-pool-webui && echo "  Stopped solo-pool-webui"
+[ "${ENABLE_WEBUI}" = "true" ] && sudo systemctl stop solopool-webui && echo "  Stopped solopool-webui"
 
 [ "${ENABLE_ALEO_POOL}" = "true" ] && sudo systemctl stop pool-aleo && echo "  Stopped pool-aleo"
 

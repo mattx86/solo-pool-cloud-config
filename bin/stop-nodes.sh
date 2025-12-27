@@ -1,6 +1,6 @@
 #!/bin/bash
 # Stop all enabled wallet and node services
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 # Validate config was loaded
 if [ "${CONFIG_LOADED:-}" != "true" ]; then

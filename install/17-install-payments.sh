@@ -15,7 +15,7 @@
 set -e
 
 # Source configuration
-INSTALL_DIR="${INSTALL_DIR:-/opt/solo-pool/install}"
+INSTALL_DIR="${INSTALL_DIR:-/opt/solopool/install}"
 source ${INSTALL_DIR}/config.sh
 
 # Validate config was loaded successfully
@@ -162,12 +162,12 @@ CARGO_BUILD_TIME=$((CARGO_BUILD_END - CARGO_BUILD_START))
 log "  Build completed in ${CARGO_BUILD_TIME} seconds"
 
 # Verify binary was created
-if [ ! -f "target/release/solo-pool-payments" ]; then
+if [ ! -f "target/release/solopool-payments" ]; then
     log_error "Build failed - binary not found"
     exit 1
 fi
 
-BINARY_SIZE=$(du -h target/release/solo-pool-payments | cut -f1)
+BINARY_SIZE=$(du -h target/release/solopool-payments | cut -f1)
 log "  Binary size: ${BINARY_SIZE}"
 
 # =============================================================================
@@ -176,12 +176,12 @@ log "  Binary size: ${BINARY_SIZE}"
 log "5. Installing Payment Processor..."
 
 # Move binary to bin/
-cp target/release/solo-pool-payments ${PAYMENTS_DIR}/bin/
+cp target/release/solopool-payments ${PAYMENTS_DIR}/bin/
 
 # Strip debug symbols
 if command -v strip &> /dev/null; then
-    strip ${PAYMENTS_DIR}/bin/solo-pool-payments 2>/dev/null || true
-    STRIPPED_SIZE=$(du -h ${PAYMENTS_DIR}/bin/solo-pool-payments | cut -f1)
+    strip ${PAYMENTS_DIR}/bin/solopool-payments 2>/dev/null || true
+    STRIPPED_SIZE=$(du -h ${PAYMENTS_DIR}/bin/solopool-payments | cut -f1)
     log "  Binary stripped: ${STRIPPED_SIZE}"
 fi
 
@@ -385,7 +385,7 @@ log "  Configuration generated"
 log "8. Setting permissions..."
 
 chown -R ${POOL_USER}:${POOL_USER} ${PAYMENTS_DIR}
-chmod 755 ${PAYMENTS_DIR}/bin/solo-pool-payments
+chmod 755 ${PAYMENTS_DIR}/bin/solopool-payments
 chmod 600 ${PAYMENTS_DIR}/config/config.toml
 chmod 755 ${PAYMENTS_DIR}/logs
 chmod 755 ${PAYMENTS_DIR}/data
@@ -413,16 +413,16 @@ Note: BTC/BCH/DGB use CKPool BTCSOLO mode where rewards go directly
 to the miner's wallet address (specified in stratum username).
 
 DIRECTORIES:
-  Binary:   ${PAYMENTS_DIR}/bin/solo-pool-payments
+  Binary:   ${PAYMENTS_DIR}/bin/solopool-payments
   Config:   ${PAYMENTS_DIR}/config/config.toml
   Database: ${PAYMENTS_DIR}/data/
   Logs:     ${PAYMENTS_DIR}/logs/
 
 SYSTEMD SERVICE:
-  Start:   sudo systemctl start solo-pool-payments
-  Stop:    sudo systemctl stop solo-pool-payments
-  Status:  sudo systemctl status solo-pool-payments
-  Logs:    journalctl -u solo-pool-payments -f
+  Start:   sudo systemctl start solopool-payments
+  Stop:    sudo systemctl stop solopool-payments
+  Status:  sudo systemctl status solopool-payments
+  Logs:    journalctl -u solopool-payments -f
 
 CONFIGURATION:
   Edit ${PAYMENTS_DIR}/config/config.toml to:
@@ -461,16 +461,16 @@ EOF
 # =============================================================================
 log_success "Solo Pool Payment Processor installed successfully"
 log ""
-log "  Binary:   ${PAYMENTS_DIR}/bin/solo-pool-payments"
+log "  Binary:   ${PAYMENTS_DIR}/bin/solopool-payments"
 log "  Config:   ${PAYMENTS_DIR}/config/config.toml"
 log "  Database: ${PAYMENTS_DIR}/data/"
 log "  Logs:     ${PAYMENTS_DIR}/logs/"
 log ""
 log "  Start the service:"
-log "    sudo systemctl start solo-pool-payments"
+log "    sudo systemctl start solopool-payments"
 log ""
 log "  View service logs:"
-log "    journalctl -u solo-pool-payments -f"
+log "    journalctl -u solopool-payments -f"
 log ""
 log "  *** BACKUP ALL POOL WALLET KEYS IMMEDIATELY! ***"
 log ""

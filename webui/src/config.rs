@@ -37,7 +37,7 @@ impl Default for AuthConfig {
 }
 
 fn default_credentials_path() -> String {
-    "/opt/solo-pool/.credentials".to_string()
+    "/opt/solopool/.credentials".to_string()
 }
 
 fn default_session_timeout() -> u64 {
@@ -45,7 +45,7 @@ fn default_session_timeout() -> u64 {
 }
 
 fn default_cookie_name() -> String {
-    "solo_pool_session".to_string()
+    "solopool_session".to_string()
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -149,19 +149,19 @@ fn default_https_port() -> u16 {
 }
 
 fn default_cert_path() -> String {
-    "/opt/solo-pool/webui/certs/server.crt".to_string()
+    "/opt/solopool/webui/certs/server.crt".to_string()
 }
 
 fn default_key_path() -> String {
-    "/opt/solo-pool/webui/certs/server.key".to_string()
+    "/opt/solopool/webui/certs/server.key".to_string()
 }
 
 fn default_log_dir() -> String {
-    "/opt/solo-pool/webui/logs".to_string()
+    "/opt/solopool/webui/logs".to_string()
 }
 
 fn default_db_dir() -> String {
-    "/opt/solo-pool/webui/data".to_string()
+    "/opt/solopool/webui/data".to_string()
 }
 
 fn default_true() -> bool {
@@ -377,7 +377,7 @@ impl Config {
     pub fn load() -> anyhow::Result<Self> {
         // Try to load from config file, fall back to defaults
         let config_path = std::env::var("CONFIG_PATH")
-            .unwrap_or_else(|_| "/opt/solo-pool/webui/config/config.toml".to_string());
+            .unwrap_or_else(|_| "/opt/solopool/webui/config/config.toml".to_string());
 
         if std::path::Path::new(&config_path).exists() {
             let content = std::fs::read_to_string(&config_path)?;

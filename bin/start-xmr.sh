@@ -4,7 +4,7 @@
 # Starts node, waits for sync, initializes wallet, starts wallet-rpc, starts stratum
 # =============================================================================
 
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
     echo "[XMR] ERROR: Failed to load configuration" >&2

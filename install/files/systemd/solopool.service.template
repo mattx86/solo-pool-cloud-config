@@ -1,5 +1,5 @@
 [Unit]
-Description=Solopool - All Services
+Description=Solo Pool - All Services
 After=network-online.target
 Wants=network-online.target
 

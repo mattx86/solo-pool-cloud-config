@@ -5,7 +5,7 @@
 # For merge mode: waits for XMR to be synced first, then starts merge proxy
 # =============================================================================
 
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
     echo "[XTM] ERROR: Failed to load configuration" >&2

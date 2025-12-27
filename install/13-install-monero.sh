@@ -16,7 +16,7 @@
 set -e
 
 # Source configuration
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 # Validate config was loaded successfully
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
@@ -37,7 +37,7 @@ esac
 log "Installing Monero node v${MONERO_VERSION} and monero-pool..."
 
 # Template directory
-TEMPLATE_DIR="/opt/solo-pool/install/files/config"
+TEMPLATE_DIR="/opt/solopool/install/files/config"
 
 # =============================================================================
 # 1. INSTALL MONEROD

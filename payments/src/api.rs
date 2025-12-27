@@ -84,7 +84,7 @@ async fn require_auth(
 async fn health_check() -> impl IntoResponse {
     Json(serde_json::json!({
         "status": "ok",
-        "service": "solo-pool-payments"
+        "service": "solopool-payments"
     }))
 }
 

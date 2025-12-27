@@ -1,5 +1,5 @@
 [package]
-name = "solo-pool-webui"
+name = "solopool-webui"
 version = "0.1.0"
 edition = "2021"
 description = "Web UI for Solo Mining Pool statistics"

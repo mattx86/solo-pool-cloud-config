@@ -4,7 +4,7 @@
 # Starts node, waits for sync, then starts stratum
 # =============================================================================
 
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
     echo "[BTC] ERROR: Failed to load configuration" >&2

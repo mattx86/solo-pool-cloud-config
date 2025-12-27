@@ -1,5 +1,5 @@
 [Unit]
-Description=Solopool Payment Processor
+Description=Solo Pool Payment Processor
 After=network-online.target
 Wants=network-online.target
 # Payments can start early - it will gracefully handle unavailable wallets

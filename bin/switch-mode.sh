@@ -20,7 +20,7 @@
 
 set -e
 
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
     echo "ERROR: Failed to load configuration" >&2
@@ -50,13 +50,13 @@ echo ""
 
 # Update SYNC_MODE in config.sh
 echo "1. Updating SYNC_MODE in config.sh..."
-sed -i "s/^      SYNC_MODE=\".*\"/      SYNC_MODE=\"${MODE}\"/" /opt/solo-pool/install/config.sh
+sed -i "s/^      SYNC_MODE=\".*\"/      SYNC_MODE=\"${MODE}\"/" /opt/solopool/install/config.sh
 
 # Re-source config to get new setting
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 # Template directory
-TEMPLATE_DIR="/opt/solo-pool/install/files/config"
+TEMPLATE_DIR="/opt/solopool/install/files/config"
 
 # Regenerate Bitcoin config if enabled
 if [ "${ENABLE_BITCOIN_POOL}" = "true" ]; then

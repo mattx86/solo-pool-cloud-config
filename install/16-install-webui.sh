@@ -14,7 +14,7 @@
 set -e
 
 # Source configuration
-INSTALL_DIR="${INSTALL_DIR:-/opt/solo-pool/install}"
+INSTALL_DIR="${INSTALL_DIR:-/opt/solopool/install}"
 source ${INSTALL_DIR}/config.sh
 
 # Validate config was loaded successfully
@@ -231,13 +231,13 @@ CARGO_BUILD_TIME=$((CARGO_BUILD_END - CARGO_BUILD_START))
 log "  Build completed in ${CARGO_BUILD_TIME} seconds"
 
 # Verify binary was created
-if [ ! -f "target/release/solo-pool-webui" ]; then
+if [ ! -f "target/release/solopool-webui" ]; then
     log_error "Build failed - binary not found"
     exit 1
 fi
 
 # Get binary size for logging
-BINARY_SIZE=$(du -h target/release/solo-pool-webui | cut -f1)
+BINARY_SIZE=$(du -h target/release/solopool-webui | cut -f1)
 log "  Binary size: ${BINARY_SIZE}"
 
 # =============================================================================
@@ -253,12 +253,12 @@ mkdir -p ${WEBUI_DIR}/logs
 mkdir -p ${WEBUI_DIR}/certs
 
 # Move binary to bin/
-cp target/release/solo-pool-webui ${WEBUI_DIR}/bin/
+cp target/release/solopool-webui ${WEBUI_DIR}/bin/
 
 # Strip debug symbols to reduce binary size (optional but recommended)
 if command -v strip &> /dev/null; then
-    strip ${WEBUI_DIR}/bin/solo-pool-webui 2>/dev/null || true
-    STRIPPED_SIZE=$(du -h ${WEBUI_DIR}/bin/solo-pool-webui | cut -f1)
+    strip ${WEBUI_DIR}/bin/solopool-webui 2>/dev/null || true
+    STRIPPED_SIZE=$(du -h ${WEBUI_DIR}/bin/solopool-webui | cut -f1)
     log "  Binary stripped: ${STRIPPED_SIZE}"
 fi
 
@@ -310,7 +310,7 @@ if [ "${WEBUI_HTTPS_ENABLED}" = "true" ]; then
         -newkey rsa:2048 \
         -keyout ${KEY_FILE} \
         -out ${CERT_FILE} \
-        -subj "/C=US/ST=State/L=City/O=Solo Pool/OU=Mining/CN=solo-pool" \
+        -subj "/C=US/ST=State/L=City/O=Solo Pool/OU=Mining/CN=solopool" \
         -addext "subjectAltName=${SAN_LIST}" \
         2>/dev/null
 
@@ -596,7 +596,7 @@ log "  Configuration generated"
 log "10. Setting permissions..."
 
 chown -R ${POOL_USER}:${POOL_USER} ${WEBUI_DIR}
-chmod 755 ${WEBUI_DIR}/bin/solo-pool-webui
+chmod 755 ${WEBUI_DIR}/bin/solopool-webui
 chmod 644 ${WEBUI_DIR}/config/config.toml
 # Ensure logs directory is writable
 chmod 755 ${WEBUI_DIR}/logs
@@ -678,16 +678,16 @@ cat >> ${WEBUI_DIR}/SETUP_NOTES.txt << EOF
 
 DIRECTORIES:
   Runtime:  ${WEBUI_DIR}
-  Binary:   ${WEBUI_DIR}/bin/solo-pool-webui (static files embedded)
+  Binary:   ${WEBUI_DIR}/bin/solopool-webui (static files embedded)
   Config:   ${WEBUI_DIR}/config/config.toml
   Database: ${WEBUI_DIR}/data/stats.db (worker statistics)
   Logs:     ${WEBUI_DIR}/logs/
 
 SYSTEMD SERVICE:
-  Start:   sudo systemctl start solo-pool-webui
-  Stop:    sudo systemctl stop solo-pool-webui
-  Status:  sudo systemctl status solo-pool-webui
-  Logs:    journalctl -u solo-pool-webui -f
+  Start:   sudo systemctl start solopool-webui
+  Stop:    sudo systemctl stop solopool-webui
+  Status:  sudo systemctl status solopool-webui
+  Logs:    journalctl -u solopool-webui -f
 
 CONFIGURATION:
   Edit ${WEBUI_DIR}/config/config.toml to change settings.
@@ -728,9 +728,9 @@ REBUILDING:
     cd ${WEBUI_DIR}
     source ~/.cargo/env
     cargo build --release
-    cp target/release/solo-pool-webui bin/
+    cp target/release/solopool-webui bin/
     rm -rf target
-    systemctl restart solo-pool-webui
+    systemctl restart solopool-webui
 EOF
 
 # =============================================================================
@@ -750,15 +750,15 @@ if [ "${WEBUI_HTTPS_ENABLED}" = "true" ]; then
     log "  HTTPS: https://YOUR_SERVER_IP:${WEBUI_HTTPS_PORT}"
 fi
 log ""
-log "  Binary: ${WEBUI_DIR}/bin/solo-pool-webui"
+log "  Binary: ${WEBUI_DIR}/bin/solopool-webui"
 log "  Config: ${WEBUI_DIR}/config/config.toml"
 log "  Logs:   ${WEBUI_DIR}/logs/"
 log ""
 log "  Start the dashboard:"
-log "    sudo systemctl start solo-pool-webui"
+log "    sudo systemctl start solopool-webui"
 log ""
 log "  View service logs:"
-log "    journalctl -u solo-pool-webui -f"
+log "    journalctl -u solopool-webui -f"
 log ""
 log "  View access/error logs:"
 log "    tail -f ${WEBUI_DIR}/logs/access.log"

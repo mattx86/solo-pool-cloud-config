@@ -6,7 +6,7 @@
 # Useful after configuration changes or to recover from issues.
 # =============================================================================
 
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
     echo "ERROR: Failed to load configuration" >&2

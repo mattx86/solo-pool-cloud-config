@@ -9,7 +9,7 @@
 #   4. WebUI (stop dashboard last)
 # =============================================================================
 
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
     echo "ERROR: Failed to load configuration" >&2
@@ -33,13 +33,13 @@ echo ""
 
 # 3. Stop payments processor
 echo "[3/4] Stopping payment processor..."
-sudo systemctl stop solo-pool-payments 2>/dev/null && echo "  Stopped solo-pool-payments" || true
+sudo systemctl stop solopool-payments 2>/dev/null && echo "  Stopped solopool-payments" || true
 echo ""
 
 # 4. Stop WebUI last (keep dashboard visible during shutdown)
 echo "[4/4] Stopping WebUI..."
 if [ "${ENABLE_WEBUI}" = "true" ]; then
-    sudo systemctl stop solo-pool-webui 2>/dev/null && echo "  Stopped solo-pool-webui" || true
+    sudo systemctl stop solopool-webui 2>/dev/null && echo "  Stopped solopool-webui" || true
 fi
 echo ""
 

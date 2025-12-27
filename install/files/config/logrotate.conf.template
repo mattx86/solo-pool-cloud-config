@@ -1,6 +1,6 @@
 # Solo Pool Log Rotation Configuration
 # Auto-generated during installation
-# Run via cron: /etc/cron.d/solo-pool
+# Run via cron: /etc/cron.d/solopool
 #
 # Retention policy:
 #   - Retain ${LOG_RETENTION_DAYS} days of logs

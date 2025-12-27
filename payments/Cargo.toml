@@ -1,5 +1,5 @@
 [package]
-name = "solo-pool-payments"
+name = "solopool-payments"
 version = "0.1.0"
 edition = "2021"
 description = "Payment processor for solo mining pool - redistributes rewards to miners"
@@ -48,5 +48,5 @@ async-trait = "0.1"
 uuid = { version = "1", features = ["v4", "serde"] }
 
 [[bin]]
-name = "solo-pool-payments"
+name = "solopool-payments"
 path = "src/main.rs"

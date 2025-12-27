@@ -20,7 +20,7 @@
 set -e
 
 # Source configuration
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 # Validate config was loaded successfully
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
@@ -41,7 +41,7 @@ esac
 log "Installing Tari node and mining software v${TARI_VERSION}..."
 
 # Template directory
-TEMPLATE_DIR="/opt/solo-pool/install/files/config"
+TEMPLATE_DIR="/opt/solopool/install/files/config"
 
 # Determine network mode settings
 if [ "${NETWORK_MODE}" = "testnet" ]; then

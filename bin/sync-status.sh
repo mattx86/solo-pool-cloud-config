@@ -3,7 +3,7 @@
 # sync-status.sh - Check blockchain sync status for all enabled nodes
 # =============================================================================
 
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 # Validate config was loaded
 if [ "${CONFIG_LOADED:-}" != "true" ]; then

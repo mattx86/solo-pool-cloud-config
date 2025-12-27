@@ -7,7 +7,7 @@
 set -e
 
 # Source configuration
-source /opt/solo-pool/install/config.sh
+source /opt/solopool/install/config.sh
 
 # Validate config was loaded successfully
 if [ "${CONFIG_LOADED:-}" != "true" ]; then
@@ -223,7 +223,7 @@ log "4. Installing login message..."
 # Disable default Ubuntu MOTD scripts (ads, system info, etc.)
 log "  Disabling default Ubuntu MOTD..."
 for motd_script in /etc/update-motd.d/*; do
-    if [ -f "${motd_script}" ] && [ "$(basename ${motd_script})" != "99-solo-pool" ]; then
+    if [ -f "${motd_script}" ] && [ "$(basename ${motd_script})" != "99-solopool" ]; then
         chmod -x "${motd_script}" 2>/dev/null || true
     fi
 done
@@ -233,8 +233,8 @@ systemctl disable motd-news.timer 2>/dev/null || true
 systemctl stop motd-news.timer 2>/dev/null || true
 
 log "  Downloading MOTD..."
-if wget -q "${FILES_URL}/motd/99-solo-pool" -O "/etc/update-motd.d/99-solo-pool" 2>/dev/null; then
-    chmod +x /etc/update-motd.d/99-solo-pool
+if wget -q "${FILES_URL}/motd/99-solopool" -O "/etc/update-motd.d/99-solopool" 2>/dev/null; then
+    chmod +x /etc/update-motd.d/99-solopool
     log "  Installed MOTD"
 else
     log_error "  Failed to download MOTD"
@@ -256,7 +256,7 @@ CONFIG_TEMPLATES_URL="${FILES_URL}/config"
 # Download maintenance templates
 log "  Downloading maintenance templates..."
 wget -q "${CONFIG_TEMPLATES_URL}/logrotate.conf.template" -O "${TEMPLATE_DIR}/logrotate.conf.template" 2>/dev/null || true
-wget -q "${CONFIG_TEMPLATES_URL}/solo-pool.cron.template" -O "${TEMPLATE_DIR}/solo-pool.cron.template" 2>/dev/null || true
+wget -q "${CONFIG_TEMPLATES_URL}/solopool.cron.template" -O "${TEMPLATE_DIR}/solopool.cron.template" 2>/dev/null || true
 
 # Export variables for template substitution
 export BASE_DIR BIN_DIR BITCOIN_DIR BCHN_DIR DIGIBYTE_DIR MONERO_DIR TARI_DIR ALEO_DIR
@@ -277,10 +277,10 @@ fi
 
 # Install cron job from template
 log "  Installing cron job..."
-if [ -f "${TEMPLATE_DIR}/solo-pool.cron.template" ]; then
-    envsubst < "${TEMPLATE_DIR}/solo-pool.cron.template" > /etc/cron.d/solo-pool
-    chmod 644 /etc/cron.d/solo-pool
-    log "  Cron job: /etc/cron.d/solo-pool"
+if [ -f "${TEMPLATE_DIR}/solopool.cron.template" ]; then
+    envsubst < "${TEMPLATE_DIR}/solopool.cron.template" > /etc/cron.d/solopool
+    chmod 644 /etc/cron.d/solopool
+    log "  Cron job: /etc/cron.d/solopool"
     log "  Schedule: ${MAINTENANCE_MINUTE} ${MAINTENANCE_HOUR} * * * (daily)"
 else
     log_error "  Cron template not found"
@@ -297,11 +297,11 @@ log "  Maintenance configured"
 # =============================================================================
 log ""
 log "6. Starting services..."
-log "  Enabling solo-pool service..."
-systemctl enable solo-pool >/dev/null 2>&1 || true
+log "  Enabling solopool service..."
+systemctl enable solopool >/dev/null 2>&1 || true
 
-log "  Starting solo-pool service (background)..."
-systemctl start solo-pool &
+log "  Starting solopool service (background)..."
+systemctl start solopool &
 
 # Give services a moment to start
 sleep 2
@@ -345,7 +345,7 @@ log "4. Then pools will be ready for mining"
 else
 log "1. Services started automatically - nodes are syncing in background"
 log "2. Check sync status: ${BIN_DIR}/sync-status.sh"
-log "3. View service status: systemctl status solo-pool"
+log "3. View service status: systemctl status solopool"
 log "4. Pools start automatically once nodes are synced"
 fi
 log ""
