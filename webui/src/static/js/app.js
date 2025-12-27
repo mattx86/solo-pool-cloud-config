@@ -116,6 +116,9 @@ async function logout() {
 function initDashboard() {
     const grid = document.getElementById('poolsGrid');
     grid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    // Apply saved collapsed state for nodes overview
+    applyNodesCollapsedState();
 }
 
 async function fetchStats() {
@@ -135,6 +138,9 @@ async function fetchStats() {
 }
 
 function updateDashboard(stats) {
+    // Update node sync status overview
+    updateNodesOverview(stats);
+
     const grid = document.getElementById('poolsGrid');
     grid.innerHTML = '';
 
@@ -156,6 +162,154 @@ function updateDashboard(stats) {
             </div>
         `;
     }
+}
+
+// Nodes overview collapsed state persistence
+const NODES_COLLAPSED_KEY = 'solopool_nodes_collapsed';
+
+function isNodesCollapsed() {
+    return localStorage.getItem(NODES_COLLAPSED_KEY) === 'true';
+}
+
+function setNodesCollapsed(collapsed) {
+    localStorage.setItem(NODES_COLLAPSED_KEY, collapsed ? 'true' : 'false');
+}
+
+function toggleNodesOverview() {
+    const nodesGrid = document.getElementById('nodesGrid');
+    const nodesToggle = document.getElementById('nodesToggle');
+    const nodesOverview = document.getElementById('nodesOverview');
+
+    if (!nodesGrid || !nodesToggle) return;
+
+    const isCollapsed = nodesGrid.classList.toggle('collapsed');
+    nodesToggle.classList.toggle('collapsed', isCollapsed);
+    setNodesCollapsed(isCollapsed);
+}
+
+function applyNodesCollapsedState() {
+    if (isNodesCollapsed()) {
+        const nodesGrid = document.getElementById('nodesGrid');
+        const nodesToggle = document.getElementById('nodesToggle');
+        if (nodesGrid) nodesGrid.classList.add('collapsed');
+        if (nodesToggle) nodesToggle.classList.add('collapsed');
+    }
+}
+
+// Node status overview - shows all blockchain node sync status at a glance
+function updateNodesOverview(stats) {
+    const nodesGrid = document.getElementById('nodesGrid');
+    const nodesOverview = document.getElementById('nodesOverview');
+
+    if (!nodesGrid || !nodesOverview) return;
+
+    // Collect node sync status from all enabled pools
+    // Group by unique node (XMR and XMR+XTM merge share the same XMR node, etc.)
+    const nodes = [];
+    const seenNodes = new Set();
+
+    POOLS.forEach(pool => {
+        const poolStats = stats[pool.id];
+        if (!poolStats || !poolStats.enabled) return;
+
+        const syncStatus = poolStats.sync_status || {};
+
+        // For merge mining, we show combined status differently
+        if (pool.id === 'xmr_xtm_merge') {
+            // Parse the combined status message to extract individual node info
+            nodes.push({
+                id: 'xmr_xtm_merge',
+                name: 'XMR+XTM (Merge)',
+                symbol: 'MERGE',
+                syncStatus: syncStatus,
+                iconClass: 'merge'
+            });
+        } else {
+            // Skip if we've already seen this node type from merge mining
+            // XMR pool and XMR+XTM merge share the same XMR node
+            if (pool.id === 'xmr' && stats.xmr_xtm_merge?.enabled) {
+                // Skip standalone XMR if merge mining is enabled (same node)
+            } else if (pool.id === 'xtm' && stats.xmr_xtm_merge?.enabled) {
+                // Skip standalone XTM if merge mining is enabled (same node)
+            } else {
+                nodes.push({
+                    id: pool.id,
+                    name: pool.name,
+                    symbol: pool.symbol,
+                    syncStatus: syncStatus,
+                    iconClass: pool.id
+                });
+            }
+        }
+    });
+
+    // Hide overview if no nodes
+    if (nodes.length === 0) {
+        nodesOverview.style.display = 'none';
+        return;
+    }
+    nodesOverview.style.display = 'block';
+
+    // Render node cards
+    nodesGrid.innerHTML = nodes.map(node => createNodeCard(node)).join('');
+}
+
+function createNodeCard(node) {
+    const syncStatus = node.syncStatus;
+    const isOnline = syncStatus.node_online;
+    const isSynced = syncStatus.is_synced;
+    const syncPercent = syncStatus.sync_percent || 0;
+    const currentHeight = syncStatus.current_height || 0;
+    const targetHeight = syncStatus.target_height || currentHeight;
+    const statusMessage = syncStatus.status_message || '';
+
+    // Determine status class and display
+    let statusClass, statusIcon, statusText, progressHtml;
+
+    if (!isOnline) {
+        statusClass = 'offline';
+        statusIcon = '⚠';
+        statusText = 'Node Offline';
+        progressHtml = '';
+    } else if (isSynced) {
+        statusClass = 'synced';
+        statusIcon = '✓';
+        statusText = 'Synced';
+        progressHtml = `<span class="node-height">${formatHeight(currentHeight)}</span>`;
+    } else {
+        statusClass = 'syncing';
+        statusIcon = '';
+        statusText = `Syncing ${syncPercent.toFixed(1)}%`;
+        progressHtml = `
+            <div class="node-progress-bar">
+                <div class="node-progress-fill ${node.iconClass}" style="width: ${syncPercent}%"></div>
+            </div>
+            <span class="node-height">${formatHeight(currentHeight)} / ${formatHeight(targetHeight)}</span>
+        `;
+    }
+
+    return `
+        <div class="node-card ${statusClass}" title="${escapeHtml(statusMessage)}">
+            <div class="node-card-header">
+                <span class="node-icon ${node.iconClass}">${node.symbol.substring(0, 3)}</span>
+                <span class="node-name">${node.name}</span>
+            </div>
+            <div class="node-status ${statusClass}">
+                ${statusIcon ? `<span class="node-status-icon">${statusIcon}</span>` : ''}
+                <span class="node-status-text">${statusText}</span>
+            </div>
+            ${progressHtml ? `<div class="node-progress">${progressHtml}</div>` : ''}
+        </div>
+    `;
+}
+
+function formatHeight(height) {
+    if (height >= 1000000) {
+        return (height / 1000000).toFixed(2) + 'M';
+    } else if (height >= 1000) {
+        return (height / 1000).toFixed(1) + 'K';
+    }
+    return height.toString();
 }
 
 function createSyncStatusHtml(syncStatus, iconClass) {

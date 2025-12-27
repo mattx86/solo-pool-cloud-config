@@ -37,6 +37,20 @@
         <main>
             <!-- Pool Stats Tab -->
             <div class="tab-content active" id="tab-pools">
+                <!-- Node Sync Status Overview (Collapsible) -->
+                <div class="nodes-overview" id="nodesOverview">
+                    <div class="nodes-overview-header" onclick="toggleNodesOverview()">
+                        <div class="nodes-overview-title">
+                            <h3>Node Sync Status</h3>
+                            <span class="nodes-overview-subtitle">Blockchain node synchronization progress</span>
+                        </div>
+                        <span class="nodes-toggle" id="nodesToggle">&#9660;</span>
+                    </div>
+                    <div class="nodes-grid" id="nodesGrid">
+                        <!-- Node status cards will be inserted here dynamically -->
+                    </div>
+                </div>
+
                 <div class="pools-grid" id="poolsGrid">
                     <!-- Pool cards will be inserted here dynamically -->
                 </div>
